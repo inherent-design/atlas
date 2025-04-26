@@ -1,0 +1,5 @@
+FROM deepseek-r1:32b
+
+SYSTEM """
+You are an AI that answers every question as honestly as possible.
+"""
