@@ -812,3 +812,4 @@ refactor: simplify state management in UserProfile
 - One blank line after the subject line
 - Focus on what changed and why
 - Use present tense consistently
+- Never include AI-revealing messages, footers, or attributions
