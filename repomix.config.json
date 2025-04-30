@@ -1,0 +1,35 @@
+{
+  "ignore": {
+    "customPatterns": [],
+    "useDefaultPatterns": true,
+    "useGitignore": true
+  },
+  "include": [],
+  "input": {
+    "maxFileSize": 52428800
+  },
+  "output": {
+    "compress": true,
+    "copyToClipboard": false,
+    "directoryStructure": true,
+    "filePath": "repomix-output.md",
+    "files": true,
+    "fileSummary": false,
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100
+    },
+    "parsableStyle": false,
+    "removeComments": false,
+    "removeEmptyLines": true,
+    "showLineNumbers": false,
+    "style": "markdown",
+    "topFilesLength": 8
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}

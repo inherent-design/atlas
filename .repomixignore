@@ -88,6 +88,14 @@ yarn-debug.log*
 *.bak
 *.swp
 
-# Local development
-.env
-.env.local
+### Project Specific ###
+
+# Root
+README.md
+CLAUDE_new.md
+
+# Versions
+prev/*
+!prev/v5
+prev/v5/COMPILER.md
+prev/v5/**/*.qntm
