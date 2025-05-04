@@ -1,81 +1,210 @@
-# Atlas v5.0: Advanced Knowledge Representation Framework
+# Atlas: Advanced Multi-Modal Learning & Guidance Framework
 
-Atlas is a comprehensive meta-framework for knowledge representation, documentation, and adaptive guidance systems. It integrates advanced graph-based knowledge structures with perspective fluidity and quantum compression techniques to create a powerful system for representing complex information.
+Atlas is a comprehensive meta-framework for knowledge representation, documentation, and adaptive guidance systems. It integrates advanced graph-based knowledge structures with a controller-worker architecture and LangGraph implementation to create a powerful system for knowledge management and AI-assisted guidance.
 
-## Core Components
+## Key Features
 
-### Quantum Knowledge Representation System
+- **Multi-Agent Architecture**: Controller-worker pattern for parallel processing and specialization
+- **LangGraph Integration**: Graph-based workflows for complex agent behaviors
+- **Knowledge Persistence**: Maintains context across sessions using ChromaDB vector storage
+- **Documentation Indexing**: Automatically processes and indexes documentation with gitignore-aware filtering
+- **Intelligent Retrieval**: Retrieves relevant context based on user queries
+- **Consistent Identity**: Maintains the Atlas identity and principles in all interactions
 
-The Quantum system is an LLM-optimized knowledge representation language designed for maximum semantic density with minimal token usage. It enables complex knowledge structures to be compressed without information loss.
+## Getting Started
 
-Key features:
-- Ultra-compact notation for efficient knowledge representation
-- Bidirectional translation between expanded and compressed forms
-- Self-bootstrapping recovery mechanisms
-- Context-sensitive partitioning with adaptive boundaries
-- Advanced temporal evolution tracking
-- Perspective fluidity for seamless viewpoint transitions
-- Multi-timeline management for parallel knowledge evolution
+### Prerequisites
 
-### Atlas Framework
+- Python 3.13 or higher
+- Anthropic API key
+- `uv` for virtual environment and package management
 
-Atlas v5.0 integrates multiple approaches to knowledge management through a layered architecture:
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd atlas
+```
+
+2. Create and activate a virtual environment with `uv`:
+
+```bash
+# Install uv if you don't have it
+pip install uv
+
+# Create virtual environment
+uv venv
+
+# Activate the virtual environment
+# On Linux/macOS:
+source .venv/bin/activate
+# On Windows:
+# .venv\Scripts\activate
+```
+
+3. Install the dependencies:
+
+```bash
+uv pip install -e .
+```
+
+4. Set your Anthropic API key:
+
+```bash
+# On Linux/macOS:
+export ANTHROPIC_API_KEY=your_api_key_here
+
+# On Windows:
+# set ANTHROPIC_API_KEY=your_api_key_here
+```
+
+Or create a `.env` file in the project root with:
+
+```
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+### Usage
+
+#### Ingesting Documentation
+
+Before using Atlas, you need to ingest documentation:
+
+```bash
+# Ingest default documentation
+python main.py -m ingest
+
+# Ingest from a specific directory
+python main.py -m ingest -d ./src-markdown/prev/v5
+```
+
+#### Interactive Chat
+
+Start an interactive chat session with Atlas:
+
+```bash
+# Basic CLI mode
+python main.py -m cli
+
+# With custom system prompt
+python main.py -m cli -s path/to/your/system_prompt.md
+
+# Advanced controller mode with parallel processing
+python main.py -m controller --parallel
+```
+
+#### Single Query
+
+Run a single query without an interactive session:
+
+```bash
+python main.py -m query -q "What is the trimodal methodology in Atlas?"
+```
+
+### Development
+
+#### Running Tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run specific test file
+uv run pytest test_atlas.py
+
+# Run with coverage
+uv run pytest --cov=atlas
+```
+
+#### Code Quality
+
+```bash
+# Run linting
+uv run ruff .
+
+# Run type checking
+uv run mypy .
+
+# Format code
+uv run black .
+```
+
+## Architecture
+
+Atlas is built with a modular architecture designed for extensibility and parallel processing:
+
+```
+atlas/
+├── __init__.py
+├── main.py                  # Entry point
+├── agents/                  # Agent implementations
+│   ├── __init__.py
+│   ├── base.py              # Base agent class
+│   ├── controller.py        # Controller agent
+│   ├── worker.py            # Worker agent
+│   └── registry.py          # Agent registry
+├── core/                    # Core functionality
+│   ├── __init__.py
+│   ├── config.py            # Configuration
+│   ├── settings.py          # Settings
+│   └── prompts.py           # System prompts
+├── graph/                   # LangGraph implementation
+│   ├── __init__.py
+│   ├── nodes.py             # Graph nodes
+│   ├── edges.py             # Graph edges
+│   ├── state.py             # State management
+│   └── workflows.py         # Workflow definitions
+├── knowledge/               # Knowledge management
+│   ├── __init__.py
+│   ├── ingest.py            # Document ingestion
+│   ├── retrieval.py         # Knowledge retrieval
+│   └── embedding.py         # Embedding functions
+├── orchestration/           # Agent orchestration
+│   ├── __init__.py
+│   ├── coordinator.py       # Agent coordination
+│   ├── parallel.py          # Parallel processing
+│   └── scheduler.py         # Task scheduling
+└── tools/                   # Tool implementations
+    ├── __init__.py
+    └── utils.py             # Utility functions
+```
+
+### Key Components
+
+1. **Multi-Agent System**:
+   - **Controller Agent**: Orchestrates workers and synthesizes results
+   - **Worker Agents**: Specialized for different tasks (retrieval, analysis, drafting)
+
+2. **LangGraph Workflows**:
+   - **Basic RAG**: Simple retrieval and generation workflow
+   - **Controller-Worker**: Advanced parallel processing workflow
+
+3. **Knowledge Management**:
+   - **Document Processor**: Parses and chunks documents with gitignore awareness
+   - **Knowledge Base**: ChromaDB vector store with persistent storage
+   - **Retrieval System**: Semantic search with relevance scoring
+
+4. **Orchestration**:
+   - **Coordinator**: Manages agent communication and task routing
+   - **Scheduler**: Handles task prioritization and assignment
+   - **Parallel Processing**: Executes tasks concurrently for performance
+
+## Framework Concepts
+
+Atlas integrates multiple approaches to knowledge management through a layered architecture:
 
 1. **Capabilities Layer**: Task guidance, problem-solving strategies, and adaptive workflows
 2. **Core Layer**: Identity, collaboration patterns, communication principles, and ethical framework
 3. **Temporal Layer**: Knowledge evolution, versioning, history preservation, and future projection
 4. **Knowledge Layer**: Graph fundamentals, partitioning systems, perspective frameworks, and trimodal integration
 
-## Repository Structure
+### Quantum Knowledge Representation System
 
-```
-atlas/
-├── quantum/                         # Quantum Knowledge Representation System
-│   ├── BOOTSTRAP_KEY.md             # Self-recovery mechanism
-│   ├── COMPRESSION_ENGINE.md        # Optimization algorithms
-│   ├── DECOMPRESSION_ENGINE.md      # Expansion mechanisms
-│   ├── DEVELOPMENT_MVP.md           # Minimal viable product
-│   ├── DEVELOPMENT_ROADMAP.md       # Future development plans
-│   ├── EXAMPLES.md                  # Practical demonstrations
-│   ├── PARSER.md                    # Translation engine
-│   ├── README.md                    # System overview
-│   └── SYNTAX.md                    # Core syntax specification
-│
-├── v5/                              # Atlas v5 Framework
-│   ├── 1-capabilities/              # Task guidance and workflows
-│   │   ├── meta/                    # Meta-capabilities and extensions
-│   │   ├── strategies/              # Problem solving approaches
-│   │   ├── tasks/                   # Task guidance frameworks
-│   │   └── workflows/               # Adaptive process models
-│   │
-│   ├── 2-core/                      # Core identity and principles
-│   │   ├── ATLAS_IDENTITY.md        # Core framework identity
-│   │   ├── COLLABORATION_PATTERNS.md # Interaction models
-│   │   ├── COMMUNICATION_PRINCIPLES.md # Effective communication
-│   │   ├── ETHICAL_FRAMEWORK.md     # Ethical guidelines
-│   │   └── LEARNING_MODEL.md        # Adaptive learning system
-│   │
-│   ├── 3-temporal/                  # Temporal evolution framework
-│   │   ├── DECISION_TRACKING.md     # Decision point documentation
-│   │   ├── FUTURE_PROJECTION.md     # Anticipating knowledge states
-│   │   ├── HISTORY_PRESERVATION.md  # Maintaining historical context
-│   │   ├── KNOWLEDGE_EVOLUTION.md   # Evolution patterns
-│   │   └── VERSIONING_FRAMEWORK.md  # Version tracking systems
-│   │
-│   ├── 4-knowledge/                 # Knowledge representation
-│   │   ├── graph/                   # Knowledge graph framework
-│   │   ├── partitioning/            # Quantum partitioning system
-│   │   ├── perspective/             # Adaptive perspective framework
-│   │   └── trimodal/                # Trimodal methodology
-│   │
-│   ├── COMPILER.md                  # Knowledge compression system
-│   └── README.md                    # Framework overview
-│
-├── v5-compiled.qntm                 # Quantum-compiled framework
-└── v5-complete.qntm                 # Complete framework with extensions
-```
+The framework includes an LLM-optimized knowledge representation language designed for maximum semantic density with minimal token usage, enabling complex knowledge structures to be compressed without information loss.
 
-## Key Innovations
+### Key Innovations
 
 1. **Quantum Partitioning**: Natural boundary creation in complex information spaces
 2. **Adaptive Perspective**: Multi-viewpoint framework for context-sensitive knowledge representation
@@ -83,36 +212,14 @@ atlas/
 4. **Temporal Evolution**: Advanced patterns for tracking knowledge development over time
 5. **Knowledge Graph Framework**: Directed relationship structures with specialized edge and node types
 
-## Applications
+## Development Roadmap
 
-Atlas can be applied across multiple domains:
+See `TODO.md` for a detailed implementation plan and roadmap.
 
-- **Documentation Systems**: Create comprehensive, interconnected knowledge repositories
-- **Project Management**: Develop adaptive, knowledge-aware workflow systems
-- **Learning Frameworks**: Design progressive knowledge acquisition systems
-- **LLM Instruction**: Enable efficient, context-aware AI guidance
-- **Knowledge Transfer**: Facilitate cross-domain knowledge sharing
-- **System Architecture**: Document complex systems with multiple perspectives
+## Contributing
 
-## Framework Evolution
+Guidelines for contributing to Atlas can be found in `CLAUDE.md`.
 
-Atlas has evolved through multiple versions, each adding new dimensions:
+## License
 
-1. **v1**: Trimodal arboreal development and initial writing guides
-2. **v2**: Expanded architecture, documentation systems, and project management
-3. **v3**: Perspective fluidity, knowledge graphs, and temporal dimensions
-4. **v4**: Advanced perspective, knowledge graph framework, and temporal evolution
-5. **v5**: Integrated framework with quantum compilation and complete capabilities
-
-## Getting Started
-
-To use Atlas effectively:
-
-1. Start with the framework overview in `v5/README.md`
-2. Explore the Quantum system in `quantum/README.md` and `quantum/SYNTAX.md`
-3. Review the compiled framework in `v5-compiled.qntm` for a complete reference
-4. Apply relevant components based on your specific needs and context
-
-## Conclusion
-
-Atlas v5.0 represents a significant advancement in knowledge representation, combining structure with flexibility to create an adaptive system that can represent complex information efficiently across multiple domains, perspectives, and temporal states.
+[Specify your license here]

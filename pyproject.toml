@@ -1,0 +1,23 @@
+[project]
+name = "atlas"
+version = "0.1.0"
+description = "Advanced Multi-Modal Learning & Guidance Framework"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "langgraph>=0.0.27",
+    "chromadb>=0.4.18",
+    "anthropic>=0.16.0",
+    "pydantic>=2.0.0",
+    "pathspec>=0.11.0",
+]
+
+[project.scripts]
+atlas = "atlas.agent:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["atlas"]

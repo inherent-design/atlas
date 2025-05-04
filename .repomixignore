@@ -1,5 +1,3 @@
-# Comprehensive .gitignore for Markdown-based documentation repositories
-
 ### Operating System Files ###
 
 # Windows
@@ -88,14 +86,59 @@ yarn-debug.log*
 *.bak
 *.swp
 
+# Local development
+.env
+.env.local
+
+### Python Specific ###
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+.python-version
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
 ### Project Specific ###
 
 # Root
 README.md
-CLAUDE_new.md
 
-# Versions
-prev/*
-!prev/v5
-prev/v5/COMPILER.md
-prev/v5/**/*.qntm
+# Markdown Source
+src-markdown/
+!src-markdown/CLAUDE_new.md
+!src-markdown/quantum
+!src-markdown/templates
+!src-markdown/prev/v5
