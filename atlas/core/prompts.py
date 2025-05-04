@@ -68,5 +68,5 @@ def load_system_prompt(file_path: Optional[str] = None) -> str:
         except Exception as e:
             print(f"Error loading system prompt from {file_path}: {str(e)}")
             print("Using default system prompt instead.")
-    
+
     return DEFAULT_SYSTEM_PROMPT

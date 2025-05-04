@@ -76,16 +76,20 @@ def load_system_prompt(file_path: Optional[str] = None) -> str:
         except Exception as e:
             print(f"Error loading system prompt from {file_path}: {str(e)}")
             print("Using default system prompt instead.")
-    
+
     return DEFAULT_SYSTEM_PROMPT
 
 
 class AtlasAgent:
     """Atlas agent for interacting with users."""
-    
-    def __init__(self, system_prompt_file: Optional[str] = None, collection_name: str = "atlas_knowledge_base"):
+
+    def __init__(
+        self,
+        system_prompt_file: Optional[str] = None,
+        collection_name: str = "atlas_knowledge_base",
+    ):
         """Initialize the Atlas agent.
-        
+
         Args:
             system_prompt_file: Optional path to a file containing the system prompt.
             collection_name: Name of the Chroma collection to use.
@@ -93,86 +97,90 @@ class AtlasAgent:
         # Load the system prompt
         self.system_prompt = load_system_prompt(system_prompt_file)
         self.collection_name = collection_name
-        
+
         # Initialize the Anthropic client
-        self.anthropic_client = Anthropic(
-            api_key=os.environ.get("ANTHROPIC_API_KEY")
-        )
-        
+        self.anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
         # Initialize conversation history
         self.messages = []
-    
+
     def query_knowledge_base(self, query: str) -> List[Dict[str, Any]]:
         """Query the knowledge base for relevant information.
-        
+
         Args:
             query: The query string.
-            
+
         Returns:
             A list of relevant documents.
         """
         # Create a fake state to use with retrieve_knowledge
         state = {"messages": [{"role": "user", "content": query}]}
-        
+
         # Call retrieve_knowledge directly
-        updated_state = retrieve_knowledge(state, query=query, collection_name=self.collection_name)
-        
+        updated_state = retrieve_knowledge(
+            state, query=query, collection_name=self.collection_name
+        )
+
         # Return the documents
         return updated_state.get("context", {}).get("documents", [])
-    
+
     def process_message(self, message: str) -> str:
         """Process a user message and return the agent's response.
-        
+
         Args:
             message: The user's message.
-            
+
         Returns:
             The agent's response.
         """
         try:
             # Add user message to history
             self.messages.append({"role": "user", "content": message})
-            
+
             # Retrieve relevant documents from the knowledge base
-            print(f"Querying knowledge base for: {message[:50]}{'...' if len(message) > 50 else ''}")
+            print(
+                f"Querying knowledge base for: {message[:50]}{'...' if len(message) > 50 else ''}"
+            )
             documents = self.query_knowledge_base(message)
             print(f"Retrieved {len(documents)} relevant documents")
-            
+
             if documents:
                 # Print top documents for debugging
                 print("Top relevant documents:")
                 for i, doc in enumerate(documents[:3]):
                     source = doc["metadata"].get("source", "Unknown")
                     score = doc["relevance_score"]
-                    print(f"  {i+1}. {source} (score: {score:.4f})")
-            
+                    print(f"  {i + 1}. {source} (score: {score:.4f})")
+
             # Create system message with context
             system_msg = self.system_prompt
             if documents:
                 context_text = "\n\n## Relevant Knowledge\n\n"
-                for i, doc in enumerate(documents[:3]):  # Limit to top 3 most relevant docs
+                for i, doc in enumerate(
+                    documents[:3]
+                ):  # Limit to top 3 most relevant docs
                     source = doc["metadata"].get("source", "Unknown")
                     content = doc["content"]
-                    context_text += f"### Document {i+1}: {source}\n{content}\n\n"
-                
+                    context_text += f"### Document {i + 1}: {source}\n{content}\n\n"
+
                 system_msg = system_msg + context_text
-            
+
             # Generate response using Claude
             response = self.anthropic_client.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=2000,
                 system=system_msg,
-                messages=self.messages
+                messages=self.messages,
             )
-            
+
             # Extract response text
             assistant_message = response.content[0].text
-            
+
             # Add assistant response to history
             self.messages.append({"role": "assistant", "content": assistant_message})
-            
+
             return assistant_message
-            
+
         except Exception as e:
             print(f"Error processing message: {str(e)}")
             print(f"Error details: {sys.exc_info()}")
@@ -183,87 +191,76 @@ def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Atlas: Advanced Multi-Modal Learning & Guidance Framework",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    
+
     # Core arguments
     parser.add_argument(
-        "-m", "--mode", 
+        "-m",
+        "--mode",
         choices=["cli", "ingest", "query", "worker", "controller"],
         default="cli",
-        help="Operation mode for Atlas"
+        help="Operation mode for Atlas",
     )
-    
+
     # System prompt and knowledge base
     parser.add_argument(
-        "-s", "--system-prompt", 
-        type=str, 
-        help="Path to system prompt file"
+        "-s", "--system-prompt", type=str, help="Path to system prompt file"
     )
     parser.add_argument(
-        "-c", "--collection", 
-        type=str, 
+        "-c",
+        "--collection",
+        type=str,
         default="atlas_knowledge_base",
-        help="Name of the ChromaDB collection to use"
+        help="Name of the ChromaDB collection to use",
     )
     parser.add_argument(
-        "--db-path", 
-        type=str, 
-        help="Path to ChromaDB database directory"
+        "--db-path", type=str, help="Path to ChromaDB database directory"
     )
-    
+
     # Ingestion options
     parser.add_argument(
-        "-d", "--directory", 
-        type=str, 
-        help="Directory to ingest documents from"
+        "-d", "--directory", type=str, help="Directory to ingest documents from"
     )
     parser.add_argument(
-        "-r", "--recursive", 
-        action="store_true", 
-        help="Recursively process directories"
+        "-r", "--recursive", action="store_true", help="Recursively process directories"
     )
-    
+
     # LangGraph options
     parser.add_argument(
-        "--parallel", 
-        action="store_true", 
-        help="Enable parallel processing with LangGraph"
+        "--parallel",
+        action="store_true",
+        help="Enable parallel processing with LangGraph",
     )
     parser.add_argument(
-        "--workers", 
-        type=int, 
+        "--workers",
+        type=int,
         default=3,
-        help="Number of worker agents to spawn in controller mode"
+        help="Number of worker agents to spawn in controller mode",
     )
     parser.add_argument(
-        "--workflow", 
+        "--workflow",
         choices=["rag", "advanced", "custom", "retrieval", "analysis", "draft"],
         default="rag",
-        help="LangGraph workflow to use or worker type in worker mode"
+        help="LangGraph workflow to use or worker type in worker mode",
     )
-    
+
     # Model options
     parser.add_argument(
-        "--model", 
-        type=str, 
+        "--model",
+        type=str,
         default="claude-3-sonnet-20240229",
-        help="Claude model to use"
+        help="Claude model to use",
     )
     parser.add_argument(
-        "--max-tokens", 
-        type=int, 
-        default=2000,
-        help="Maximum tokens in model responses"
+        "--max-tokens", type=int, default=2000, help="Maximum tokens in model responses"
     )
-    
+
     # Query options
     parser.add_argument(
-        "-q", "--query", 
-        type=str, 
-        help="Single query to process (query mode only)"
+        "-q", "--query", type=str, help="Single query to process (query mode only)"
     )
-    
+
     return parser.parse_args()
 
 
@@ -282,38 +279,33 @@ def ingest_documents(args):
     """Ingest documents from the specified directory."""
     # Import config
     from atlas.core.config import AtlasConfig
-    
+
     # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path
-    )
-    
+    config = AtlasConfig(collection_name=args.collection, db_path=args.db_path)
+
     # Get db_path from config
     db_path = config.db_path
-    
+
     if not args.directory:
         # Use default directories if none specified
         default_dirs = [
             "./src-markdown/prev/v1",
-            "./src-markdown/prev/v2", 
+            "./src-markdown/prev/v2",
             "./src-markdown/prev/v3",
             "./src-markdown/prev/v4",
             "./src-markdown/prev/v5",
             "./src-markdown/quantum",
         ]
-        
+
         print(f"No directory specified. Using default directories:")
         for dir_path in default_dirs:
             print(f"  - {dir_path}")
-        
+
         print(f"Using ChromaDB at: {db_path}")
         from atlas.knowledge.ingest import DocumentProcessor
-        processor = DocumentProcessor(
-            collection_name=args.collection,
-            db_path=db_path
-        )
-        
+
+        processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
+
         for dir_path in default_dirs:
             if os.path.exists(dir_path):
                 print(f"\nIngesting documents from {dir_path}")
@@ -323,15 +315,13 @@ def ingest_documents(args):
     else:
         print(f"Ingesting documents from {args.directory}")
         print(f"Using ChromaDB at: {db_path}")
-        
+
         from atlas.knowledge.ingest import DocumentProcessor
-        processor = DocumentProcessor(
-            collection_name=args.collection,
-            db_path=db_path
-        )
-        
+
+        processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
+
         processor.process_directory(args.directory, recursive=args.recursive)
-    
+
     return True
 
 
@@ -339,40 +329,39 @@ def run_cli_mode(args):
     """Run Atlas in interactive CLI mode."""
     print("\nAtlas CLI Mode")
     print("-------------")
-    
+
     # Import and use config
     from atlas.core.config import AtlasConfig
-    
+
     # Create config with command line parameters
     config = AtlasConfig(
         collection_name=args.collection,
         db_path=args.db_path,
         model_name=args.model,
-        max_tokens=args.max_tokens
+        max_tokens=args.max_tokens,
     )
-    
+
     # Initialize agent
     agent = AtlasAgent(
-        system_prompt_file=args.system_prompt, 
-        collection_name=args.collection
+        system_prompt_file=args.system_prompt, collection_name=args.collection
     )
-    
+
     print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
     print("---------------------------------------------------")
-    
+
     while True:
         # Get user input
         try:
             user_input = input("\nYou: ")
-            
+
             # Check for exit command
             if user_input.lower() in ["exit", "quit"]:
                 print("\nGoodbye!")
                 break
-                
+
             # Process the message and get response
             response = agent.process_message(user_input)
-            
+
             # Display the response
             print(f"\nAtlas: {response}")
         except KeyboardInterrupt:
@@ -382,8 +371,7 @@ def run_cli_mode(args):
             print(f"\nUnexpected error: {str(e)}")
             print("Let's continue with a fresh conversation.")
             agent = AtlasAgent(
-                system_prompt_file=args.system_prompt, 
-                collection_name=args.collection
+                system_prompt_file=args.system_prompt, collection_name=args.collection
             )
 
 
@@ -392,40 +380,39 @@ def run_query_mode(args):
     if not args.query:
         print("ERROR: Query parameter (-q/--query) is required for query mode.")
         return False
-    
+
     # Import and use config
     from atlas.core.config import AtlasConfig
-    
+
     # Create config with command line parameters
     config = AtlasConfig(
         collection_name=args.collection,
         db_path=args.db_path,
         model_name=args.model,
-        max_tokens=args.max_tokens
+        max_tokens=args.max_tokens,
     )
-    
+
     print(f"Processing query: {args.query}")
-    
+
     agent = AtlasAgent(
-        system_prompt_file=args.system_prompt, 
-        collection_name=args.collection
+        system_prompt_file=args.system_prompt, collection_name=args.collection
     )
-    
+
     response = agent.process_message(args.query)
     print(f"Response: {response}")
     return True
-    
+
 
 def run_controller_mode(args):
     """Run Atlas in controller mode."""
     print("\nAtlas Controller Mode")
     print("--------------------")
-    
+
     try:
         # Import here to avoid circular imports
         from atlas.orchestration.coordinator import AgentCoordinator
         from atlas.core.config import AtlasConfig
-        
+
         # Create config with command line parameters
         config = AtlasConfig(
             collection_name=args.collection,
@@ -433,34 +420,34 @@ def run_controller_mode(args):
             model_name=args.model,
             max_tokens=args.max_tokens,
             parallel_enabled=args.parallel,
-            worker_count=args.workers
+            worker_count=args.workers,
         )
-        
+
         # Initialize coordinator with parallel processing if enabled
         coordinator = AgentCoordinator(
             system_prompt_file=args.system_prompt,
             collection_name=args.collection,
             config=config,
-            worker_count=args.workers
+            worker_count=args.workers,
         )
-        
+
         print(f"Controller initialized with {args.workers} workers.")
         print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
         print("---------------------------------------------------")
-        
+
         while True:
             # Get user input
             try:
                 user_input = input("\nYou: ")
-                
+
                 # Check for exit command
                 if user_input.lower() in ["exit", "quit"]:
                     print("\nGoodbye!")
                     break
-                    
+
                 # Process the message and get response
                 response = coordinator.process_message(user_input)
-                
+
                 # Display the response
                 print(f"\nAtlas: {response}")
             except KeyboardInterrupt:
@@ -472,9 +459,9 @@ def run_controller_mode(args):
                 coordinator = AgentCoordinator(
                     system_prompt_file=args.system_prompt,
                     collection_name=args.collection,
-                    worker_count=args.workers
+                    worker_count=args.workers,
                 )
-        
+
         return True
     except Exception as e:
         print(f"Error initializing controller mode: {str(e)}")
@@ -486,79 +473,78 @@ def run_worker_mode(args):
     """Run Atlas in worker mode."""
     print("\nAtlas Worker Mode")
     print("----------------")
-    
+
     try:
         # Import here to avoid circular imports
         from atlas.agents.worker import RetrievalWorker, AnalysisWorker, DraftWorker
         from atlas.core.config import AtlasConfig
-        
+
         # Create config with command line parameters
         config = AtlasConfig(
             collection_name=args.collection,
             db_path=args.db_path,
             model_name=args.model,
-            max_tokens=args.max_tokens
+            max_tokens=args.max_tokens,
         )
-        
+
         # Default to retrieval worker if no specific type is given
         worker_type = "retrieval"
         if args.workflow and args.workflow in ["analysis", "draft"]:
             worker_type = args.workflow
-        
+
         print(f"Initializing {worker_type} worker...")
-        
+
         # Create appropriate worker type
         if worker_type == "analysis":
             worker = AnalysisWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
-                config=config
+                config=config,
             )
             worker_desc = "Analysis Worker: Specializes in query analysis and information needs identification"
         elif worker_type == "draft":
             worker = DraftWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
-                config=config
+                config=config,
             )
             worker_desc = "Draft Worker: Specializes in generating draft responses"
         else:  # Default to retrieval worker
             worker = RetrievalWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
-                config=config
+                config=config,
             )
-            worker_desc = "Retrieval Worker: Specializes in document retrieval and summarization"
-        
+            worker_desc = (
+                "Retrieval Worker: Specializes in document retrieval and summarization"
+            )
+
         print(f"Worker initialized: {worker_desc}")
         print("Atlas worker is ready. Type 'exit' or 'quit' to end the session.")
         print("-----------------------------------------------------------")
-        
+
         # Simple CLI loop for worker
         while True:
             try:
                 user_input = input("\nTask: ")
-                
+
                 # Check for exit command
                 if user_input.lower() in ["exit", "quit"]:
                     print("\nWorker shutting down. Goodbye!")
                     break
-                
+
                 # Create a simple task and process it
-                task = {
-                    "task_id": "cli_task",
-                    "query": user_input
-                }
-                
+                task = {"task_id": "cli_task", "query": user_input}
+
                 result = worker.process_task(task)
                 print(f"\nResult: {result.get('result', 'No result')}")
-                
+
             except KeyboardInterrupt:
                 print("\nWorker interrupted. Shutting down!")
                 break
             except Exception as e:
                 print(f"\nError processing task: {str(e)}")
-        
+
         return True
     except Exception as e:
         print(f"Error initializing worker mode: {str(e)}")
@@ -569,11 +555,11 @@ def run_worker_mode(args):
 def main():
     """Main entry point for Atlas."""
     args = parse_args()
-    
+
     # Check environment
     if not check_environment():
         sys.exit(1)
-    
+
     # Run the appropriate mode
     success = True
     if args.mode == "cli":
@@ -586,7 +572,7 @@ def main():
         success = run_controller_mode(args)
     elif args.mode == "worker":
         success = run_worker_mode(args)
-    
+
     sys.exit(0 if success else 1)
 
 

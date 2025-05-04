@@ -12,19 +12,18 @@ from langgraph.checkpoint import MemorySaver
 from atlas.core.config import AtlasConfig
 from atlas.graph.state import AgentState, ControllerState
 from atlas.graph.nodes import (
-    retrieve_knowledge, 
-    generate_response, 
-    route_to_workers, 
-    create_worker_tasks, 
-    process_worker_results, 
+    retrieve_knowledge,
+    generate_response,
+    route_to_workers,
+    create_worker_tasks,
+    process_worker_results,
     generate_final_response,
-    should_end
+    should_end,
 )
 
 
 def create_basic_rag_graph(
-    system_prompt_file: Optional[str] = None,
-    config: Optional[AtlasConfig] = None
+    system_prompt_file: Optional[str] = None, config: Optional[AtlasConfig] = None
 ) -> StateGraph:
     """Create a basic RAG workflow graph.
 
@@ -37,39 +36,33 @@ def create_basic_rag_graph(
     """
     # Create StateGraph with AgentState
     builder = StateGraph(AgentState)
-    
+
     # Use currying to pass additional parameters to node functions
     def retrieve(state: AgentState) -> AgentState:
         return retrieve_knowledge(state, config)
-    
+
     def generate(state: AgentState) -> AgentState:
         return generate_response(state, system_prompt_file, config)
-    
+
     # Add nodes
     builder.add_node("retrieve_knowledge", retrieve)
     builder.add_node("generate_response", generate)
-    
+
     # Define edges
     builder.add_edge("retrieve_knowledge", "generate_response")
     builder.add_conditional_edges(
-        "generate_response",
-        should_end,
-        {
-            True: END,
-            False: "retrieve_knowledge"
-        }
+        "generate_response", should_end, {True: END, False: "retrieve_knowledge"}
     )
-    
+
     # Set the entry point
     builder.set_entry_point("retrieve_knowledge")
-    
+
     # Compile the graph
     return builder.compile()
 
 
 def create_controller_worker_graph(
-    system_prompt_file: Optional[str] = None,
-    config: Optional[AtlasConfig] = None
+    system_prompt_file: Optional[str] = None, config: Optional[AtlasConfig] = None
 ) -> StateGraph:
     """Create a controller-worker workflow graph.
 
@@ -82,29 +75,29 @@ def create_controller_worker_graph(
     """
     # Create StateGraph with ControllerState
     builder = StateGraph(ControllerState)
-    
+
     # Use currying to pass additional parameters to node functions
     def final_response(state: ControllerState) -> ControllerState:
         return generate_final_response(state, system_prompt_file, config)
-    
+
     # Add nodes
     builder.add_node("retrieve_knowledge", retrieve_knowledge)
     builder.add_node("create_worker_tasks", create_worker_tasks)
     builder.add_node("process_worker_results", process_worker_results)
     builder.add_node("generate_final_response", final_response)
-    
+
     # Add router node
     builder.add_router("route_workers", route_to_workers)
-    
+
     # Define edges
     builder.add_edge("retrieve_knowledge", "route_workers")
     builder.add_edge("create_worker_tasks", "route_workers")
     builder.add_edge("process_worker_results", "route_workers")
     builder.add_edge("generate_final_response", END)
-    
+
     # Set the entry point
     builder.set_entry_point("retrieve_knowledge")
-    
+
     # Compile the graph
     return builder.compile()
 
@@ -112,7 +105,7 @@ def create_controller_worker_graph(
 def get_workflow_graph(
     workflow_type: str = "rag",
     system_prompt_file: Optional[str] = None,
-    config: Optional[AtlasConfig] = None
+    config: Optional[AtlasConfig] = None,
 ) -> StateGraph:
     """Get a workflow graph based on the specified type.
 
@@ -136,7 +129,7 @@ def get_workflow_graph(
 def run_rag_workflow(
     query: str,
     system_prompt_file: Optional[str] = None,
-    config: Optional[AtlasConfig] = None
+    config: Optional[AtlasConfig] = None,
 ) -> Dict[str, Any]:
     """Run the basic RAG workflow.
 
@@ -150,20 +143,20 @@ def run_rag_workflow(
     """
     # Create the graph
     graph = create_basic_rag_graph(system_prompt_file, config)
-    
+
     # Create initial state
     initial_state = AgentState(messages=[{"role": "user", "content": query}])
-    
+
     # Run the graph
     final_state = graph.invoke(initial_state)
-    
+
     return final_state
 
 
 def run_controller_workflow(
     query: str,
     system_prompt_file: Optional[str] = None,
-    config: Optional[AtlasConfig] = None
+    config: Optional[AtlasConfig] = None,
 ) -> Dict[str, Any]:
     """Run the controller-worker workflow.
 
@@ -177,11 +170,11 @@ def run_controller_workflow(
     """
     # Create the graph
     graph = create_controller_worker_graph(system_prompt_file, config)
-    
+
     # Create initial state
     initial_state = ControllerState(messages=[{"role": "user", "content": query}])
-    
+
     # Run the graph
     final_state = graph.invoke(initial_state)
-    
+
     return final_state

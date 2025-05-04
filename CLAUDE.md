@@ -234,16 +234,16 @@ python main.py -m query -q "What is the trimodal methodology in Atlas?"
 
 ```bash
 # Run tests
-uv run pytest
+uv tool run pytest
 
 # Run linting
-uv run ruff .
+uv tool run ruff check
 
 # Run type checking
-uv run mypy .
+uv tool run mypy .
 
 # Format code
-uv run black .
+uv tool run black .
 ```
 
 ## Testing
@@ -252,16 +252,16 @@ uv run black .
 
 ```bash
 # Run all tests
-uv run pytest
+uv tool run pytest
 
 # Run specific test file
-uv run pytest test_atlas.py
+uv tool run pytest test_atlas.py
 
 # Run with coverage
-uv run pytest --cov=atlas
+uv tool run pytest --cov=atlas
 
 # Run tests with detailed output
-uv run pytest -v
+uv tool run pytest -v
 ```
 
 ### Creating New Tests

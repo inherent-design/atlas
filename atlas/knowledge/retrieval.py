@@ -11,7 +11,11 @@ import chromadb
 
 
 class KnowledgeBase:
-    def __init__(self, collection_name: str = "atlas_knowledge_base", db_path: Optional[str] = None):
+    def __init__(
+        self,
+        collection_name: str = "atlas_knowledge_base",
+        db_path: Optional[str] = None,
+    ):
         """Initialize the knowledge base.
 
         Args:
@@ -26,9 +30,9 @@ class KnowledgeBase:
             db_path = home_dir / "atlas_chroma_db"
             db_path.mkdir(exist_ok=True)
             self.db_path = str(db_path.absolute())
-        
+
         print(f"ChromaDB persistence directory: {self.db_path}")
-        
+
         # List contents of directory to debug
         print(f"Current contents of DB directory:")
         try:
@@ -41,38 +45,38 @@ class KnowledgeBase:
                     print(f"  - {item} ({size:.2f} KB)")
         except Exception as e:
             print(f"Error listing DB directory: {e}")
-            
+
         try:
-            self.chroma_client = chromadb.PersistentClient(
-                path=self.db_path
+            self.chroma_client = chromadb.PersistentClient(path=self.db_path)
+            print(
+                f"ChromaDB client initialized successfully with persistence at: {self.db_path}"
             )
-            print(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
-            
+
             # List all collections
             try:
                 all_collections = self.chroma_client.list_collections()
                 print(f"Available collections: {[c.name for c in all_collections]}")
             except Exception as e:
                 print(f"Error listing collections: {e}")
-            
+
             # Get or create collection
             try:
                 self.collection = self.chroma_client.get_or_create_collection(
                     name=collection_name
                 )
                 print(f"Collection '{collection_name}' accessed successfully")
-                
+
                 # Verify persistence by checking collection count
                 count = self.collection.count()
                 print(f"Collection contains {count} documents")
-                
+
                 if count == 0:
                     print("WARNING: Collection is empty. Has any data been ingested?")
                     print("Try running with -d <directory> flag to ingest documents.")
             except Exception as e:
                 print(f"Error accessing collection: {e}")
                 raise e
-                
+
         except Exception as e:
             print(f"Error initializing ChromaDB: {str(e)}")
             print("Using fallback in-memory ChromaDB")
@@ -106,15 +110,15 @@ class KnowledgeBase:
             if doc_count == 0:
                 print("Warning: Collection is empty. No results will be returned.")
                 return []
-                
+
             actual_n_results = min(n_results, doc_count)
-            
+
             results = self.collection.query(
                 query_texts=[query],
                 n_results=actual_n_results,
                 where=where_clause if where_clause else None,
             )
-            
+
             # Format results
             documents = []
             for i, (doc, metadata, distance) in enumerate(
@@ -132,7 +136,7 @@ class KnowledgeBase:
                         - distance,  # Convert distance to relevance score
                     }
                 )
-                
+
             return documents
         except Exception as e:
             print(f"Error retrieving from knowledge base: {str(e)}")
@@ -151,7 +155,7 @@ class KnowledgeBase:
             doc_count = self.collection.count()
             if doc_count == 0:
                 return []
-                
+
             # Adjust limit based on document count
             limit = min(1000, doc_count)
             results = self.collection.get(limit=limit)
@@ -182,7 +186,9 @@ class KnowledgeBase:
 
 # Function for use with LangGraph
 def retrieve_knowledge(
-    state: Dict[str, Any], query: Optional[str] = None, collection_name: str = "atlas_knowledge_base"
+    state: Dict[str, Any],
+    query: Optional[str] = None,
+    collection_name: str = "atlas_knowledge_base",
 ) -> Dict[str, Any]:
     """Retrieve knowledge from the Atlas knowledge base.
 
@@ -218,19 +224,21 @@ def retrieve_knowledge(
 
         query = last_user_message
 
-    print(f"Retrieving knowledge for query: {query[:50]}{'...' if len(query) > 50 else ''}")
-    
+    print(
+        f"Retrieving knowledge for query: {query[:50]}{'...' if len(query) > 50 else ''}"
+    )
+
     # Retrieve relevant documents
     documents = kb.retrieve(query)
     print(f"Retrieved {len(documents)} relevant documents")
-    
+
     if documents:
         # Print the top document sources for debugging
         print("Top relevant documents:")
         for i, doc in enumerate(documents[:3]):
             source = doc["metadata"].get("source", "Unknown")
             score = doc["relevance_score"]
-            print(f"  {i+1}. {source} (score: {score:.4f})")
+            print(f"  {i + 1}. {source} (score: {score:.4f})")
 
     # Update state with retrieved documents
     state["context"] = {"documents": documents, "query": query}
