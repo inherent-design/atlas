@@ -154,5 +154,5 @@ If you see authentication errors:
 
 If you can't connect to Ollama:
 - Ensure Ollama is installed and running (`ollama serve`)
-- Check that it's accessible at http://localhost:11434
+- Check that it's accessible at `http://localhost:11434`
 - Verify you have the specified model pulled (`ollama pull llama3`)
