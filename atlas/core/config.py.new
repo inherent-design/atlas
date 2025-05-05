@@ -15,9 +15,11 @@ class AtlasConfig:
     def __init__(
         self,
         anthropic_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         collection_name: str = "atlas_knowledge_base",
         db_path: Optional[str] = None,
-        model_name: str = "claude-3-5-sonnet-20240620",
+        provider: str = "anthropic",
+        model_name: Optional[str] = None,
         max_tokens: int = 2000,
         parallel_enabled: bool = False,
         worker_count: int = 3,
@@ -26,21 +28,38 @@ class AtlasConfig:
 
         Args:
             anthropic_api_key: API key for Anthropic. If None, read from environment.
+            openai_api_key: API key for OpenAI. If None, read from environment.
             collection_name: Name of the ChromaDB collection.
             db_path: Path to ChromaDB storage. If None, use default in home directory.
-            model_name: Name of the Anthropic model to use.
+            provider: Model provider to use ('anthropic', 'openai', 'ollama').
+            model_name: Name of the model to use (provider-specific).
             max_tokens: Maximum number of tokens in responses.
             parallel_enabled: Enable parallel processing with LangGraph.
             worker_count: Number of worker agents in parallel mode.
         """
-        # API key (from args or environment)
+        # API keys (from args or environment)
         self.anthropic_api_key = anthropic_api_key or os.environ.get(
             "ANTHROPIC_API_KEY"
         )
-        # Only validate API key if not explicitly skipped
-        if not self.anthropic_api_key and not os.environ.get("SKIP_API_KEY_CHECK"):
+        self.openai_api_key = openai_api_key or os.environ.get(
+            "OPENAI_API_KEY"
+        )
+
+        # Set provider environment variables if provided
+        if self.anthropic_api_key and "ANTHROPIC_API_KEY" not in os.environ:
+            os.environ["ANTHROPIC_API_KEY"] = self.anthropic_api_key
+            
+        if self.openai_api_key and "OPENAI_API_KEY" not in os.environ:
+            os.environ["OPENAI_API_KEY"] = self.openai_api_key
+            
+        # Validate API key based on selected provider
+        if provider == "anthropic" and not self.anthropic_api_key and not os.environ.get("SKIP_API_KEY_CHECK"):
             raise ValueError(
-                "ANTHROPIC_API_KEY must be provided or set as an environment variable"
+                "ANTHROPIC_API_KEY must be provided or set as an environment variable when using the Anthropic provider"
+            )
+        elif provider == "openai" and not self.openai_api_key and not os.environ.get("SKIP_API_KEY_CHECK"):
+            raise ValueError(
+                "OPENAI_API_KEY must be provided or set as an environment variable when using the OpenAI provider"
             )
 
         # ChromaDB settings
@@ -54,6 +73,17 @@ class AtlasConfig:
         self.db_path = db_path
 
         # Model settings
+        self.provider = provider
+        
+        # Set default model based on provider if none specified
+        if not model_name:
+            if provider == "anthropic":
+                model_name = "claude-3-7-sonnet-20250219"
+            elif provider == "openai":
+                model_name = "gpt-4o"
+            elif provider == "ollama":
+                model_name = "llama3"
+                
         self.model_name = model_name
         self.max_tokens = max_tokens
 
@@ -63,10 +93,11 @@ class AtlasConfig:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        # Note: We don't include the API key in the dict for security
+        # Note: We don't include the API keys in the dict for security
         return {
             "collection_name": self.collection_name,
             "db_path": self.db_path,
+            "provider": self.provider,
             "model_name": self.model_name,
             "max_tokens": self.max_tokens,
             "parallel_enabled": self.parallel_enabled,

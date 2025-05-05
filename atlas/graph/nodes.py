@@ -4,18 +4,14 @@ Node functions for LangGraph in Atlas.
 This module defines the node functions used in LangGraph workflows.
 """
 
-import os
-import sys
-from typing import Dict, List, Any, Optional, TypedDict, Union, Callable
+from typing import Optional, Union
 
 from anthropic import Anthropic
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END
 
 from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
 from atlas.knowledge.retrieval import KnowledgeBase
-from atlas.graph.state import AgentState, ControllerState, Message
+from atlas.graph.state import AgentState, ControllerState
 
 
 def retrieve_knowledge(
@@ -149,23 +145,19 @@ def generate_response(
     return state
 
 
-def route_to_workers(state: ControllerState) -> Union[str, None]:
+def route_to_workers(state: ControllerState) -> ControllerState:
     """Route the flow based on whether to use workers.
 
     Args:
         state: The controller state.
 
     Returns:
-        The next node name or None to continue.
+        The controller state (modified to be used with conditional edges)
     """
-    if state.all_tasks_completed:
-        return "generate_final_response"
-    elif not state.all_tasks_assigned:
-        return "create_worker_tasks"
-    elif len(state.completed_workers) < len(state.active_workers):
-        return "wait_for_workers"
-    else:
-        return "process_worker_results"
+    # This function now just returns the state itself
+    # The routing logic is now implemented in add_conditional_edges in the workflow
+    # We keep this as a separate node for future extensibility
+    return state
 
 
 def create_worker_tasks(state: ControllerState) -> ControllerState:

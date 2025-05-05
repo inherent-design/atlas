@@ -7,7 +7,15 @@ Main entry point for the Atlas module.
 import os
 import sys
 import argparse
-from typing import Optional
+
+# Type imports removed as they are unused
+from dotenv import load_dotenv
+
+# Set tokenizers parallelism to false to avoid warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Ensure atlas package is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -74,15 +82,30 @@ def parse_args():
         help="LangGraph workflow to use or worker type in worker mode",
     )
 
-    # Model options
+    # Model provider options
+    parser.add_argument(
+        "--provider",
+        type=str,
+        choices=["anthropic", "openai", "ollama"],
+        default="anthropic",
+        help="Model provider to use (anthropic, openai, ollama)"
+    )
     parser.add_argument(
         "--model",
         type=str,
-        default="claude-3-sonnet-20240229",
-        help="Claude model to use",
+        default="claude-3-7-sonnet-20250219",
+        help="Model to use (provider-specific, e.g., claude-3-opus-20240229, gpt-4o, llama3)"
     )
     parser.add_argument(
-        "--max-tokens", type=int, default=2000, help="Maximum tokens in model responses"
+        "--max-tokens", 
+        type=int, 
+        default=2000, 
+        help="Maximum tokens in model responses"
+    )
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        help="Base URL for API (used primarily with Ollama, default: http://localhost:11434)"
     )
 
     # Query options
@@ -93,14 +116,45 @@ def parse_args():
     return parser.parse_args()
 
 
-def check_environment():
-    """Check for required environment variables."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("ERROR: ANTHROPIC_API_KEY environment variable is not set.")
-        print("Please set it before running Atlas.")
-        print("Example: export ANTHROPIC_API_KEY=your_api_key_here")
-        return False
+def check_environment(provider="anthropic"):
+    """Check for required environment variables based on provider.
+    
+    Args:
+        provider: The model provider to use (anthropic, openai, ollama)
+        
+    Returns:
+        Boolean indicating if the required environment variables are set.
+    """
+    if provider == "anthropic":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            print("ERROR: ANTHROPIC_API_KEY environment variable is not set.")
+            print("Please set it before running Atlas with Anthropic provider.")
+            print("Example: export ANTHROPIC_API_KEY=your_api_key_here")
+            return False
+    elif provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            print("ERROR: OPENAI_API_KEY environment variable is not set.")
+            print("Please set it before running Atlas with OpenAI provider.")
+            print("Example: export OPENAI_API_KEY=your_api_key_here")
+            return False
+    elif provider == "ollama":
+        # No API key required for Ollama, but we should check if it's running
+        try:
+            import requests
+            response = requests.get("http://localhost:11434/api/version", timeout=1)
+            if response.status_code != 200:
+                print("WARNING: Ollama server doesn't appear to be running at http://localhost:11434")
+                print("Please start Ollama before running Atlas with Ollama provider.")
+                print("Example: ollama serve")
+                print("Continuing anyway, but expect connection errors...")
+        except:
+            print("WARNING: Could not connect to Ollama server at http://localhost:11434")
+            print("Please make sure Ollama is installed and running.")
+            print("Example: ollama serve")
+            print("Continuing anyway, but expect connection errors...")
+    
     return True
 
 
@@ -126,7 +180,7 @@ def ingest_documents(args):
             "./src-markdown/quantum",
         ]
 
-        print(f"No directory specified. Using default directories:")
+        print("No directory specified. Using default directories:")
         for dir_path in default_dirs:
             print(f"  - {dir_path}")
 
@@ -155,23 +209,54 @@ def run_cli_mode(args):
     print("\nAtlas CLI Mode")
     print("-------------")
 
-    # Import and use config
+    # Import config and agent
     from atlas.core.config import AtlasConfig
-
-    # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path,
-        model_name=args.model,
-        max_tokens=args.max_tokens,
-    )
-
-    # Initialize agent
-    agent = AtlasAgent(
-        system_prompt_file=args.system_prompt,
-        collection_name=args.collection,
-        config=config,
-    )
+    
+    # Use the appropriate agent based on selected provider
+    if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
+        from atlas.agents.multi_provider_base import MultiProviderAgent
+        
+        # Create config with command line parameters
+        config = AtlasConfig(
+            collection_name=args.collection,
+            db_path=args.db_path,
+            model_name=args.model,
+            max_tokens=args.max_tokens,
+        )
+        
+        # Get additional provider params
+        provider_params = {}
+        if args.base_url and args.provider == "ollama":
+            provider_params["base_url"] = args.base_url
+        
+        # Initialize multi-provider agent
+        print(f"Using {args.provider} provider with model: {args.model}")
+        agent = MultiProviderAgent(
+            system_prompt_file=args.system_prompt,
+            collection_name=args.collection,
+            config=config,
+            provider_name=args.provider,
+            model_name=args.model,
+            **provider_params
+        )
+    else:
+        # Fallback to default Anthropic agent
+        from atlas.agents.base import AtlasAgent
+        
+        # Create config with command line parameters
+        config = AtlasConfig(
+            collection_name=args.collection,
+            db_path=args.db_path,
+            model_name=args.model,
+            max_tokens=args.max_tokens,
+        )
+        
+        # Initialize standard Atlas agent
+        agent = AtlasAgent(
+            system_prompt_file=args.system_prompt,
+            collection_name=args.collection,
+            config=config,
+        )
 
     print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
     print("---------------------------------------------------")
@@ -179,12 +264,18 @@ def run_cli_mode(args):
     while True:
         # Get user input
         try:
-            user_input = input("\nYou: ")
+            # Try to avoid EOF issues with a more robust input approach
+            print("\nYou: ", end="", flush=True)
+            user_input = sys.stdin.readline().strip()
 
             # Check for exit command
             if user_input.lower() in ["exit", "quit"]:
                 print("\nGoodbye!")
                 break
+
+            # Skip empty inputs
+            if not user_input:
+                continue
 
             # Process the message and get response
             response = agent.process_message(user_input)
@@ -194,14 +285,33 @@ def run_cli_mode(args):
         except KeyboardInterrupt:
             print("\nSession interrupted. Goodbye!")
             break
+        except EOFError:
+            print("\nEOF detected. Exiting gracefully.")
+            break
         except Exception as e:
             print(f"\nUnexpected error: {str(e)}")
             print("Let's continue with a fresh conversation.")
-            agent = AtlasAgent(
-                system_prompt_file=args.system_prompt,
-                collection_name=args.collection,
-                config=config,
-            )
+            # Reinitialize agent based on provider
+            if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
+                from atlas.agents.multi_provider_base import MultiProviderAgent
+                provider_params = {}
+                if args.base_url and args.provider == "ollama":
+                    provider_params["base_url"] = args.base_url
+                agent = MultiProviderAgent(
+                    system_prompt_file=args.system_prompt,
+                    collection_name=args.collection,
+                    config=config,
+                    provider_name=args.provider,
+                    model_name=args.model,
+                    **provider_params
+                )
+            else:
+                from atlas.agents.base import AtlasAgent
+                agent = AtlasAgent(
+                    system_prompt_file=args.system_prompt,
+                    collection_name=args.collection,
+                    config=config,
+                )
 
 
 def run_query_mode(args):
@@ -223,11 +333,33 @@ def run_query_mode(args):
 
     print(f"Processing query: {args.query}")
 
-    agent = AtlasAgent(
-        system_prompt_file=args.system_prompt,
-        collection_name=args.collection,
-        config=config,
-    )
+    # Use the appropriate agent based on selected provider
+    if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
+        from atlas.agents.multi_provider_base import MultiProviderAgent
+        
+        # Get additional provider params
+        provider_params = {}
+        if args.base_url and args.provider == "ollama":
+            provider_params["base_url"] = args.base_url
+        
+        # Initialize multi-provider agent
+        print(f"Using {args.provider} provider with model: {args.model}")
+        agent = MultiProviderAgent(
+            system_prompt_file=args.system_prompt,
+            collection_name=args.collection,
+            config=config,
+            provider_name=args.provider,
+            model_name=args.model,
+            **provider_params
+        )
+    else:
+        # Use default Anthropic agent
+        from atlas.agents.base import AtlasAgent
+        agent = AtlasAgent(
+            system_prompt_file=args.system_prompt,
+            collection_name=args.collection,
+            config=config,
+        )
 
     response = agent.process_message(args.query)
     print(f"Response: {response}")
@@ -257,12 +389,18 @@ def run_controller_mode(args):
         while True:
             # Get user input
             try:
-                user_input = input("\nYou: ")
+                # Try to avoid EOF issues with a more robust input approach
+                print("\nYou: ", end="", flush=True)
+                user_input = sys.stdin.readline().strip()
 
                 # Check for exit command
                 if user_input.lower() in ["exit", "quit"]:
                     print("\nGoodbye!")
                     break
+
+                # Skip empty inputs
+                if not user_input:
+                    continue
 
                 # Process the message and get response
                 response = coordinator.process_message(user_input)
@@ -271,6 +409,9 @@ def run_controller_mode(args):
                 print(f"\nAtlas: {response}")
             except KeyboardInterrupt:
                 print("\nSession interrupted. Goodbye!")
+                break
+            except EOFError:
+                print("\nEOF detected. Exiting gracefully.")
                 break
             except Exception as e:
                 print(f"\nUnexpected error in controller mode: {str(e)}")
@@ -330,12 +471,18 @@ def run_worker_mode(args):
         # Simple CLI loop for worker
         while True:
             try:
-                user_input = input("\nTask: ")
+                # Try to avoid EOF issues with a more robust input approach
+                print("\nTask: ", end="", flush=True)
+                user_input = sys.stdin.readline().strip()
 
                 # Check for exit command
                 if user_input.lower() in ["exit", "quit"]:
                     print("\nWorker shutting down. Goodbye!")
                     break
+
+                # Skip empty inputs
+                if not user_input:
+                    continue
 
                 # Create a simple task and process it
                 task = {"task_id": "cli_task", "query": user_input}
@@ -345,6 +492,9 @@ def run_worker_mode(args):
 
             except KeyboardInterrupt:
                 print("\nWorker interrupted. Shutting down!")
+                break
+            except EOFError:
+                print("\nEOF detected. Exiting gracefully.")
                 break
             except Exception as e:
                 print(f"\nError processing task: {str(e)}")
@@ -360,8 +510,8 @@ def main():
     """Main entry point for Atlas."""
     args = parse_args()
 
-    # Check environment
-    if not check_environment():
+    # Check environment based on selected provider
+    if not check_environment(args.provider):
         sys.exit(1)
 
     # Run the appropriate mode

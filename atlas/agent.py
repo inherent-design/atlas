@@ -6,11 +6,9 @@ This module defines the main Atlas agent workflow and capabilities.
 
 import os
 import sys
-from typing import Dict, List, Any, Optional, Tuple, Union
-from operator import itemgetter
+from typing import Dict, List, Any, Optional
 
 from anthropic import Anthropic
-from langgraph.graph import StateGraph, END
 
 from atlas.tools.knowledge_retrieval import retrieve_knowledge
 
@@ -102,7 +100,7 @@ class AtlasAgent:
         self.anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
         # Initialize conversation history
-        self.messages = []
+        self.messages: List[Dict[str, str]] = []
 
     def query_knowledge_base(self, query: str) -> List[Dict[str, Any]]:
         """Query the knowledge base for relevant information.
@@ -167,7 +165,7 @@ class AtlasAgent:
 
             # Generate response using Claude
             response = self.anthropic_client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-7-sonnet-20250219",
                 max_tokens=2000,
                 system=system_msg,
                 messages=self.messages,
@@ -189,6 +187,8 @@ class AtlasAgent:
 
 def parse_args():
     """Parse command-line arguments."""
+    import argparse
+
     parser = argparse.ArgumentParser(
         description="Atlas: Advanced Multi-Modal Learning & Guidance Framework",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -249,7 +249,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="claude-3-sonnet-20240229",
+        default="claude-3-7-sonnet-20250219",
         help="Claude model to use",
     )
     parser.add_argument(
@@ -297,7 +297,7 @@ def ingest_documents(args):
             "./src-markdown/quantum",
         ]
 
-        print(f"No directory specified. Using default directories:")
+        print("No directory specified. Using default directories:")
         for dir_path in default_dirs:
             print(f"  - {dir_path}")
 
@@ -330,18 +330,7 @@ def run_cli_mode(args):
     print("\nAtlas CLI Mode")
     print("-------------")
 
-    # Import and use config
-    from atlas.core.config import AtlasConfig
-
-    # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path,
-        model_name=args.model,
-        max_tokens=args.max_tokens,
-    )
-
-    # Initialize agent
+    # Initialize agent with collection name
     agent = AtlasAgent(
         system_prompt_file=args.system_prompt, collection_name=args.collection
     )
@@ -381,16 +370,7 @@ def run_query_mode(args):
         print("ERROR: Query parameter (-q/--query) is required for query mode.")
         return False
 
-    # Import and use config
-    from atlas.core.config import AtlasConfig
-
-    # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path,
-        model_name=args.model,
-        max_tokens=args.max_tokens,
-    )
+    # Process the query
 
     print(f"Processing query: {args.query}")
 

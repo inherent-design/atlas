@@ -1,34 +1,37 @@
 """
-Base agent implementation for Atlas.
+Multi-provider capable Atlas agent.
 
-This module defines the core Atlas agent functionality.
+This module defines an enhanced Atlas agent that can use various model providers.
 """
 
 import sys
 from typing import Dict, List, Any, Optional
 
-from anthropic import Anthropic
-
 from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
+from atlas.core.providers import create_provider, get_available_providers, ModelProvider
 from atlas.knowledge.retrieval import KnowledgeBase
 
 
-class AtlasAgent:
-    """Atlas agent for interacting with users."""
+class MultiProviderAgent:
+    """Atlas agent with support for multiple model providers."""
 
     def __init__(
         self,
         system_prompt_file: Optional[str] = None,
         collection_name: str = "atlas_knowledge_base",
         config: Optional[AtlasConfig] = None,
+        provider_name: str = "anthropic",
+        model_name: Optional[str] = None,
     ):
-        """Initialize the Atlas agent.
+        """Initialize the multi-provider Atlas agent.
 
         Args:
             system_prompt_file: Optional path to a file containing the system prompt.
             collection_name: Name of the Chroma collection to use.
             config: Optional configuration object. If not provided, default values are used.
+            provider_name: Name of the model provider to use (anthropic, openai, ollama).
+            model_name: Optional name of the specific model to use (defaults to provider's default).
         """
         # Initialize configuration (use provided or create default)
         self.config = config or AtlasConfig(collection_name=collection_name)
@@ -36,8 +39,17 @@ class AtlasAgent:
         # Load the system prompt
         self.system_prompt = load_system_prompt(system_prompt_file)
 
-        # Initialize the Anthropic client
-        self.anthropic_client = Anthropic(api_key=self.config.anthropic_api_key)
+        # Initialize model provider
+        try:
+            self.provider = create_provider(
+                provider_name=provider_name,
+                model_name=model_name or self.config.model_name,
+                max_tokens=self.config.max_tokens,
+            )
+            
+            print(f"Using {provider_name} provider with model: {self.provider.model_name}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize model provider: {str(e)}")
 
         # Initialize knowledge base
         self.knowledge_base = KnowledgeBase(
@@ -99,28 +111,24 @@ class AtlasAgent:
 
                 system_msg = system_msg + context_text
 
-            # Generate response using Claude
-            response = self.anthropic_client.messages.create(
-                model=self.config.model_name,
-                max_tokens=self.config.max_tokens,
-                system=system_msg,
+            # Generate response using configured model provider
+            response = self.provider.generate_response(
+                system_prompt=system_msg,
                 messages=self.messages,
+                max_tokens=self.config.max_tokens,
             )
 
             # Extract response text
-            assistant_message = response.content[0].text
+            assistant_message = response.content.text
             
             # Log usage statistics
-            if hasattr(response, 'usage'):
-                input_tokens = getattr(response.usage, 'input_tokens', 0)
-                output_tokens = getattr(response.usage, 'output_tokens', 0)
+            if response.usage:
+                input_tokens = response.usage.get("input_tokens", 0)
+                output_tokens = response.usage.get("output_tokens", 0)
                 print(f"API Usage: {input_tokens} input tokens, {output_tokens} output tokens")
                 
-                # Calculate cost (approximate, depends on the model)
-                # Claude 3 Sonnet: $3 per million input tokens, $15 per million output tokens
-                input_cost = (input_tokens / 1000000) * 3
-                output_cost = (output_tokens / 1000000) * 15
-                total_cost = input_cost + output_cost
+                # Calculate cost
+                input_cost, output_cost, total_cost = self.provider.calculate_cost(response.usage)
                 print(f"Estimated Cost: ${total_cost:.6f} (Input: ${input_cost:.6f}, Output: ${output_cost:.6f})")
             
             # Add assistant response to history
@@ -132,3 +140,20 @@ class AtlasAgent:
             print(f"Error processing message: {str(e)}")
             print(f"Error details: {sys.exc_info()}")
             return "I'm sorry, I encountered an error processing your request. Please try again."
+
+
+def list_available_providers() -> Dict[str, List[str]]:
+    """List all available model providers and their supported models.
+    
+    Returns:
+        Dictionary of provider names to lists of model names.
+    """
+    providers = get_available_providers()
+    
+    # Format for display
+    print("Available Model Providers:")
+    for provider, models in providers.items():
+        model_list = ", ".join(models)
+        print(f"  - {provider}: {model_list}")
+    
+    return providers

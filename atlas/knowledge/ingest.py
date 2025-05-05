@@ -10,7 +10,7 @@ import re
 import glob
 import sys
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional
 
 import chromadb
 import pathspec
@@ -48,7 +48,7 @@ class DocumentProcessor:
         print(f"ChromaDB persistence directory: {self.db_path}")
 
         # List contents of directory to debug
-        print(f"Current contents of DB directory:")
+        print("Current contents of DB directory:")
         try:
             for item in os.listdir(self.db_path):
                 item_path = os.path.join(self.db_path, item)
@@ -242,6 +242,7 @@ class DocumentProcessor:
                     "id": section_id,
                     "text": section["text"],
                     "metadata": {
+                        "path": rel_path,  # Add path field
                         "source": rel_path,
                         "file_name": file_name,
                         "section_title": section["title"],

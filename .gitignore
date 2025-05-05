@@ -4,7 +4,7 @@
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/
+**/$RECYCLE.BIN/
 *.cab
 *.msi
 *.msm
@@ -35,18 +35,18 @@ Temporary Items
 ### Editor Files ###
 
 # VS Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+**/.vscode/*
+!**/.vscode/settings.json
+!**/.vscode/tasks.json
+!**/.vscode/launch.json
+!**/.vscode/extensions.json
 
 # Sublime Text
 *.sublime-workspace
 *.sublime-project
 
 # JetBrains IDEs
-.idea/
+**/.idea/
 *.iml
 *.iws
 *.ipr
@@ -67,14 +67,14 @@ Session.vim
 ### Documentation Specific ###
 
 # Build output
-_site/
-public/
-dist/
-build/
+**/_site/
+**/public/
+**/dist/
+**/build/
 
 # Dependencies
-node_modules/
-vendor/
+**/node_modules/
+**/vendor/
 
 # Log files
 *.log
@@ -93,44 +93,47 @@ yarn-debug.log*
 ### Python Specific ###
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 
 # Distribution / packaging
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
+**/build/
+**/develop-eggs/
+**/dist/
+**/downloads/
+**/eggs/
+**/.eggs/
+**/lib/
+**/lib64/
+**/parts/
+**/sdist/
+**/var/
+**/wheels/
+**/*.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
 # Virtual environments
-venv/
-env/
-ENV/
-.venv/
-.env/
+**/venv/
+**/env/
+**/ENV/
+**/.venv/
+**/.env/
 .python-version
 
 # Linting / typechecking / formatting
-.ruff_cache/
-.mypy_cache/
+**/.ruff_cache/
+**/.mypy_cache/
 
 # Testing
-.pytest_cache/
+**/.pytest_cache/
 .coverage
-htmlcov/
-.tox/
+**/htmlcov/
+**/.tox/
+
+# Custom
+**/.claude/

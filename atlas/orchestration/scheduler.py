@@ -4,13 +4,10 @@ Task scheduling for Atlas agents.
 This module provides tools for scheduling and managing agent tasks.
 """
 
-import os
-import sys
 import time
 import uuid
-from typing import Dict, List, Any, Optional, Union, Callable
+from typing import Dict, Any, Optional, Union
 
-from atlas.core.config import AtlasConfig
 
 
 class Task:

@@ -1,6 +1,0 @@
-{
-  "permissions": {
-    "allow": ["Bash(rm:*)", "WebFetch(domain:*)", "Bash(uv run:*)"],
-    "deny": []
-  }
-}

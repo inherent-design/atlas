@@ -74,10 +74,10 @@ Before using Atlas, you need to ingest documentation:
 
 ```bash
 # Ingest default documentation
-python main.py -m ingest
+uv run python main.py -m ingest
 
 # Ingest from a specific directory
-python main.py -m ingest -d ./src-markdown/prev/v5
+uv run python main.py -m ingest -d ./src-markdown/prev/v5
 ```
 
 #### Interactive Chat
@@ -86,13 +86,17 @@ Start an interactive chat session with Atlas:
 
 ```bash
 # Basic CLI mode
-python main.py -m cli
+uv run python main.py -m cli
 
 # With custom system prompt
-python main.py -m cli -s path/to/your/system_prompt.md
+uv run python main.py -m cli -s path/to/your/system_prompt.md
+
+# Using different model providers
+uv run python main.py -m cli --provider openai --model gpt-4o
+uv run python main.py -m cli --provider ollama --model llama3
 
 # Advanced controller mode with parallel processing
-python main.py -m controller --parallel
+uv run python main.py -m controller --parallel
 ```
 
 #### Single Query
@@ -100,35 +104,111 @@ python main.py -m controller --parallel
 Run a single query without an interactive session:
 
 ```bash
-python main.py -m query -q "What is the trimodal methodology in Atlas?"
+uv run python main.py -m query -q "What is the trimodal methodology in Atlas?"
 ```
 
 ### Development
 
-#### Running Tests
+#### Utility Scripts
+
+Atlas includes a set of utility scripts for development, testing, and debugging, organized in the `atlas/scripts` module:
+
+1. **Debug Utilities** (`atlas/scripts/debug/`):
+   - `check_db.py` - Analyze and inspect ChromaDB database contents
+   - `check_models.py` - Test available model providers and their models
+
+2. **Testing Utilities** (`atlas/scripts/testing/`):
+   - `run_tests.py` - Unified test runner for all test types
+   - `test_query.py` - Run test queries with different providers
+   - `test_providers.py` - Compare different model providers
+
+These tools can be invoked either directly from their module paths or through convenience wrapper scripts in the project root.
+
+#### Testing Architecture
+
+Atlas provides a comprehensive testing framework with three levels of tests organized for maximum flexibility:
+
+1. **Mock Tests** (`atlas/tests/test_mock.py`) - Recommended for routine development:
+   - Uses unittest framework with proper assertions
+   - No API key required - all external dependencies are mocked
+   - Tests all components including cost tracking
+   - Organized by test classes for different components
+   - Very fast execution with zero API costs
+
+2. **Minimal Tests** (`atlas/tests/test_minimal.py`) - For basic verification:
+   - Lightweight tests that only verify core components
+   - No API key required
+   - Very quick to run
+   - Good for smoke testing during initial setup
+
+3. **API Tests** (`atlas/tests/test_api.py`) - For integration verification:
+   - Makes real API calls to Anthropic (requires API key)
+   - Tests the full integration with actual responses
+   - Provides cost tracking information in the output
+   - Can be scoped to test specific components
+   - Should be used sparingly due to API costs
+
+All tests share standardized helper functions defined in the `atlas/tests/helpers.py` module, which provides:
+- Mock response creation
+- Test configuration setup
+- Cost tracking verification
+- Utility functions for standard test assertions
+
+#### Running Tests and Utilities
+
+Use the unified test runner:
 
 ```bash
-# Run all tests
-uv run pytest
+# Run the preferred mock tests (no API key required)
+uv run python run_tests.py
 
-# Run specific test file
-uv run pytest test_atlas.py
+# Run minimal tests only
+uv run python run_tests.py -t minimal
 
-# Run with coverage
-uv run pytest --cov=atlas
+# Run specific API test (requires API key)
+uv run python run_tests.py -t api --api-test base
+
+# Run API test with custom query (requires API key)
+uv run python run_tests.py -t api --api-test base -q "Your query here"
+
+# Check available model providers and their models
+uv run python check_models.py --provider all
+
+# Inspect ChromaDB contents
+uv run python check_db.py
+
+# Test with different model providers
+uv run python test_providers.py --provider ollama --model llama3
+uv run python test_providers.py --provider openai --model gpt-4o -i
 ```
+
+> **Important Testing Notes:**
+>
+> 1. Always prefer the mock tests for routine development as they provide comprehensive coverage without API costs
+> 2. The API tests will make actual API calls and incur charges based on token usage
+> 3. When developing new features, first create mock tests before implementing the feature
+> 4. All tests automatically report API cost estimation when making real API calls
+
+#### Cost Tracking
+
+Atlas includes cost tracking for API calls to Anthropic. When running real tests with an API key, the system will report:
+- Input tokens used and their cost
+- Output tokens used and their cost
+- Total API cost for the operation
+
+This feature helps monitor usage during development and testing to avoid unexpected charges.
 
 #### Code Quality
 
 ```bash
 # Run linting
-uv run ruff .
+uv tool run ruff check
 
 # Run type checking
-uv run mypy .
+uv tool run mypy .
 
 # Format code
-uv run black .
+uv tool run black .
 ```
 
 ## Architecture
@@ -166,6 +246,23 @@ atlas/
 │   ├── coordinator.py       # Agent coordination
 │   ├── parallel.py          # Parallel processing
 │   └── scheduler.py         # Task scheduling
+├── scripts/                 # Utility scripts
+│   ├── __init__.py
+│   ├── debug/               # Debugging utilities
+│   │   ├── __init__.py
+│   │   ├── check_db.py      # Database inspection
+│   │   └── check_models.py  # Model provider testing
+│   └── testing/             # Testing utilities
+│       ├── __init__.py
+│       ├── run_tests.py     # Test runner
+│       ├── test_query.py    # Query testing
+│       └── test_providers.py # Provider testing
+├── tests/                   # Test modules
+│   ├── __init__.py
+│   ├── helpers.py           # Test helper functions
+│   ├── test_mock.py         # Mock tests without API calls
+│   ├── test_minimal.py      # Minimal tests for setup verification
+│   └── test_api.py          # API integration tests
 └── tools/                   # Tool implementations
     ├── __init__.py
     └── utils.py             # Utility functions
@@ -200,6 +297,16 @@ Atlas integrates multiple approaches to knowledge management through a layered a
 3. **Temporal Layer**: Knowledge evolution, versioning, history preservation, and future projection
 4. **Knowledge Layer**: Graph fundamentals, partitioning systems, perspective frameworks, and trimodal integration
 
+### Multi-Provider Model Support
+
+Atlas supports multiple model providers beyond the default Anthropic Claude models:
+
+1. **Anthropic Claude**: High-quality reasoning models (default)
+2. **OpenAI GPT**: Versatile language models with wide capabilities
+3. **Ollama**: Local, self-hosted models for privacy or cost-sensitive applications
+
+See [Model Providers Documentation](docs/MODEL_PROVIDERS.md) for detailed usage instructions.
+
 ### Quantum Knowledge Representation System
 
 The framework includes an LLM-optimized knowledge representation language designed for maximum semantic density with minimal token usage, enabling complex knowledge structures to be compressed without information loss.
@@ -211,6 +318,37 @@ The framework includes an LLM-optimized knowledge representation language design
 3. **Trimodal Methodology**: Balanced approach integrating bottom-up, top-down, and holistic perspectives
 4. **Temporal Evolution**: Advanced patterns for tracking knowledge development over time
 5. **Knowledge Graph Framework**: Directed relationship structures with specialized edge and node types
+6. **API Cost Tracking**: Monitoring token usage and estimated costs during development
+7. **Provider Abstraction**: Seamless switching between different model providers
+
+## Future Vision
+
+Atlas is evolving toward a fully distributed multi-agent framework with the following target capabilities:
+
+### 1. Quantum-Inspired Knowledge Architecture
+- Process multiple knowledge partitions simultaneously
+- Automatically identify natural conceptual boundaries in complex knowledge spaces
+- Maintain multiple interpretations of knowledge simultaneously
+
+### 2. Advanced Multi-Agent Orchestration
+- Dynamically adjust agent relationships based on task requirements
+- Enable diverse agent types with complementary capabilities
+- Break complex problems into optimal sub-tasks automatically
+
+### 3. Perspective-Driven Knowledge Graph
+- Navigate knowledge from different technical and functional viewpoints
+- Adjust information relevance based on user context
+- Focus on relationships between concepts rather than isolated facts
+
+### 4. Continuous Self-Improvement
+- Track efficiency and quality metrics for ongoing optimization
+- Optimize token usage based on task importance (✅ Started with API cost tracking)
+- Identify reusable patterns across different domains
+
+### 5. Seamless Human-AI Collaboration
+- Understand user needs beyond explicit queries
+- Adapt guidance based on user expertise level
+- Make agent decision processes transparent and understandable
 
 ## Development Roadmap
 

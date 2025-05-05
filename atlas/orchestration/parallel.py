@@ -4,13 +4,10 @@ Parallel processing for Atlas agents.
 This module provides tools for running agents in parallel.
 """
 
-import os
-import sys
 import asyncio
 import concurrent.futures
-from typing import Dict, List, Any, Optional, Union, Callable, Awaitable
+from typing import Dict, List, Any
 
-from atlas.core.config import AtlasConfig
 from atlas.agents.worker import WorkerAgent
 
 

@@ -4,7 +4,7 @@ State management for LangGraph in Atlas.
 This module defines the state models used in LangGraph workflows.
 """
 
-from typing import Dict, List, Any, Optional, TypedDict, Union
+from typing import Dict, List, Any, Optional, TypedDict
 
 from pydantic import BaseModel, Field
 

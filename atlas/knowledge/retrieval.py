@@ -34,7 +34,7 @@ class KnowledgeBase:
         print(f"ChromaDB persistence directory: {self.db_path}")
 
         # List contents of directory to debug
-        print(f"Current contents of DB directory:")
+        print("Current contents of DB directory:")
         try:
             for item in os.listdir(self.db_path):
                 item_path = os.path.join(self.db_path, item)

@@ -4,10 +4,9 @@ Workflow definitions for LangGraph in Atlas.
 This module defines the graph workflows used by Atlas agents.
 """
 
-from typing import Dict, Any, Optional, Union, TypedDict, Annotated
+from typing import Dict, Any, Optional
 
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint import MemorySaver
 
 from atlas.core.config import AtlasConfig
 from atlas.graph.state import AgentState, ControllerState
@@ -86,8 +85,20 @@ def create_controller_worker_graph(
     builder.add_node("process_worker_results", process_worker_results)
     builder.add_node("generate_final_response", final_response)
 
-    # Add router node
-    builder.add_router("route_workers", route_to_workers)
+    # Add conditional edges for routing (instead of using router)
+    builder.add_node("route_workers", route_to_workers)
+    builder.add_conditional_edges(
+        "route_workers",
+        lambda x: x,
+        {
+            "generate_final_response": lambda state: state.all_tasks_completed,
+            "create_worker_tasks": lambda state: not state.all_tasks_assigned,
+            "process_worker_results": lambda state: (
+                state.all_tasks_assigned and 
+                len(state.completed_workers) >= len(state.active_workers)
+            )
+        }
+    )
 
     # Define edges
     builder.add_edge("retrieve_knowledge", "route_workers")

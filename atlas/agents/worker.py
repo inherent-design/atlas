@@ -4,17 +4,12 @@ Worker agent for the Atlas framework.
 This module implements the worker agents that perform specialized tasks.
 """
 
-import os
 import sys
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, Any, Optional
 
-from anthropic import Anthropic
 
-from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
-from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.agents.base import AtlasAgent
-from atlas.graph.workflows import run_rag_workflow
 
 
 class WorkerAgent(AtlasAgent):

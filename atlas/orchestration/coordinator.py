@@ -4,13 +4,9 @@ Agent coordination for Atlas.
 This module provides tools for coordinating multiple agents.
 """
 
-import os
-import sys
-import asyncio
-from typing import Dict, List, Any, Optional, Union, Callable
+from typing import Dict, Any, Optional
 
 from atlas.core.config import AtlasConfig
-from atlas.agents.base import AtlasAgent
 from atlas.agents.worker import (
     WorkerAgent,
     RetrievalWorker,
@@ -43,7 +39,7 @@ class AgentCoordinator:
             collection_name=collection_name,
             parallel_enabled=True,
             worker_count=worker_count,
-            model_name="claude-3-sonnet-20240229",
+            model_name="claude-3-7-sonnet-20250219",
             max_tokens=2000,
         )
 
