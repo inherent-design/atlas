@@ -24,7 +24,7 @@
 }
 
 .VPFeature::after {
-  content: '';
+  content: "";
   position: absolute;
   z-index: 2;
 
@@ -36,9 +36,7 @@
 
   border-radius: inherit;
 
-  transition:
-    opacity 0.12s ease-in-out,
-    background-color 0.12s ease-in-out;
+  transition: opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
   background-color: var(--vp-c-gray-soft);
   opacity: 0;
 }
@@ -61,14 +59,12 @@
   transform: rotate(-10deg);
   opacity: 0.1;
 
-  transition:
-    filter 0.12s ease-in-out,
-    transform 0.12s ease-in-out,
+  transition: filter 0.12s ease-in-out, transform 0.12s ease-in-out,
     opacity 0.12s ease-in-out;
 }
 
 .VPFeature:hover .box .icon {
-  filter: saturate(1) contrast(0.8) brightness(0.8);
+  filter: saturate(3.3) contrast(1.3) brightness(0.8);
   transform: rotate(-5deg) scale(1.08) translateX(0.7rem);
   opacity: 0.12;
 }
@@ -91,6 +87,50 @@
 
 /* Mermaid diagrams */
 
+:root {
+  /* Pastel palette - Light mode mermaid variables */
+  --mermaid-bg: transparent;
+  --mermaid-edge-color: var(--vp-c-brand-1);
+  --mermaid-node-bg: var(--vp-c-bg-soft);
+  --mermaid-node-border: var(--vp-c-divider);
+  --mermaid-text-color: var(--vp-c-text-1);
+  --mermaid-label-bg: rgba(255, 255, 255, 0.7);
+
+  /* Pastel color palette for diagram elements */
+  --mermaid-primary-color: #92b4f4; /* Soft blue */
+  --mermaid-primary-border: #5e83c2; /* Darker blue */
+  --mermaid-info-color: #9ce3ff; /* Light cyan */
+  --mermaid-info-border: #5aafcf; /* Darker cyan */
+  --mermaid-success-color: #a8e4b1; /* Soft green */
+  --mermaid-success-border: #62a56c; /* Darker green */
+  --mermaid-warning-color: #ffe3a0; /* Soft yellow */
+  --mermaid-warning-border: #d1b667; /* Darker yellow */
+  --mermaid-danger-color: #fec0c7; /* Soft red */
+  --mermaid-danger-border: #cf7f8a; /* Darker red */
+}
+
+.dark {
+  /* Dark mode mermaid variables - darker but still readable versions */
+  --mermaid-node-bg: var(--vp-c-bg-soft);
+  --mermaid-node-border: var(--vp-c-divider);
+  --mermaid-text-color: var(--vp-c-text-1);
+  --mermaid-label-bg: rgba(30, 30, 30, 0.7);
+  --mermaid-edge-color: var(--vp-c-brand-1);
+
+  /* Dark mode pastel palette - slightly brighter for dark backgrounds */
+  --mermaid-primary-color: #4a75d6; /* Deeper blue */
+  --mermaid-primary-border: #2c4580; /* Dark blue */
+  --mermaid-info-color: #41a8cf; /* Deeper cyan */
+  --mermaid-info-border: #266f8c; /* Dark cyan */
+  --mermaid-success-color: #50a85e; /* Deeper green */
+  --mermaid-success-border: #2e6237; /* Dark green */
+  --mermaid-warning-color: #d9bc57; /* Amber */
+  --mermaid-warning-border: #8a762f; /* Dark amber */
+  --mermaid-danger-color: #d2666f; /* Rose */
+  --mermaid-danger-border: #8c4147; /* Dark rose */
+}
+
+/* Basic container styling */
 .mermaid {
   margin: 2rem 0;
   max-width: 100%;
@@ -98,8 +138,138 @@
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
+  background-color: var(--mermaid-bg);
 }
 
 .mermaid svg {
   display: inline-block;
+  max-width: 100%;
+}
+
+/* Basic label styling */
+.mermaid .label {
+  color: var(--mermaid-text-color);
+  font-weight: 500;
+}
+
+.mermaid .node .label foreignObject div {
+  color: currentColor !important;
+}
+
+/* Edge label styling */
+.mermaid .edgeLabel {
+  color: var(--mermaid-text-color) !important;
+  background-color: var(--mermaid-label-bg) !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+}
+
+/* Fix for flowchart edge labels */
+.mermaid g.edgeLabel {
+  background-color: var(--mermaid-label-bg) !important;
+  border-radius: 4px;
+  opacity: 1 !important;
+}
+
+.mermaid g.edgeLabel span,
+.mermaid g.edgeLabel div,
+.mermaid g.edgeLabel foreignObject {
+  color: var(--mermaid-text-color) !important;
+  background-color: var(--mermaid-label-bg) !important;
+  padding: 1px 4px !important;
+  display: inline-block !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
+
+/* Fix for TD/LR flowcharts specifically */
+.mermaid .flowchart-link {
+  stroke: var(--mermaid-edge-color) !important;
+  stroke-width: 2px;
+}
+
+.mermaid .marker {
+  fill: var(--mermaid-edge-color) !important;
+  stroke: var(--mermaid-edge-color) !important;
+}
+
+/* Force text visibility */
+.mermaid text {
+  fill: var(--mermaid-text-color) !important;
+  font-family: var(--vp-font-family-base) !important;
+}
+
+/* Standard class styling for Mermaid diagrams */
+.mermaid .node.primary rect,
+.mermaid .node.primary circle,
+.mermaid .node.primary ellipse,
+.mermaid .node.primary polygon {
+  fill: var(--mermaid-primary-color) !important;
+  stroke: var(--mermaid-primary-border) !important;
+}
+
+.mermaid .node.info rect,
+.mermaid .node.info circle,
+.mermaid .node.info ellipse,
+.mermaid .node.info polygon {
+  fill: var(--mermaid-info-color) !important;
+  stroke: var(--mermaid-info-border) !important;
+}
+
+.mermaid .node.success rect,
+.mermaid .node.success circle,
+.mermaid .node.success ellipse,
+.mermaid .node.success polygon {
+  fill: var(--mermaid-success-color) !important;
+  stroke: var(--mermaid-success-border) !important;
+}
+
+.mermaid .node.warning rect,
+.mermaid .node.warning circle,
+.mermaid .node.warning ellipse,
+.mermaid .node.warning polygon {
+  fill: var(--mermaid-warning-color) !important;
+  stroke: var(--mermaid-warning-border) !important;
+}
+
+.mermaid .node.danger rect,
+.mermaid .node.danger circle,
+.mermaid .node.danger ellipse,
+.mermaid .node.danger polygon {
+  fill: var(--mermaid-danger-color) !important;
+  stroke: var(--mermaid-danger-border) !important;
+}
+
+/* Text color fixes for standard classes - light mode */
+.mermaid .node.primary .label,
+.mermaid .node.info .label,
+.mermaid .node.success .label {
+  color: #333 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+.mermaid .node.danger .label {
+  color: #333 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+.mermaid .node.warning .label {
+  color: #333 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Dark mode text adjustments */
+.dark .mermaid .node.primary .label,
+.dark .mermaid .node.info .label,
+.dark .mermaid .node.success .label,
+.dark .mermaid .node.danger .label {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
+}
+
+.dark .mermaid .node.warning .label {
+  color: #333 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.7) !important;
 }

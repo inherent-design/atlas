@@ -11,25 +11,25 @@ graph TD
     UI --> AppController{Application Controller}
     AppController --> DBConnector[ChromaDB Connector]
     DBConnector --> ChromaDB[(ChromaDB)]
-    
+
     %% Data Processing Components
     DBConnector --> CollectionManager[Collection Manager]
     CollectionManager --> QueryEngine[Query Engine]
     QueryEngine --> ResultProcessor[Result Processor]
     ResultProcessor --> UI
-    
+
     %% Visualization Components
     UI --> VisualizationEngine[Visualization Engine]
     VisualizationEngine --> DocumentViewer[Document Viewer]
     VisualizationEngine --> GraphView[Embedding Graph View]
     VisualizationEngine --> MetadataView[Metadata Explorer]
-    
+
     %% System Integrations
     AppController <--> AtlasIntegration[Atlas Integration]
     AtlasIntegration <--> ExistingSystem[Existing Atlas System]
-    
-    class User,ChromaDB,ExistingSystem emphasis
-    classDef emphasis fill:#f9f,stroke:#333,stroke-width:2px
+
+    %% Style is centralized in theme/custom.css
+    class User,ChromaDB,ExistingSystem primary
 ```
 
 ## Component Layers
@@ -46,7 +46,7 @@ graph TD
         MetadataPanel[Metadata Explorer]
         VectorView[Vector Visualization]
     end
-    
+
     %% Business Logic Layer
     subgraph LogicLayer["Business Logic Layer"]
         AppController[Application Controller]
@@ -56,26 +56,22 @@ graph TD
         FilterEngine[Filter Engine]
         ExportManager[Export Manager]
     end
-    
+
     %% Data Layer
     subgraph DataLayer["Data Layer"]
         ChromaDB[(ChromaDB)]
         EmbeddingCache[(Embedding Cache)]
         ConfigStore[(Configuration)]
     end
-    
+
     %% Connection between layers
     UILayer --> LogicLayer
     LogicLayer --> DataLayer
-    
-    %% Style definitions
-    classDef ui fill:#d4f4fa,stroke:#333,stroke-width:1px
-    classDef logic fill:#fffacd,stroke:#333,stroke-width:1px
-    classDef data fill:#e6ffe6,stroke:#333,stroke-width:1px
-    
-    class UIMain,NavPanel,SearchBar,ResultList,DetailView,MetadataPanel,VectorView ui
-    class AppController,DBConnector,QueryEngine,ResultProcessor,FilterEngine,ExportManager logic
-    class ChromaDB,EmbeddingCache,ConfigStore data
+
+    %% Style is centralized in theme/custom.css
+    class UIMain,NavPanel,SearchBar,ResultList,DetailView,MetadataPanel,VectorView info
+    class AppController,DBConnector,QueryEngine,ResultProcessor,FilterEngine,ExportManager success
+    class ChromaDB,EmbeddingCache,ConfigStore primary
 ```
 
 ## User Interaction Flow
@@ -87,7 +83,7 @@ sequenceDiagram
     participant Controller as App Controller
     participant Connector as DB Connector
     participant DB as ChromaDB
-    
+
     %% Initial load
     User->>UI: Launch ChromaDB Viewer
     UI->>Controller: Initialize
@@ -96,7 +92,7 @@ sequenceDiagram
     DB-->>Connector: Collections Data
     Connector-->>Controller: Available Collections
     Controller-->>UI: Display Collections
-    
+
     %% Collection Selection
     User->>UI: Select Collection
     UI->>Controller: Set Active Collection
@@ -105,7 +101,7 @@ sequenceDiagram
     DB-->>Connector: Collection Metadata
     Connector-->>Controller: Collection Info
     Controller-->>UI: Update Collection View
-    
+
     %% Search Flow
     User->>UI: Enter Search Query
     UI->>Controller: Process Search
@@ -125,7 +121,7 @@ sequenceDiagram
     participant Controller as App Controller
     participant Connector as DB Connector
     participant DB as ChromaDB
-    
+
     %% Document Selection
     User->>UI: Select Document
     UI->>Controller: Get Document Details
@@ -134,7 +130,7 @@ sequenceDiagram
     DB-->>Connector: Document Data
     Connector-->>Controller: Processed Document
     Controller-->>UI: Show Document Details
-    
+
     %% Export Functionality
     User->>UI: Export Results
     UI->>Controller: Request Export
@@ -154,23 +150,28 @@ flowchart TD
     ChromaDB[(ChromaDB)] --> |Collections| DBConnector
     DBConnector --> |Collection Metadata| AppController
     AppController --> |Collections List| NavPanel
-    
+
     NavPanel[Collection Selector] --> |Selected Collection| AppController
     AppController --> |Load Collection| DBConnector
-    
+
     SearchBar[Search Interface] --> |Query| AppController
     AppController --> |Process Query| QueryEngine
     QueryEngine --> |Execute| DBConnector
     DBConnector --> |Raw Results| QueryEngine
     QueryEngine --> |Processed Results| AppController
     AppController --> |Display Results| ResultList[Results List]
-    
+
     ResultList --> |Selected Document| AppController
     AppController --> |Load Document| DBConnector
     DBConnector --> |Document Data| AppController
     AppController --> |Content| DetailView[Document View]
     AppController --> |Metadata| MetadataPanel[Metadata Explorer]
     AppController --> |Vectors| VectorView[Vector Visualization]
+    
+    %% Use standard styling defined in the theme
+    class ChromaDB primary
+    class DBConnector,AppController,QueryEngine success
+    class NavPanel,SearchBar,ResultList,DetailView,MetadataPanel,VectorView info
 ```
 
 ## Component Descriptions
@@ -280,78 +281,78 @@ def main():
     # Sidebar for configuration
     st.sidebar.header("Configuration")
     db_path = st.sidebar.text_input("ChromaDB Path", value=str(Path.home() / "atlas_chroma_db"))
-    
+
     # Connect to ChromaDB
     client = connect_to_chromadb(db_path)
-    
+
     if client:
         # Get collections
         collections = get_collections(client)
         collection_names = [c.name for c in collections]
-        
+
         if collection_names:
             selected_collection = st.sidebar.selectbox("Select Collection", collection_names)
             collection = client.get_collection(selected_collection)
-            
+
             # Display collection info
             count = collection.count()
             st.header(f"Collection: {selected_collection} ({count} documents)")
-            
+
             # Search interface
             st.subheader("Search")
             query = st.text_input("Enter search query")
             n_results = st.slider("Number of results", 1, 50, 10)
-            
+
             if query:
                 results = search_collection(collection, query, n_results)
-                
+
                 # Display results
                 if results["documents"][0]:
                     st.subheader(f"Results ({len(results['documents'][0])} documents)")
-                    
+
                     # Create a dataframe for better display
                     results_df = pd.DataFrame({
                         "ID": results["ids"][0],
                         "Document": [doc[:300] + "..." if len(doc) > 300 else doc for doc in results["documents"][0]],
                         "Distance": results["distances"][0] if "distances" in results else [0] * len(results["ids"][0]),
                     })
-                    
+
                     st.dataframe(results_df)
-                    
+
                     # Document viewer
                     st.subheader("Document Viewer")
                     selected_id = st.selectbox("Select document to view", results["ids"][0])
-                    
+
                     idx = results["ids"][0].index(selected_id)
                     document = results["documents"][0][idx]
                     metadata = results["metadatas"][0][idx] if results["metadatas"][0] else {}
-                    
+
                     # Display document content
                     st.text_area("Content", document, height=300)
-                    
+
                     # Display metadata
                     st.subheader("Metadata")
                     st.json(metadata)
-                    
+
                     # If embeddings are available, visualize
                     if "embeddings" in results and results["embeddings"][0]:
                         st.subheader("Vector Visualization")
                         # Use PCA to reduce dimensions for visualization
                         from sklearn.decomposition import PCA
-                        
+
                         embeddings = np.array(results["embeddings"][0])
                         pca = PCA(n_components=3)
                         components = pca.fit_transform(embeddings)
-                        
+
                         df = pd.DataFrame(components, columns=["x", "y", "z"])
                         df["id"] = results["ids"][0]
-                        
+
                         fig = px.scatter_3d(df, x="x", y="y", z="z", hover_name="id")
                         st.plotly_chart(fig)
-                
+
                 else:
                     st.info("No results found.")
-            
+
         else:
             st.warning("No collections found in the database.")
     else:

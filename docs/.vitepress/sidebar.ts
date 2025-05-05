@@ -1,27 +1,46 @@
 import { DefaultTheme } from "vitepress";
 
-// Utility function to create a TODO item
-const todoItem = (text: string, link: string): DefaultTheme.SidebarItem => ({
-  text: `⏳ ${text}`,
-  link,
-});
+// Utility function to create a status-marked item
+const statusItem = (text: string, link: string, status: "done" | "progress" | "planned"): DefaultTheme.SidebarItem => {
+  const icons = {
+    done: "✅",
+    progress: "🚧",
+    planned: "⏱️"
+  };
+  return {
+    text: `${icons[status]} ${text}`,
+    link
+  };
+};
 
 // Complete sidebar configuration based on documentation structure
 export const sidebar: DefaultTheme.Sidebar = [
   {
-    text: "Models",
-    link: "/models",
+    text: "Getting Started",
+    items: [
+      { text: "Overview", link: "/" },
+      statusItem("MVP Strategy", "/MVP_STRATEGY", "done"),
+      statusItem("Implementation Plan", "/TODO", "done"),
+    ]
   },
   {
-    text: "Environment Variables",
-    link: "/env_variables",
+    text: "Development",
+    items: [
+      statusItem("Testing Guide", "/TESTING", "done"),
+      statusItem("Environment Variables", "/ENV_VARIABLES", "done"),
+    ]
   },
   {
-    text: "Testing",
-    link: "/testing",
+    text: "Configuration",
+    items: [
+      statusItem("Models", "/MODELS", "done"),
+      statusItem("Model Providers", "/MODEL_PROVIDERS", "done"),
+    ]
   },
   {
-    text: "Chroma DB Viewer",
-    link: "/chromadb_viewer",
+    text: "Tools & Utilities",
+    items: [
+      statusItem("ChromaDB Viewer", "/CHROMADB_VIEWER", "done"),
+    ]
   },
 ];

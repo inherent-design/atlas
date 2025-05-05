@@ -344,9 +344,31 @@ Atlas is evolving toward a fully distributed multi-agent framework with the foll
 - Adapt guidance based on user expertise level
 - Make agent decision processes transparent and understandable
 
-## Development Roadmap
+## Documentation
 
-See `TODO.md` for a detailed implementation plan and roadmap.
+Atlas provides comprehensive documentation in the `docs/` directory:
+
+- **[MVP Strategy](docs/MVP_STRATEGY.md)**: Implementation strategy for the minimum viable product
+- **[Implementation Plan](docs/TODO.md)**: Detailed roadmap and task checklist
+- **[Testing Guide](docs/TESTING.md)**: Comprehensive testing approach and patterns
+- **[Environment Variables](docs/ENV_VARIABLES.md)**: Configuration options via environment variables
+- **[Models](docs/MODELS.md)**: Supported language models and capabilities
+- **[Model Providers](docs/MODEL_PROVIDERS.md)**: Available model providers and their integration
+- **[ChromaDB Viewer](docs/CHROMADB_VIEWER.md)**: Tools for inspecting the vector database
+
+To view the documentation with proper formatting:
+```bash
+# Navigate to the docs directory
+cd docs
+
+# Install dependencies
+npm install
+
+# Start the documentation server
+npm run dev
+```
+
+Then open your browser to `http://localhost:5173/atlas/` to browse the documentation.
 
 ## Contributing
 
