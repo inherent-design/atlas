@@ -137,3 +137,6 @@ MANIFEST
 
 # Custom
 **/.claude/
+
+**/.vitepress/cache/
+**/.vitepress/dist/
