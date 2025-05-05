@@ -1,0 +1,29 @@
+{
+  "author": "zer0cell",
+  "devDependencies": {
+    "@braintree/sanitize-url": "^7.1.1",
+    "cytoscape": "^3.32.0",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "dayjs": "^1.11.13",
+    "debug": "^4.4.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "vitepress": "^1.6.3",
+    "vitepress-markdown-timeline": "^1.2.2",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "name": "@inherent-design/atlas",
+  "packageManager": "pnpm@10.10.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inherent-design/atlas.git"
+  },
+  "scripts": {
+    "build": "vitepress build",
+    "dev": "vitepress dev",
+    "preview": "vitepress preview"
+  },
+  "type": "module",
+  "version": "1.0.0"
+}

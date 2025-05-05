@@ -126,33 +126,27 @@ These tools can be invoked either directly from their module paths or through co
 
 #### Testing Architecture
 
-Atlas provides a comprehensive testing framework with three levels of tests organized for maximum flexibility:
+Atlas follows a standardized testing approach with all tests located in the `atlas/tests/` directory. See [Testing Documentation](docs/TESTING.md) for comprehensive details.
 
-1. **Mock Tests** (`atlas/tests/test_mock.py`) - Recommended for routine development:
-   - Uses unittest framework with proper assertions
+The testing framework includes:
+
+1. **Unit Tests** (`atlas/tests/test_*.py`):
+   - Tests for specific modules (e.g., `test_models.py`, `test_env.py`)
+   - Uses Python's unittest framework 
+   - Includes mocked components to avoid external dependencies
+
+2. **Mock Tests** (`atlas/tests/test_mock.py`) - Recommended for routine development:
    - No API key required - all external dependencies are mocked
-   - Tests all components including cost tracking
-   - Organized by test classes for different components
    - Very fast execution with zero API costs
+   - Suitable for continuous integration
 
-2. **Minimal Tests** (`atlas/tests/test_minimal.py`) - For basic verification:
-   - Lightweight tests that only verify core components
-   - No API key required
-   - Very quick to run
-   - Good for smoke testing during initial setup
-
-3. **API Tests** (`atlas/tests/test_api.py`) - For integration verification:
-   - Makes real API calls to Anthropic (requires API key)
-   - Tests the full integration with actual responses
-   - Provides cost tracking information in the output
-   - Can be scoped to test specific components
+3. **Integration Tests** (`atlas/tests/test_api.py`):
+   - Tests full system integration with real components
+   - Makes real API calls (requires API key)
+   - Provides cost tracking information
    - Should be used sparingly due to API costs
 
-All tests share standardized helper functions defined in the `atlas/tests/helpers.py` module, which provides:
-- Mock response creation
-- Test configuration setup
-- Cost tracking verification
-- Utility functions for standard test assertions
+All tests share standardized helper functions defined in the `atlas/tests/helpers.py` module and follow consistent patterns.
 
 #### Running Tests and Utilities
 

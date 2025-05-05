@@ -1,0 +1,233 @@
+# Environment Variables in Atlas
+
+This document provides a comprehensive guide to all environment variables used in the Atlas framework.
+
+## Environment Variable Handling
+
+Atlas uses a centralized environment variable management system through the `atlas.core.env` module. This ensures consistent handling of environment variables across the codebase and provides proper validation and type conversion.
+
+### Loading Environment Variables
+
+Environment variables can be set directly in the shell or through a `.env` file in the project root. The `.env` file is loaded automatically when the application starts, but you can also specify a custom path using the `ATLAS_ENV_PATH` environment variable.
+
+Environment variables are loaded from the following sources, in order of precedence:
+1. OS environment variables (highest precedence)
+2. `.env` file (lower precedence)
+
+Example `.env` file:
+```bash
+# API Keys
+ANTHROPIC_API_KEY=your_anthropic_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+# Configuration
+ATLAS_ENABLE_TELEMETRY=true
+ATLAS_TELEMETRY_LOG_LEVEL=INFO
+ATLAS_DB_PATH=/path/to/atlas_db
+```
+
+### Accessing Environment Variables
+
+Always use the `atlas.core.env` module to access environment variables instead of using `os.environ` directly. This ensures consistent handling and proper validation.
+
+```python
+from atlas.core import env
+
+# Get a string value with a default
+api_endpoint = env.get_string("API_ENDPOINT", default="https://api.example.com")
+
+# Get a required string value (raises ValueError if not present)
+api_key = env.get_required_string("API_KEY")
+
+# Get an integer value
+timeout = env.get_int("TIMEOUT", default=30)
+
+# Get a float value
+threshold = env.get_float("THRESHOLD", default=0.75)
+
+# Get a boolean value
+debug_mode = env.get_bool("DEBUG_MODE", default=False)
+
+# Get a list of values from a comma-separated string
+allowed_hosts = env.get_list("ALLOWED_HOSTS", default=["localhost"])
+
+# Check if an API key is available
+has_openai = env.has_api_key("openai")
+
+# Get an API key
+anthropic_key = env.get_api_key("anthropic")
+
+# Set an environment variable
+env.set_env_var("CUSTOM_VAR", "custom_value")
+
+# Load environment from a specific .env file
+env.load_env_file("/path/to/.env")
+
+# Get all available providers
+providers = env.get_available_providers()
+
+# Validate required variables
+missing = env.validate_required_vars(["API_KEY", "DB_PATH"])
+```
+
+## Available Environment Variables
+
+### Core Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ATLAS_ENV_PATH` | Path to .env file | No | `.env` in current directory |
+| `ATLAS_LOG_LEVEL` | Logging level | No | `INFO` |
+| `SKIP_API_KEY_CHECK` | Skip API key validation | No | `false` |
+
+### API Keys
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ANTHROPIC_API_KEY` | API key for Anthropic Claude | Required for Anthropic | None |
+| `OPENAI_API_KEY` | API key for OpenAI | Required for OpenAI | None |
+| `OPENAI_ORGANIZATION` | Organization ID for OpenAI | No | None |
+
+### Telemetry
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ATLAS_ENABLE_TELEMETRY` | Enable or disable telemetry | No | `true` |
+| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for telemetry | No | `true` |
+| `ATLAS_TELEMETRY_LOG_LEVEL` | Log level for telemetry | No | `INFO` |
+
+### Database
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ATLAS_DB_PATH` | Path to ChromaDB database | No | `~/atlas_chroma_db` |
+| `ATLAS_COLLECTION_NAME` | ChromaDB collection name | No | `atlas_knowledge_base` |
+
+### Model Settings
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ATLAS_DEFAULT_PROVIDER` | Default model provider | No | `anthropic` |
+| `ATLAS_DEFAULT_MODEL` | Default model to use | No | `claude-3-7-sonnet-20250219` |
+| `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | No | `2000` |
+
+### Development and Testing
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ATLAS_DEV_MODE` | Enable development mode | No | `false` |
+| `ATLAS_MOCK_API` | Use mock API responses | No | `false` |
+
+## Adding New Environment Variables
+
+When adding new environment variables to the codebase:
+
+1. Always use the `atlas.core.env` module to access them
+2. Add documentation for the new variables in this file
+3. Update any relevant configuration classes to use the new variables
+4. Add validation for required variables
+5. Register new provider API key variables with `register_api_key_var`
+
+## Using the env.py Module
+
+The `atlas/core/env.py` module provides a centralized way to access environment variables. Here are some examples of how to use it:
+
+### Basic Usage
+
+```python
+from atlas.core import env
+
+# Get a string value (returns None if not set)
+api_key = env.get_string("ANTHROPIC_API_KEY")
+
+# Get a string with default value
+log_level = env.get_string("ATLAS_LOG_LEVEL", "INFO")
+
+# Get a boolean value
+telemetry_enabled = env.get_bool("ATLAS_ENABLE_TELEMETRY", True)
+
+# Get an integer value
+max_tokens = env.get_int("ATLAS_MAX_TOKENS", 2000)
+
+# Get a required value (raises ValueError if not set)
+required_key = env.get_required_string("ANTHROPIC_API_KEY")
+```
+
+### Provider-Specific Functions
+
+```python
+from atlas.core import env
+
+# Check if a provider's API key is available
+if env.has_api_key("anthropic"):
+    # Use Anthropic provider
+    api_key = env.get_api_key("anthropic")
+    # Initialize Anthropic client...
+
+# Get all available providers
+providers = env.get_available_providers()
+for provider, available in providers.items():
+    if available:
+        print(f"Provider {provider} is available")
+```
+
+### Validating Required Variables
+
+```python
+from atlas.core import env
+
+# Check if all required variables are present
+missing = env.validate_required_vars(["ANTHROPIC_API_KEY", "ATLAS_DB_PATH"])
+if missing:
+    print(f"Missing required environment variables: {', '.join(missing)}")
+    # Handle missing variables...
+```
+
+### Setting Environment Variables
+
+```python
+from atlas.core import env
+
+# Set an environment variable
+env.set_env_var("ATLAS_CUSTOM_SETTING", "custom_value")
+
+# Set a variable without updating os.environ (for testing)
+env.set_env_var("ATLAS_TEST_VAR", "test_value", update_os_environ=False)
+```
+
+### Working with .env Files
+
+```python
+from atlas.core import env
+
+# Load a specific .env file
+env.load_env_file("/path/to/.env")
+
+# Force reload all environment variables
+env.load_environment(force_reload=True)
+```
+
+### Registering Custom Providers
+
+```python
+from atlas.core import env
+
+# Register a new provider with its API key environment variable
+env.register_api_key_var("custom_provider", "CUSTOM_PROVIDER_API_KEY")
+
+# Register a provider that doesn't need an API key
+env.register_api_key_var("local_provider", None)
+```
+
+## Best Practices
+
+1. **Always use the env module** instead of direct `os.environ` access
+2. **Document new environment variables** in this file when adding them
+3. **Use appropriate type conversion** functions for different variable types
+4. **Validate required variables** early in the application startup
+5. **Provide sensible defaults** when possible
+6. **Use provider-specific functions** for API keys
+7. **Keep sensitive information** in environment variables or `.env` files (never commit them)
+8. **Group related variables** with consistent prefixes (e.g., `ATLAS_` for Atlas-specific variables)
+9. **Use feature flags** for enabling/disabling features (e.g., `ATLAS_ENABLE_TELEMETRY`)
+10. **Add validation** for critical configuration values

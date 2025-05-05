@@ -2,14 +2,20 @@
 Telemetry module for Atlas framework.
 
 This module provides OpenTelemetry integration for tracing, metrics, and
-logging throughout the Atlas framework.
+logging throughout the Atlas framework. Telemetry can be enabled/disabled
+at runtime and through environment variables.
+
+Environment variables:
+    ATLAS_ENABLE_TELEMETRY: Set to "0" or "false" to disable telemetry (default: enabled)
+    ATLAS_TELEMETRY_CONSOLE_EXPORT: Set to "0" or "false" to disable console exporting (default: enabled)
+    ATLAS_TELEMETRY_LOG_LEVEL: Set the log level for telemetry (default: INFO)
 """
 
 import os
 import logging
 import inspect
 import functools
-from typing import Optional, Dict, Any, Callable, TypeVar, cast
+from typing import Optional, Dict, Any, Callable, TypeVar, cast, Union, Literal
 
 # Import OpenTelemetry modules
 try:
@@ -51,6 +57,27 @@ T = TypeVar('T')
 # Configure logger
 logger = logging.getLogger(__name__)
 
+# Parse environment variables
+def _parse_bool_env(var_name: str, default: bool = True) -> bool:
+    """Parse a boolean environment variable."""
+    val = os.environ.get(var_name, str(default)).lower()
+    return val not in ("0", "false", "no", "off", "disable", "disabled")
+
+# Check if telemetry is enabled through environment variables
+TELEMETRY_ENABLED = _parse_bool_env("ATLAS_ENABLE_TELEMETRY", True)
+CONSOLE_EXPORT_ENABLED = _parse_bool_env("ATLAS_TELEMETRY_CONSOLE_EXPORT", True)
+
+# Set log level from environment (default to INFO)
+log_level_name = os.environ.get("ATLAS_TELEMETRY_LOG_LEVEL", "INFO").upper()
+try:
+    LOG_LEVEL = getattr(logging, log_level_name)
+except AttributeError:
+    LOG_LEVEL = logging.INFO
+    logger.warning(f"Invalid log level: {log_level_name}, defaulting to INFO")
+
+# Configure logger with the specified level
+logger.setLevel(LOG_LEVEL)
+
 # Global variables for telemetry provider instances
 _tracer_provider = None
 _meter_provider = None
@@ -65,25 +92,36 @@ SERVICE_VERSION = "0.1.0"  # Should be imported from version.py in the future
 def initialize_telemetry(
     service_name: str = SERVICE_NAME, 
     service_version: str = SERVICE_VERSION,
-    enable_console_exporter: bool = True,
+    enable_console_exporter: Optional[bool] = None,
     enable_otlp_exporter: bool = False,
     otlp_endpoint: Optional[str] = None,
     sampling_ratio: float = 1.0,
+    force_enable: bool = False,
 ) -> bool:
     """Initialize OpenTelemetry for the Atlas service.
     
     Args:
         service_name: Name of the service for telemetry.
         service_version: Version of the service.
-        enable_console_exporter: Whether to enable console exporters.
+        enable_console_exporter: Whether to enable console exporters. If None, uses CONSOLE_EXPORT_ENABLED.
         enable_otlp_exporter: Whether to enable OTLP exporters.
         otlp_endpoint: Endpoint for OTLP exporter.
         sampling_ratio: Sampling ratio for traces (0.0 to 1.0).
+        force_enable: Force enable telemetry even if disabled by environment variables.
         
     Returns:
         True if telemetry was initialized successfully, False otherwise.
     """
     global _tracer_provider, _meter_provider, _atlas_tracer, _atlas_meter
+    
+    # Use console exporter setting from environment if not explicitly provided
+    if enable_console_exporter is None:
+        enable_console_exporter = CONSOLE_EXPORT_ENABLED
+    
+    # Check if telemetry is disabled by environment variable and not forced
+    if not TELEMETRY_ENABLED and not force_enable:
+        logger.info("Telemetry is disabled by environment configuration.")
+        return False
     
     # Check if OpenTelemetry is available
     if not OPENTELEMETRY_AVAILABLE:
@@ -100,6 +138,8 @@ def initialize_telemetry(
         resource = Resource.create({
             "service.name": service_name,
             "service.version": service_version,
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.language": "python",
         })
         
         # Initialize tracer provider
@@ -109,6 +149,7 @@ def initialize_telemetry(
         if enable_console_exporter:
             console_span_processor = BatchSpanProcessor(ConsoleSpanExporter())
             _tracer_provider.add_span_processor(console_span_processor)
+            logger.debug("Console span exporter enabled")
             
         # Add OTLP exporter if enabled
         if enable_otlp_exporter and otlp_endpoint:
@@ -123,6 +164,7 @@ def initialize_telemetry(
                 otlp_metric_reader = PeriodicExportingMetricReader(
                     OTLPMetricExporter(endpoint=otlp_endpoint)
                 )
+                logger.debug(f"OTLP exporter enabled with endpoint: {otlp_endpoint}")
             except ImportError:
                 logger.warning("OTLP exporters not available. Install 'opentelemetry-exporter-otlp' package.")
                 
@@ -133,12 +175,13 @@ def initialize_telemetry(
         _atlas_tracer = trace.get_tracer(service_name, service_version)
         
         # Initialize metrics
-        _meter_provider = MeterProvider(resource=resource)
-        
-        # Add console exporter for metrics in development
+        readers = []
         if enable_console_exporter:
             console_metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter())
-            _meter_provider = MeterProvider(resource=resource, metric_readers=[console_metric_reader])
+            readers.append(console_metric_reader)
+            
+        # Create meter provider with configured readers
+        _meter_provider = MeterProvider(resource=resource, metric_readers=readers if readers else None)
         
         # Set the global meter provider
         metrics.set_meter_provider(_meter_provider)
@@ -175,15 +218,58 @@ def shutdown_telemetry() -> None:
         _atlas_meter = None
 
 
+def enable_telemetry() -> bool:
+    """Enable telemetry at runtime.
+    
+    Returns:
+        True if telemetry was enabled successfully, False otherwise.
+    """
+    global TELEMETRY_ENABLED
+    
+    TELEMETRY_ENABLED = True
+    
+    # If telemetry is already initialized, we're good
+    if _tracer_provider is not None:
+        logger.info("Telemetry is already initialized and enabled.")
+        return True
+    
+    # Initialize telemetry with force_enable to bypass environment settings
+    return initialize_telemetry(force_enable=True)
+
+
+def disable_telemetry() -> None:
+    """Disable telemetry at runtime.
+    
+    This will stop any future span creation but won't affect existing spans.
+    It will also shut down any active providers.
+    """
+    global TELEMETRY_ENABLED
+    
+    TELEMETRY_ENABLED = False
+    logger.info("Telemetry has been disabled.")
+    
+    # Shut down any active providers
+    shutdown_telemetry()
+
+
+def is_telemetry_enabled() -> bool:
+    """Check if telemetry is currently enabled.
+    
+    Returns:
+        True if telemetry is enabled, False otherwise.
+    """
+    return TELEMETRY_ENABLED and (OPENTELEMETRY_AVAILABLE or False)
+
+
 def get_tracer() -> Optional[Tracer]:
     """Get the Atlas tracer instance.
     
     Returns:
-        The Atlas tracer or None if telemetry is not initialized.
+        The Atlas tracer or None if telemetry is not initialized or enabled.
     """
     global _atlas_tracer
     
-    if not OPENTELEMETRY_AVAILABLE:
+    if not TELEMETRY_ENABLED or not OPENTELEMETRY_AVAILABLE:
         return None
         
     if _atlas_tracer is None:
@@ -199,11 +285,11 @@ def get_meter() -> Optional[Meter]:
     """Get the Atlas meter instance.
     
     Returns:
-        The Atlas meter or None if telemetry is not initialized.
+        The Atlas meter or None if telemetry is not initialized or enabled.
     """
     global _atlas_meter
     
-    if not OPENTELEMETRY_AVAILABLE:
+    if not TELEMETRY_ENABLED or not OPENTELEMETRY_AVAILABLE:
         return None
         
     if _atlas_meter is None:
@@ -219,9 +305,9 @@ def get_current_span() -> Optional[Span]:
     """Get the current active span.
     
     Returns:
-        The current span or None if no span is active.
+        The current span or None if no span is active or telemetry is disabled.
     """
-    if not OPENTELEMETRY_AVAILABLE or trace is None:
+    if not TELEMETRY_ENABLED or not OPENTELEMETRY_AVAILABLE or trace is None:
         return None
         
     return trace.get_current_span()
@@ -266,12 +352,16 @@ def create_histogram(name: str, description: str, unit: str = "ms") -> Optional[
 def traced(
     name: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
+    log_args: bool = False,
+    log_result: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to create a span around a function.
     
     Args:
         name: Name of the span. If None, the function name will be used.
         attributes: Initial attributes for the span.
+        log_args: Whether to log function arguments to the span.
+        log_result: Whether to log function result to the span.
         
     Returns:
         A decorator function.
@@ -279,8 +369,8 @@ def traced(
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
-            # If OpenTelemetry is not available, just call the function
-            if not OPENTELEMETRY_AVAILABLE:
+            # If telemetry is disabled or not available, just call the function
+            if not TELEMETRY_ENABLED or not OPENTELEMETRY_AVAILABLE:
                 return func(*args, **kwargs)
                 
             # Get the tracer
@@ -304,18 +394,53 @@ def traced(
             # Add custom attributes if provided
             if attributes:
                 span_attributes.update(attributes)
+            
+            # Log start with details if in debug mode
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Starting span: {span_name}")
                 
             # Start a new span
             with tracer.start_as_current_span(span_name, attributes=span_attributes) as span:
                 try:
+                    # Log arguments if requested
+                    if log_args and logger.isEnabledFor(logging.DEBUG):
+                        # Remove self for instance methods
+                        arg_list = list(args[1:]) if args and qualname.split('.')[0] != func.__name__ else list(args)
+                        arg_dict = {**kwargs}
+                        
+                        # Truncate large values and convert to strings
+                        def truncate_value(val: Any) -> str:
+                            s = str(val)
+                            return s[:100] + "..." if len(s) > 100 else s
+                        
+                        args_str = ", ".join([truncate_value(a) for a in arg_list])
+                        kwargs_str = ", ".join([f"{k}={truncate_value(v)}" for k, v in arg_dict.items()])
+                        
+                        span.set_attribute("function.args", args_str)
+                        span.set_attribute("function.kwargs", kwargs_str)
+                        logger.debug(f"Function {qualname} called with args: {args_str}, kwargs: {kwargs_str}")
+                    
                     # Call the original function
                     result = func(*args, **kwargs)
+                    
+                    # Log result if requested
+                    if log_result and logger.isEnabledFor(logging.DEBUG):
+                        result_str = str(result)
+                        if len(result_str) > 100:
+                            result_str = result_str[:100] + "..."
+                        span.set_attribute("function.result", result_str)
+                        logger.debug(f"Function {qualname} returned: {result_str}")
+                    
                     return result
                 except Exception as ex:
                     # Record the exception in the span
                     span.record_exception(ex)
                     span.set_status(StatusCode.ERROR, str(ex))
+                    logger.error(f"Exception in {qualname}: {str(ex)}", exc_info=True)
                     raise
+                finally:
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f"Ending span: {span_name}")
                     
         return wrapper
         
@@ -326,14 +451,31 @@ class TracedClass:
     """Mixin class to add tracing to a class.
     
     This mixin adds tracing to all public methods of a class.
+    
+    Example:
+        ```python
+        class MyAgent(TracedClass):
+            def process_message(self, message: str) -> str:
+                # This method will be automatically traced
+                return "response"
+        ```
     """
     
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Initialize subclass with tracing for all methods."""
+    def __init_subclass__(cls, disable_tracing: bool = False, **kwargs: Any) -> None:
+        """Initialize subclass with tracing for all methods.
+        
+        Args:
+            disable_tracing: Whether to disable tracing for this class.
+        """
         super().__init_subclass__(**kwargs)
         
-        # Skip if OpenTelemetry is not available
-        if not OPENTELEMETRY_AVAILABLE:
+        # Skip if tracing is disabled for this class
+        if disable_tracing:
+            logger.debug(f"Tracing disabled for class {cls.__name__}")
+            return
+            
+        # Skip if telemetry is not available or enabled
+        if not TELEMETRY_ENABLED or not OPENTELEMETRY_AVAILABLE:
             return
             
         # Get all methods defined in the class

@@ -3,12 +3,19 @@
 Test runner for Atlas framework.
 
 This script provides a unified interface for running all Atlas tests.
+Tests are organized in the atlas/tests/ directory with consistent naming:
+- test_*.py: Unit tests for specific modules
+- test_mock.py: Mock tests that don't require API keys
+- test_api.py: Integration tests that require API keys
 """
 
 import os
 import sys
 import argparse
 import unittest
+import importlib
+import glob
+from pathlib import Path
 
 
 def run_mock_tests():
@@ -153,6 +160,66 @@ def run_api_tests(test_name, system_prompt=None, query=None):
     return result.wasSuccessful()
 
 
+def run_unit_tests(module_name=None):
+    """Run unit tests for a specific module or all modules.
+    
+    Args:
+        module_name: Optional name of the module to test (e.g., 'models', 'env').
+                    If None, all unit tests are run.
+    
+    Returns:
+        True if all tests passed, False otherwise.
+    """
+    if module_name:
+        print(f"=== Running Unit Tests for {module_name} module ===")
+    else:
+        print("=== Running All Unit Tests ===")
+    
+    # Get project root directory
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+    tests_dir = os.path.join(project_root, "atlas/tests")
+    
+    # Find test files
+    test_files = []
+    if module_name:
+        # Look for a specific test file
+        pattern = f"test_{module_name}*.py"
+        test_files = glob.glob(os.path.join(tests_dir, pattern))
+        if not test_files:
+            print(f"No test file found matching {pattern}")
+            return False
+    else:
+        # Find all test files except test_mock.py and test_api.py
+        all_test_files = glob.glob(os.path.join(tests_dir, "test_*.py"))
+        test_files = [file for file in all_test_files 
+                     if not (file.endswith("test_mock.py") or file.endswith("test_api.py"))]
+    
+    # Import and run tests
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+    
+    for test_file in test_files:
+        test_module_name = os.path.basename(test_file)[:-3]  # Remove .py
+        module_path = f"atlas.tests.{test_module_name}"
+        try:
+            test_module = importlib.import_module(module_path)
+            module_tests = loader.loadTestsFromModule(test_module)
+            suite.addTests(module_tests)
+            print(f"Added tests from {test_module_name}")
+        except ImportError as e:
+            print(f"Error importing {module_path}: {e}")
+    
+    # Run the tests
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    
+    # Print summary
+    print(f"\n=== {result.testsRun - len(result.errors) - len(result.failures)}/{result.testsRun} unit tests passed! ===")
+    if result.skipped:
+        print(f"Note: {len(result.skipped)} tests were skipped.")
+    
+    return result.wasSuccessful()
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Run Atlas tests")
@@ -161,9 +228,16 @@ def parse_args():
     parser.add_argument(
         "-t", 
         "--test-type",
-        choices=["mock", "minimal", "api", "all"],
+        choices=["unit", "mock", "minimal", "api", "all"],
         default="mock",
         help="Type of tests to run (default: mock)"
+    )
+    
+    # Module to test
+    parser.add_argument(
+        "-m", "--module",
+        type=str,
+        help="Module to test (e.g., 'models', 'env')"
     )
     
     # API test options
@@ -190,6 +264,11 @@ def main():
     args = parse_args()
     
     success = True
+    
+    if args.test_type in ["unit", "all"]:
+        unit_success = run_unit_tests(args.module)
+        success = success and unit_success
+        print("\n")
     
     if args.test_type in ["mock", "all"]:
         mock_success = run_mock_tests()
