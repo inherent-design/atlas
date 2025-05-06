@@ -84,3 +84,7 @@
   padding-left: 4.2rem;
   z-index: 3;
 }
+
+.mermaid svg {
+  margin: 0 auto;
+}

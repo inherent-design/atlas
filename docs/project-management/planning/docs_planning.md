@@ -137,7 +137,7 @@ docs/
 
 | Source Document    | Target Location(s)                               | Status     |
 | ------------------ | ------------------------------------------------ | ---------- |
-| CHROMADB_VIEWER.md | guides/examples/chromadb_viewer.md               | Pending    |
+| CHROMADB_VIEWER.md | guides/examples/chromadb_viewer.md               | Deprecated |
 | ENV_VARIABLES.md   | reference/env_variables.md                       | Complete ✅ |
 | MODELS.md          | components/models/index.md                       | Complete ✅ |
 | MODEL_PROVIDERS.MD | components/models/{anthropic,openai,ollama}.md   | Complete ✅ |
@@ -211,6 +211,12 @@ All Atlas documentation adheres to the following standards:
    - Version control for documentation aligned with code
    - Deprecation notices for outdated information
    - Collaborative editing and review process
+
+6. **Diagram Standards**
+   - Mermaid diagrams used for all technical diagrams
+   - No inline styling in diagrams (rely on VitePress theme styling)
+   - Consistent diagram types for similar content
+   - Simple, focused diagrams that illustrate key concepts
 
 ## Future Documentation Enhancements
 

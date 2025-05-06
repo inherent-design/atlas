@@ -25,12 +25,6 @@ flowchart TD
     H --> I[Response Generation]
     I --> J[Final Response]
 
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef agent fill:#bbf,stroke:#333,stroke-width:2px
-    classDef data fill:#dfd,stroke:#333,stroke-width:2px
-    class A,J data
-    class B,E,F,G agent
-    class C,D,H,I process
 ```
 
 ## Components

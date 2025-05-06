@@ -19,10 +19,6 @@ graph TD
     D --> F[Implementation]
     D --> G[Evolution]
 
-    classDef philosophy fill:#f9f,stroke:#333,stroke-width:2px
-    classDef application fill:#bbf,stroke:#333,stroke-width:2px
-    class A,B,C philosophy
-    class D,E,F,G application
 ```
 
 ## Trimodal Methodology

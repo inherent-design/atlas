@@ -21,8 +21,6 @@ flowchart TD
     B --> C[Graph Definition]
     C --> D[Execution Engine]
 
-    classDef component fill:#f9f,stroke:#333,stroke-width:2px
-    class A,B,C,D component
 ```
 
 ## Creating a Custom Workflow

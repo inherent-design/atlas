@@ -13,11 +13,6 @@ flowchart TD
     C --> D[Context Enrichment]
     D --> E[LLM Generation]
     E --> F[Response]
-
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef data fill:#bbf,stroke:#333,stroke-width:2px
-    class A,F data
-    class B,C,D,E process
 ```
 
 ## Query Types
@@ -65,11 +60,6 @@ flowchart LR
     B --> C[Relevance Scoring]
     C --> D[Document Formatting]
     D --> E[Relevant Documents]
-
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef data fill:#bbf,stroke:#333,stroke-width:2px
-    class A,E data
-    class B,C,D process
 ```
 
 ### LLM Generation

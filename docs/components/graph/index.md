@@ -22,10 +22,6 @@ flowchart LR
     C -->|More context needed| B
     C -->|Complete| D[End]
 
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef terminal fill:#bbf,stroke:#333,stroke-width:2px
-    class A,D terminal
-    class B,C process
 ```
 
 ## Key Components

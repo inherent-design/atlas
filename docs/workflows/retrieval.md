@@ -23,11 +23,6 @@ flowchart TD
     I --> J[Relevant Documents]
 
     E --- H
-
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef data fill:#bbf,stroke:#333,stroke-width:2px
-    class A,F,E,J data
-    class B,C,D,G,H,I process
 ```
 
 ## Components
@@ -94,11 +89,6 @@ flowchart LR
     C --> D[Split into Chunks]
     D --> E[Generate Embeddings]
     E --> F[Store in ChromaDB]
-
-    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-    classDef data fill:#bbf,stroke:#333,stroke-width:2px
-    class F data
-    class A,B,C,D,E process
 ```
 
 ### Document Retrieval Flow
