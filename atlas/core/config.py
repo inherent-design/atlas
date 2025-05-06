@@ -5,8 +5,13 @@ This module defines configuration options and settings for the Atlas framework.
 """
 
 import os
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+from atlas.core.errors import ConfigurationError, ValidationError, ErrorSeverity
+
+logger = logging.getLogger(__name__)
 
 
 class AtlasConfig:
@@ -39,8 +44,13 @@ class AtlasConfig:
         )
         # Only validate API key if not explicitly skipped
         if not self.anthropic_api_key and not os.environ.get("SKIP_API_KEY_CHECK"):
-            raise ValueError(
-                "ANTHROPIC_API_KEY must be provided or set as an environment variable"
+            raise ConfigurationError(
+                message="ANTHROPIC_API_KEY must be provided or set as an environment variable",
+                severity=ErrorSeverity.ERROR,
+                details={
+                    "missing_config": "ANTHROPIC_API_KEY",
+                    "config_source": "environment",
+                }
             )
 
         # ChromaDB settings
@@ -60,7 +70,50 @@ class AtlasConfig:
         # Parallel processing settings
         self.parallel_enabled = parallel_enabled
         self.worker_count = worker_count
+        
+        # Validate configuration
+        try:
+            self.validate()
+            logger.debug("Configuration validated successfully")
+        except ValidationError as e:
+            # Log the validation error but don't raise it again
+            # This allows partially valid configurations to be used
+            e.log()
+            logger.warning("Configuration validation failed, but proceeding with partial configuration")
 
+    def validate(self) -> None:
+        """Validate configuration settings.
+        
+        Raises:
+            ValidationError: If any configuration settings are invalid.
+        """
+        validation_errors = {}
+        
+        # Validate model name
+        if not self.model_name or not isinstance(self.model_name, str):
+            validation_errors["model_name"] = ["Model name must be a non-empty string"]
+        
+        # Validate token count
+        if not isinstance(self.max_tokens, int) or self.max_tokens <= 0:
+            validation_errors["max_tokens"] = ["Max tokens must be a positive integer"]
+        
+        # Validate worker count
+        if self.parallel_enabled:
+            if not isinstance(self.worker_count, int) or self.worker_count <= 0:
+                validation_errors["worker_count"] = ["Worker count must be a positive integer"]
+        
+        # Validate database path
+        if not self.db_path or not isinstance(self.db_path, str):
+            validation_errors["db_path"] = ["Database path must be a non-empty string"]
+        
+        # Raise error if any validation failures
+        if validation_errors:
+            raise ValidationError(
+                message="Invalid configuration settings",
+                field_errors=validation_errors,
+                severity=ErrorSeverity.ERROR,
+            )
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         # Note: We don't include the API key in the dict for security

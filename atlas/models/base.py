@@ -319,6 +319,25 @@ class ModelProvider(TracedClass, abc.ABC):
         """
         pass
     
+    @property
+    def model_name(self) -> str:
+        """Get the name of the model.
+        
+        Returns:
+            The model name as a string.
+            
+        Note:
+            Providers should override this to return their specific model name.
+            The default implementation falls back to the provider's internal storage.
+        """
+        # Try to get model name from various common attribute names
+        for attr in ["_model_name", "model", "_model"]:
+            if hasattr(self, attr):
+                return getattr(self, attr)
+        
+        # Fall back to a generic name
+        return "unnamed-model"
+    
     @traced(name="get_available_models")
     @abc.abstractmethod
     def get_available_models(self) -> List[str]:
@@ -338,6 +357,47 @@ class ModelProvider(TracedClass, abc.ABC):
             True if the API key is valid, False otherwise.
         """
         pass
+    
+    @traced(name="validate_api_key_detailed")
+    def validate_api_key_detailed(self) -> Dict[str, Any]:
+        """Validate API key with detailed information about the result.
+        
+        Returns:
+            A dictionary with validation details:
+            - valid: bool - Whether the key is valid
+            - error: Optional[str] - Error message if validation failed
+            - provider: str - Provider name
+            - key_present: bool - Whether the key is present (but might be invalid)
+        """
+        try:
+            # Try to validate the key
+            valid = self.validate_api_key()
+            
+            # Build the response
+            result = {
+                "valid": valid,
+                "provider": self.name,
+                "key_present": bool(getattr(self, "_api_key", None)),
+                "error": None
+            }
+            
+            if not valid:
+                if not result["key_present"]:
+                    result["error"] = f"No API key found for {self.name}"
+                else:
+                    result["error"] = f"API key for {self.name} is invalid"
+                    
+            return result
+        
+        except Exception as e:
+            # If validation throws an exception, capture it
+            logger.error(f"Error during API key validation for {self.name}: {str(e)}")
+            return {
+                "valid": False,
+                "provider": self.name,
+                "key_present": bool(getattr(self, "_api_key", None)),
+                "error": str(e)
+            }
     
     @traced(name="generate", log_args=True)
     @abc.abstractmethod

@@ -126,7 +126,7 @@ These tools can be invoked either directly from their module paths or through co
 
 #### Testing Architecture
 
-Atlas follows a standardized testing approach with all tests located in the `atlas/tests/` directory. See [Testing Documentation](docs/TESTING.md) for comprehensive details.
+Atlas follows a standardized testing approach with formal tests located in the `atlas/tests/` directory. See [Testing Documentation](docs/TESTING.md) for comprehensive details.
 
 The testing framework includes:
 
@@ -147,6 +147,29 @@ The testing framework includes:
    - Should be used sparingly due to API costs
 
 All tests share standardized helper functions defined in the `atlas/tests/helpers.py` module and follow consistent patterns.
+
+#### Examples vs. Tests
+
+The project differentiates between formal tests and usage examples:
+
+1. **Formal Tests** (`atlas/tests/`):
+   - Structured test cases with assertions
+   - Designed to verify correctness
+   - Run with testing frameworks
+   - Include mocking and fixtures
+
+2. **Usage Examples** (`examples/`):
+   - Demonstrate how to use the Atlas API
+   - Provide starting points for implementations
+   - Show best practices and patterns
+   - Can be run without an API key using `SKIP_API_KEY_CHECK=true`
+
+3. **Testing Utilities** (`atlas/scripts/testing/`):
+   - Test runners and helpers
+   - Tools for running specific test types
+   - Utilities for test result analysis
+
+This organization keeps the concerns separated: formal verification in `tests/`, demonstrations in `examples/`, and utilities in `scripts/testing/`.
 
 #### Running Tests and Utilities
 

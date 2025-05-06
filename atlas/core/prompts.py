@@ -5,7 +5,12 @@ This module defines the default system prompts used by Atlas agents.
 """
 
 import os
+import logging
 from typing import Optional
+
+from atlas.core.errors import ConfigurationError, ErrorSeverity, safe_execute
+
+logger = logging.getLogger(__name__)
 
 # Default system prompt
 DEFAULT_SYSTEM_PROMPT = """# **Atlas: Advanced Multi-Modal Learning & Guidance Framework**
@@ -58,15 +63,47 @@ def load_system_prompt(file_path: Optional[str] = None) -> str:
 
     Returns:
         The system prompt string.
+        
+    Raises:
+        ConfigurationError: If the file cannot be read or parsed.
     """
-    if file_path and os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                custom_prompt = f.read()
-                print(f"Loaded custom system prompt from {file_path}")
-                return custom_prompt
-        except Exception as e:
-            print(f"Error loading system prompt from {file_path}: {str(e)}")
-            print("Using default system prompt instead.")
-
-    return DEFAULT_SYSTEM_PROMPT
+    # If no file path provided, return default prompt
+    if not file_path:
+        logger.debug("No custom system prompt file specified, using default")
+        return DEFAULT_SYSTEM_PROMPT
+        
+    # Check if file exists
+    if not os.path.exists(file_path):
+        logger.warning(f"System prompt file not found: {file_path}")
+        return DEFAULT_SYSTEM_PROMPT
+    
+    # Define a function to read the file
+    def read_prompt_file() -> str:
+        with open(file_path, "r", encoding="utf-8") as f:
+            custom_prompt = f.read()
+            if not custom_prompt.strip():
+                raise ConfigurationError(
+                    message=f"System prompt file is empty: {file_path}",
+                    severity=ErrorSeverity.WARNING
+                )
+            return custom_prompt
+    
+    # Read the file with error handling
+    try:
+        custom_prompt = safe_execute(
+            read_prompt_file,
+            default=DEFAULT_SYSTEM_PROMPT,
+            error_msg=f"Failed to read system prompt from {file_path}",
+            error_cls=ConfigurationError,
+            log_error=True,
+        )
+        
+        if custom_prompt != DEFAULT_SYSTEM_PROMPT:
+            logger.info(f"Loaded custom system prompt from {file_path}")
+        
+        return custom_prompt
+        
+    except Exception as e:
+        logger.error(f"Unexpected error loading system prompt: {e}", exc_info=True)
+        logger.info("Using default system prompt instead")
+        return DEFAULT_SYSTEM_PROMPT

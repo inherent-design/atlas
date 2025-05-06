@@ -353,6 +353,9 @@ def get_available_providers() -> Dict[str, bool]:
 def validate_provider_requirements(providers: List[str]) -> Dict[str, bool]:
     """Validate that requirements for specified providers are met.
     
+    This is a basic validation that only checks if API keys are set, not if they are valid.
+    For more thorough validation, use validate_api_keys function.
+    
     Args:
         providers: List of provider names to validate.
         
@@ -384,6 +387,102 @@ def validate_provider_requirements(providers: List[str]) -> Dict[str, bool]:
             results[provider] = has_api_key(provider)
     
     return results
+
+
+def validate_api_keys(providers: Optional[List[str]] = None, skip_validation: bool = False) -> Dict[str, Dict[str, Any]]:
+    """Validate API keys for specified providers using API calls.
+    
+    This performs a thorough validation by actually making API calls to the providers.
+    For a faster, basic check that only verifies keys are set, use validate_provider_requirements.
+    
+    Args:
+        providers: List of provider names to validate. If None, validates all available providers.
+        skip_validation: If True, skips the actual API call validation and only checks if keys are present.
+        
+    Returns:
+        Dictionary mapping provider names to validation results, with each result containing:
+        - valid: Whether the key is valid
+        - error: Error message if validation failed
+        - key_present: Whether the key is present (but might be invalid)
+    """
+    # Temporarily set SKIP_API_KEY_CHECK if requested
+    if skip_validation:
+        original_skip = get_bool("SKIP_API_KEY_CHECK", False)
+        set_env_var("SKIP_API_KEY_CHECK", "true")
+    
+    try:
+        # If no providers specified, check all known providers
+        if providers is None:
+            providers = list(PROVIDER_API_KEYS.keys())
+        
+        # Import at function scope to avoid circular imports
+        from atlas.models.factory import create_provider
+        
+        results = {}
+        
+        for provider_name in providers:
+            provider_name = provider_name.lower()
+            
+            if provider_name not in PROVIDER_API_KEYS:
+                results[provider_name] = {
+                    "valid": False,
+                    "provider": provider_name,
+                    "key_present": False,
+                    "error": f"Unknown provider: {provider_name}"
+                }
+                continue
+            
+            # Skip validation entirely if specific provider doesn't need a key
+            if provider_name == "ollama":
+                # For Ollama, just check if the server is running
+                try:
+                    import requests
+                    response = requests.get("http://localhost:11434/api/version", timeout=1)
+                    valid = response.status_code == 200
+                    results[provider_name] = {
+                        "valid": valid,
+                        "provider": provider_name,
+                        "key_present": True,  # Ollama doesn't need a key
+                        "error": None if valid else "Ollama server not running or not responding"
+                    }
+                except Exception as e:
+                    results[provider_name] = {
+                        "valid": False,
+                        "provider": provider_name,
+                        "key_present": True,  # Ollama doesn't need a key
+                        "error": f"Error connecting to Ollama: {str(e)}"
+                    }
+                continue
+            
+            # Check if API key is present first
+            key_present = has_api_key(provider_name)
+            if not key_present:
+                results[provider_name] = {
+                    "valid": False,
+                    "provider": provider_name,
+                    "key_present": False,
+                    "error": f"No API key found for {provider_name}"
+                }
+                continue
+            
+            # Create provider and validate the key
+            try:
+                provider = create_provider(provider_name=provider_name)
+                results[provider_name] = provider.validate_api_key_detailed()
+            except Exception as e:
+                results[provider_name] = {
+                    "valid": False,
+                    "provider": provider_name,
+                    "key_present": True,
+                    "error": f"Error validating {provider_name} API key: {str(e)}"
+                }
+        
+        return results
+    
+    finally:
+        # Restore original SKIP_API_KEY_CHECK value if we changed it
+        if skip_validation:
+            set_env_var("SKIP_API_KEY_CHECK", "true" if original_skip else "false")
 
 
 def validate_required_vars(names: List[str]) -> List[str]:

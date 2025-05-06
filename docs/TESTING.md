@@ -2,9 +2,11 @@
 
 This document describes the testing approach used in the Atlas project, including directory structure, test types, and how to run tests.
 
-## Testing Directory Structure
+## Testing and Examples Directory Structure
 
-Atlas uses a standardized approach to testing:
+Atlas differentiates between formal tests, usage examples, and testing utilities:
+
+### Formal Tests
 
 - **`atlas/tests/`**: Contains all unit tests and integration tests
   - Test files are named with a `test_` prefix (e.g., `test_models.py`, `test_env.py`)
@@ -12,10 +14,21 @@ Atlas uses a standardized approach to testing:
   - Tests use the Python `unittest` framework
   - Mock tests that don't require API keys are available for CI/CD
 
+### Testing Utilities
+
 - **`atlas/scripts/testing/`**: Contains utility scripts for running tests and test-related tasks
   - `run_tests.py`: Script for running all tests or specific test types
-  - `test_providers.py`: Script for testing different model providers
-  - `test_query.py`: Script for testing individual queries
+  - Other scripts for test setup, configuration, and analysis
+
+### Usage Examples
+
+- **`examples/`**: Contains example scripts demonstrating Atlas functionality
+  - These are **not** formal tests but usage demonstrations
+  - Examples show how to use Atlas in real-world scenarios
+  - Each example focuses on a specific feature or use case
+  - Examples can be run with or without an API key (using `SKIP_API_KEY_CHECK=true`)
+
+The examples are meant to serve as a starting point for developers integrating Atlas into their own projects, while the formal tests verify that the framework is working correctly.
 
 ## Test Types
 
@@ -88,6 +101,29 @@ uv run python atlas/scripts/testing/test_providers.py --provider openai
 # Test with Ollama provider
 uv run python atlas/scripts/testing/test_providers.py --provider ollama
 ```
+
+## Running Examples
+
+The example scripts in the `examples/` directory demonstrate practical usage of Atlas:
+
+```bash
+# Run the query example
+uv run python examples/query_example.py
+
+# Run the retrieval example
+uv run python examples/retrieval_example.py
+
+# Run the streaming example
+uv run python examples/streaming_example.py
+
+# Run examples without an API key (using mock responses)
+SKIP_API_KEY_CHECK=true uv run python examples/query_example.py
+```
+
+Examples are different from tests in that they:
+1. Focus on demonstrating functionality, not verifying correctness
+2. Provide realistic usage patterns and code snippets
+3. Can be used as templates for your own implementations
 
 ## Writing Tests
 
@@ -180,6 +216,8 @@ The test suite is designed to work with CI/CD pipelines. The mock tests can run 
 
 ## Best Practices
 
+### For Formal Tests
+
 1. **Isolation**: Tests should be isolated and not depend on each other's state
 2. **Mocking**: Use mocks for external dependencies to keep tests fast and reliable
 3. **Clarity**: Test names should clearly describe what is being tested
@@ -187,3 +225,13 @@ The test suite is designed to work with CI/CD pipelines. The mock tests can run 
 5. **Speed**: Tests should run quickly to encourage frequent testing
 6. **Documentation**: Document any non-obvious test setup or assertions
 7. **Environment**: Tests should clean up after themselves and not leave side effects
+
+### For Examples
+
+1. **Clarity**: Examples should be clear and easy to understand
+2. **Completeness**: Include all necessary setup and imports
+3. **Documentation**: Add comments explaining important parts of the example
+4. **Error Handling**: Show proper error handling in examples
+5. **Flexibility**: Demonstrate both basic and advanced usage
+6. **Independence**: Examples should run independently without requiring other examples
+7. **Realistic**: Use realistic scenarios that developers might actually encounter

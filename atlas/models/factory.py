@@ -259,6 +259,70 @@ def get_all_providers(
     return providers
 
 
+@traced(name="validate_api_keys")
+def validate_api_keys(providers: Optional[List[str]] = None, skip_validation: bool = False) -> Dict[str, Dict[str, Any]]:
+    """Validate API keys for specified providers.
+    
+    This function creates and validates provider instances for the specified providers.
+    
+    Args:
+        providers: List of provider names to validate. If None, validates all available providers.
+        skip_validation: If True, skips actual API calls and only checks if keys are present.
+        
+    Returns:
+        Dictionary mapping provider names to validation results with the following keys:
+        - valid: Whether the key is valid
+        - error: Error message if validation failed
+        - key_present: Whether the key is present (but might be invalid)
+        - provider: Provider name
+    """
+    if providers is None:
+        # Get all available providers based on environment variables
+        available = discover_providers()
+        providers = list(available.keys())
+    
+    results = {}
+    
+    # Set SKIP_API_KEY_CHECK environment variable if skip_validation is True
+    if skip_validation:
+        env.set_env_var("SKIP_API_KEY_CHECK", "true")
+    
+    try:
+        for provider_name in providers:
+            # Skip if provider not in registry
+            if provider_name not in _PROVIDER_REGISTRY:
+                results[provider_name] = {
+                    "valid": False,
+                    "provider": provider_name,
+                    "key_present": False,
+                    "error": f"Unsupported provider: {provider_name}"
+                }
+                continue
+                
+            try:
+                # Try to create the provider
+                provider = create_provider(provider_name=provider_name)
+                
+                # Validate the API key
+                validation_result = provider.validate_api_key_detailed()
+                results[provider_name] = validation_result
+                
+            except Exception as e:
+                results[provider_name] = {
+                    "valid": False,
+                    "provider": provider_name,
+                    "key_present": False,
+                    "error": str(e)
+                }
+        
+        return results
+        
+    finally:
+        # Reset SKIP_API_KEY_CHECK if we set it
+        if skip_validation:
+            env.set_env_var("SKIP_API_KEY_CHECK", "false")
+
+
 class ProviderFactory(TracedClass):
     """Factory for creating and managing model providers."""
     
