@@ -2,6 +2,44 @@
 
 This file contains essential instructions and guidelines for Claude Code when working on the Atlas project. These instructions serve as a reference for both human developers and Claude to ensure consistent development practices.
 
+## Project Status 2024 Update
+
+### Completed Milestones
+
+- ✅ **Foundation Stabilization**: Unified agent implementations, agent registry with dynamic discovery, error handling, conditional edge routing, query-only client
+- ✅ **Environment Configuration**: Centralized environment management, configuration precedence, validation logic
+- ✅ **Documentation System**: Complete VitePress-based documentation with comprehensive coverage of all components, workflows, and APIs
+- ✅ **Core Component Design**: Established architecture patterns, module structure, and interaction protocols
+
+### Current Focus
+
+1. **Knowledge System Enhancements**:
+   - Improving document chunking and content boundary detection
+   - Enhancing metadata handling for better document retrieval
+   - Implementing more sophisticated relevance scoring algorithms
+   - Adding filtering capabilities to narrow search results
+
+2. **Provider Implementation Completion**:
+   - Completing streaming implementation for OpenAI and Ollama providers
+   - Adding comprehensive error handling and fallback mechanisms
+   - Implementing connection pooling and resource management
+   - Creating provider health monitoring
+
+3. **Testing Infrastructure**:
+   - Developing mocked provider implementations for test isolation
+   - Creating comprehensive test suite for all components
+   - Implementing test coverage metrics and reporting
+   - Building scenario-based integration tests
+
+### Next Steps (Immediate)
+
+1. Create comprehensive mock providers for API-free testing
+2. Complete OpenAI and Ollama provider implementations
+3. Enhance error handling with better fallback mechanisms
+4. Improve document chunking strategies for better retrieval
+5. Add metadata filtering capabilities to knowledge base retrieval
+6. Optimize provider resource usage with connection pooling
+
 ## Core Development Principles
 
 ### 1. Clean Break Philosophy with Careful Testing
@@ -25,6 +63,7 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Create isolated test modules when testing specific components.
 - Implement unit tests alongside feature development.
 - When testing complex workflows, create test-specific wrapper modules rather than modifying production code.
+- Prefer mock tests that don't require API keys for faster and more reliable testing.
 
 ### 4. Error Handling
 
@@ -57,6 +96,7 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Update documentation when adding or modifying features.
 - Include docstrings with parameters, return values, and examples.
 - Add inline comments for complex logic or algorithms.
+- Use Mermaid diagrams for visualizing workflows and architecture but avoid inline styling.
 
 ## Working with LangGraph
 
@@ -139,14 +179,6 @@ Atlas differentiates between formal tests, usage examples, and testing utilities
 - **Integration Tests**: Verify that different components work together
 - **API Tests**: Test real API interactions (requires API keys)
 
-### Debugging
-
-- Add detailed logging throughout the codebase
-- Use the telemetry module to trace function calls and performance
-- Implement debug modes with increased verbosity
-- Create visualization tools for complex workflows
-- Document common debugging scenarios and solutions
-
 ## Implementation Notes for Claude Code
 
 1. When working on this project, Claude should:
@@ -168,455 +200,95 @@ Atlas differentiates between formal tests, usage examples, and testing utilities
    - Suggest alternatives with pros and cons clearly outlined
    - Be explicit about any limitations or potential issues
 
-## Project Roadmap Reference
+## Advanced Feature Development Areas
 
-### Current Development Focus
+The following areas represent the most important development directions for advancing Atlas capabilities:
 
-The current development focus is on:
+### 1. Enhanced Knowledge Management
 
-1. ✅ Foundation Stabilization: Completed with unified agent implementations, agent registry with dynamic discovery, error handling system, conditional edge routing, and query-only client for other agentic clients
-2. 📚 Knowledge Enhancements: Improving document chunking, metadata handling, retrieval relevance, and filtering capabilities
-3. 🔀 Workflow Improvements: Enhancing message passing between agents and structured message formats with metadata
-4. 🧪 Testing: Creating mocked provider implementations and comprehensive tests for all providers
-5. 📝 Documentation: Documenting new interfaces and components
+- **Priority**: High
+- **Status**: In Progress
+- **Goals**:
+  - Implement more sophisticated document chunking strategies
+  - Add advanced metadata filtering and faceted search
+  - Improve relevance scoring with hybrid approaches (semantic + keyword)
+  - Create caching mechanisms for frequent queries
+  - Support multimedia document types (beyond markdown)
 
-**Next priorities:**
-1. Complete the provider implementations for OpenAI and Ollama with streaming
-2. Enhance testing for all providers with error conditions and edge cases
-3. Implement provider optimizations like connection pooling and health checks
+### 2. Advanced Multi-Agent Orchestration
 
-Refer to the TODO.md file for a detailed implementation plan with specific tasks and priorities.
+- **Priority**: Medium
+- **Status**: Planned
+- **Goals**:
+  - Implement dynamic agent allocation based on task requirements
+  - Create specialized worker agents for different domains
+  - Develop better feedback mechanisms between agents
+  - Enhance message passing with structured formats and metadata
+  - Build visualization tools for agent interactions
 
-### Future Vision and Target Architecture
+### 3. Provider Performance Optimization
 
-Atlas is evolving toward a fully distributed multi-agent framework with these target capabilities:
+- **Priority**: High
+- **Status**: In Progress
+- **Goals**:
+  - Complete streaming implementations for all providers
+  - Implement connection pooling for performance
+  - Add advanced retry and fallback mechanisms
+  - Create provider switching based on cost/performance needs
+  - Implement health monitoring and diagnostics
 
-#### 1. Quantum-Inspired Knowledge Partitioning
-- **Parallel Context Processing**: Process multiple partitions of knowledge simultaneously
-- **Dynamic Boundary Detection**: Automatically identify natural conceptual boundaries
-- **State Superposition**: Maintain multiple interpretations of knowledge simultaneously
-- **Measurement-Based Collapse**: Refine knowledge based on specific queries
+### 4. Interactive Documentation & Examples
 
-#### 2. Advanced Multi-Agent Orchestration
-- **Self-Organizing Agent Topology**: Dynamically adjust agent relationships based on task requirements
-- **Heterogeneous Agent Specialization**: Enable diverse agent types with complementary capabilities
-- **Adaptive Task Decomposition**: Break complex problems into optimal sub-tasks
-- **Emergent Consensus Mechanisms**: Develop collaborative decision-making without centralized control
+- **Priority**: Medium
+- **Status**: Planning
+- **Goals**:
+  - Create interactive code examples in documentation
+  - Build more comprehensive example applications
+  - Develop tutorials for common usage patterns
+  - Add troubleshooting guides and problem-solving trees
+  - Create visual explanations of key concepts
 
-#### 3. Perspective-Driven Knowledge Graph
-- **Multi-Perspective Traversal**: Navigate knowledge from different technical and functional viewpoints
-- **Context-Aware Relevance**: Adjust information relevance based on user context
-- **Temporal Evolution Tracking**: Maintain historical perspectives alongside current understanding
-- **Relationship-First Architecture**: Focus on connections between concepts rather than isolated facts
+## Development Environment
 
-#### 4. Continuous Self-Improvement
-- **Performance Metrics Tracking**: Monitor various efficiency and quality metrics
-- **Adaptive Resource Allocation**: Optimize token usage based on task importance
-- **Knowledge Consolidation**: Regularly refine and improve knowledge representation
-- **Emergent Pattern Recognition**: Identify reusable patterns across different domains
-
-#### 5. Seamless Human-AI Collaboration
-- **Intention-Based Communication**: Understand user needs beyond explicit queries
-- **Progressive Scaffolding**: Adapt guidance based on user expertise level
-- **Collaborative Problem Definition**: Work with users to refine problem statements
-- **Transparent Reasoning**: Make agent decision processes understandable to users
-
-## Development Environment Setup
-
-### Requirements
+### Key Requirements
 
 - Python version: >=3.13
-- Key dependencies: langgraph, chromadb, anthropic, pydantic, pathspec
-- Environment variables required: ANTHROPIC_API_KEY
-- Default DB path: ~/atlas_chroma_db
-- Claude model: claude-3-7-sonnet-20250219
+- Key dependencies: langgraph==0.4.1, chromadb>=1.0.7, anthropic>=0.50.0
+- Environment management: uv for virtual environments and dependencies
+- Documentation: VitePress for documentation site
+- Testing: pytest for tests, with custom test runner
 
-### Setting Up Development Environment
-
-We use `uv` for virtual environment and package management. If you don't have it installed:
+### Important Commands
 
 ```bash
-# Install uv
-pip install uv
-```
-
-Setting up the project:
-
-```bash
-# Clone the repository (if you haven't already)
-git clone <repository-url>
-cd atlas
-
-# Create and activate virtual environment
+# Development setup
 uv venv
-
-# Activate virtual environment
-# On Linux/macOS:
 source .venv/bin/activate
-# On Windows:
-# .venv\Scripts\activate
-
-# Install dependencies
 uv pip install -e .
 
-# Install tools
-uv pip install ruff black mypy pytest
-```
-
-### Environment Variables
-
-Create a `.env` file in the project root with:
-
-```
-ANTHROPIC_API_KEY=your_api_key_here
-```
-
-Or set environment variables directly:
-
-```bash
-# On Linux/macOS:
-export ANTHROPIC_API_KEY=your_api_key_here
-
-# On Windows:
-# set ANTHROPIC_API_KEY=your_api_key_here
-```
-
-## Running Atlas
-
-### Basic Usage
-
-Atlas can be run in several modes, including CLI mode for interactive use, query mode for one-off questions, and ingest mode for adding documents to the knowledge base:
-
-```bash
-# Run in CLI mode with default system prompt
-uv run python main.py -m cli
-
-# Run with custom system prompt
-uv run python main.py -m cli -s path/to/your/system_prompt.md
-
-# Ingest documents
-uv run python main.py -m ingest -d path/to/your/documents/
-
-# Run in controller mode with parallel processing
-uv run python main.py -m controller --parallel
-
-# Run a single query
-uv run python main.py -m query -q "What is the trimodal methodology in Atlas?"
-```
-
-### Using the Query Client
-
-Atlas provides a lightweight query-only client that can be used from other applications or agentic systems. This is demonstrated in the examples directory:
-
-```python
-from atlas import create_query_client
-
-# Create a client
-client = create_query_client()
-
-# Simple query with LLM response
-response = client.query("What is the trimodal methodology?")
-print(response)
-
-# Retrieve documents without requiring LLM response (no API key needed)
-documents = client.retrieve_only("knowledge graph structure")
-print(f"Found {len(documents)} relevant documents")
-
-# Streaming response with callback
-def print_streaming(delta, full_text):
-    print(delta, end="", flush=True)
-
-client.query_streaming("Explain conditional edge routing", print_streaming)
-```
-
-### Development Commands
-
-```bash
-# Run tests
-uv python -m pytest
-
-# Run specific test file
-uv python -m pytest test_atlas.py
-
-# Run with coverage
-uv python -m pytest --cov=atlas
-
-# Run mock tests
-uv python mock_test.py
-
-# Run linting
-uv tool run ruff check
-
-# Run type checking
-uv tool run mypy .
-
-# Format code
-uv tool run black .
-```
-
-### Dependency Management
-
-Atlas uses the following key dependencies with specific version requirements to ensure compatibility:
-
-```
-langgraph==0.4.1
-chromadb>=1.0.7
-anthropic>=0.50.0
-pydantic>=2.11.4
-pathspec>=0.12.1
-```
-
-To install or update dependencies:
-
-```bash
-# Install dependencies from pyproject.toml
-uv sync
-
-# Add a specific dependency
-uv add <package_name>==<version>
-
-# Update all dependencies
-uv pip compile pyproject.toml -o requirements.txt
-uv pip sync requirements.txt
-```
-
-When updating dependency versions, ensure compatibility with existing code. Some packages have breaking API changes between versions that require code adaptations:
-
-#### LangGraph Version Compatibility
-
-- langgraph 0.0.27 → 0.4.1 upgrade notes:
-  - `MemorySaver` import path changed to `from langgraph.saver import MemorySaver`
-  - `CheckpointAt` is now available in the checkpoint module
-  - The graph compilation API has been enhanced with additional options
-  - State management has been improved with more type safety
-
-#### Code Adaptations for LangGraph Upgrades
-
-When updating from older versions of langgraph, make these changes:
-
-```python
-# Old import (0.0.27)
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint import MemorySaver
-
-# New imports (0.4.1)
-from langgraph.graph import StateGraph, END
-from langgraph.saver import MemorySaver
-```
-
-For projects using checkpoint features:
-
-```python
-# New checkpoint imports
-from langgraph.checkpoint.base import CheckpointAt, Checkpoint
-```
-
-#### Other Dependency Upgrades
-
-**Anthropic API Changes (anthropic ≥0.50.0)**:
-- The Claude API has evolved with improved streaming capabilities
-- Messages API is now the standard for all interactions
-- Content handling now supports structured formats and multi-modal inputs
-- Example usage:
-  ```python
-  # Modern Anthropic API usage
-  response = client.messages.create(
-      model="claude-3-7-sonnet-20250219",
-      max_tokens=2000,
-      system=system_prompt,
-      messages=message_history
-  )
-  ```
-
-**ChromaDB Changes (chromadb ≥1.0.7)**:
-- Improved persistent storage handling
-- Enhanced embedding functionality with better model support
-- More robust error handling and connection management
-- Metadata filtering improvements
-
-**Pydantic Upgrades (pydantic ≥2.11.4)**:
-- Better type validation and error messages
-- Enhanced schema generation and serialization
-- Improved performance for model validation
-
-## Environment Setup and Troubleshooting
-
-### Development Environment
-
-```bash
-# Create a new virtual environment
-uv venv
-
-# Activate the environment
-source .venv/bin/activate  # On Linux/macOS
-# .venv\Scripts\activate  # On Windows
-
-# Install all dependencies
-uv sync
-```
-
-### Troubleshooting Common Issues
-
-#### Import Errors
-If you encounter import errors like `ModuleNotFoundError` or `ImportError`, check:
-1. That all dependencies are installed with correct versions
-2. That import paths match the installed package versions
-3. Run `uv sync` to ensure all dependencies are up to date
-
-#### LangGraph Compatibility Issues
-If you encounter errors with LangGraph functionality:
-1. Verify the LangGraph version with `uv pip show langgraph`
-2. Check that import paths match the installed version
-3. If needed, install the exact version specified in pyproject.toml: `uv add langgraph==0.4.1`
-
-#### API Changes in Dependencies
-When upgrading dependencies:
-1. Review the changelog or release notes for each package
-2. Test key functionality after upgrading
-3. Update code to use new API patterns where needed
-
-## Testing
-
-### Running Tests
-
-#### Using the Test Runner Script (Recommended)
-
-```bash
-# Run mock tests (fast, reliable, no API key required)
+# Testing
 uv run python atlas/scripts/testing/run_tests.py --test-type mock
-
-# Run unit tests for all modules
 uv run python atlas/scripts/testing/run_tests.py --test-type unit
 
-# Run unit tests for a specific module
-uv run python atlas/scripts/testing/run_tests.py --test-type unit --module models
+# Run Atlas
+uv run python main.py -m cli
+uv run python main.py -m query -q "Your query here"
+uv run python main.py -m ingest -d /path/to/docs/
 
-# Run minimal tests (basic functionality verification)
-uv run python atlas/scripts/testing/run_tests.py --test-type minimal
-
-# Run API tests for the base agent (requires API key)
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base
-
-# Run API tests with a custom query
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base --query "Your query here"
-
-# Run all tests (both mock and real tests)
-uv run python atlas/scripts/testing/run_tests.py --test-type all
+# Documentation
+cd docs
+pnpm dev    # Start dev server
+pnpm build  # Build documentation
 ```
 
-#### Using Direct Test Commands
+## Future Vision
 
-```bash
-# Run the mock tests directly (no API key required)
-uv run python mock_test.py
+Atlas is evolving toward a fully distributed multi-agent framework that implements:
 
-# Run only the base agent test (requires API key)
-uv run python test_atlas.py --test base
+1. **Quantum-Inspired Knowledge Partitioning**: Multi-perspective knowledge representation
+2. **Self-Organizing Agent Topology**: Dynamic agent relationships and specialization
+3. **Context-Aware Relevance**: Adaptive information retrieval based on user needs
+4. **Emergent Pattern Recognition**: Identifying reusable patterns across domains
+5. **Transparent Reasoning**: Making agent decision processes understandable
 
-# Run specific base agent test with custom query (requires API key)
-uv run python test_atlas.py --test base --query "Your query here"
-```
-
-#### Running Example Files
-
-```bash
-# Run the query example
-uv run python examples/query_example.py
-
-# Run the retrieval example
-uv run python examples/retrieval_example.py
-
-# Run the streaming example
-uv run python examples/streaming_example.py
-
-# Run examples without an API key (using mock responses)
-SKIP_API_KEY_CHECK=true uv run python examples/query_example.py
-```
-
-> **Important Testing Notes:**
->
-> 1. The unified test runner (`atlas/scripts/testing/run_tests.py`) is the recommended way to run tests
-> 2. Mock tests are the most reliable way to verify code functionality without requiring API keys
-> 3. The real tests using API calls work reliably for the base agent, but may encounter issues with controller and workflow components
-> 4. Always run the mock tests before making changes to ensure you have a working baseline
-> 5. Example files in the `examples/` directory demonstrate functionality but are not formal tests
-
-### API Cost Tracking
-
-Atlas includes built-in cost tracking for Anthropic API calls. This feature helps monitor usage during development and testing to avoid unexpected charges.
-
-When running real tests with an API key, the system will automatically report:
-- Input tokens used and their cost
-- Output tokens used and their cost
-- Total API cost for the operation
-
-Example output:
-```
-API Usage: 683 input tokens, 502 output tokens
-Estimated Cost: $0.009579 (Input: $0.002049, Output: $0.007530)
-```
-
-This cost tracking is based on current Anthropic pricing for the Claude 3.5 Sonnet model:
-- Input tokens: $3 per million tokens
-- Output tokens: $15 per million tokens
-
-If Anthropic updates their pricing, you might need to update the cost calculation in the agent class.
-
-### Creating New Tests
-
-When creating new tests:
-
-1. Create test files in the project root or a `tests/` directory
-2. Name test files with `test_` prefix (e.g., `test_agents.py`)
-3. Name test functions with `test_` prefix
-4. Use pytest fixtures for common setup
-
-Example test:
-
-```python
-def test_atlas_agent():
-    agent = AtlasAgent()
-    response = agent.process_message("test query")
-    assert response is not None
-```
-
-## Commit Guidelines
-
-- Write clear, descriptive commit messages
-- Reference related issues or tasks in commit messages
-- Group related changes in single commits
-- Ensure the codebase remains in a working state after each commit
-
-## Examples and Templates
-
-### Examples Directory
-
-The `examples/` directory contains demonstration scripts that show how to use Atlas:
-
-- `query_example.py`: Demonstrates the query client with various features
-- `retrieval_example.py`: Shows document retrieval without requiring an API key
-- `streaming_example.py`: Demonstrates streaming responses with callbacks
-
-These examples serve as a starting point for integrating Atlas into your projects. They can be run with or without an API key using the `SKIP_API_KEY_CHECK=true` environment variable.
-
-### Project Structure
-
-When creating new features, follow the established project structure:
-
-```
-atlas/
-├── __init__.py                  # Core exports for the package
-├── agents/                      # Agent implementations
-├── core/                        # Core functionality (config, env, etc.)
-├── graph/                       # LangGraph implementation
-├── knowledge/                   # Knowledge management
-├── models/                      # Provider implementations
-├── orchestration/               # Agent orchestration
-├── scripts/                     # Utility scripts
-│   ├── debug/                   # Debugging utilities
-│   └── testing/                 # Testing utilities
-├── tests/                       # Test modules
-└── tools/                       # Tool implementations
-```
-
-By following these guidelines, we can maintain a high-quality, robust implementation of the Atlas framework while continually expanding its capabilities.
+By following these guidelines and principles, we will continue to build Atlas into a powerful framework that combines flexibility, robustness, and extensibility.
