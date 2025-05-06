@@ -25,13 +25,13 @@ export default defineConfig(
       socialLinks: [
         {
           icon: "github",
-          link: "https://github.com/inherent-design/inherent.design",
+          link: "https://github.com/inherent-design/atlas",
         },
       ],
 
       editLink: {
         pattern:
-          "https://github.com/inherent-design/inherent.design/edit/main/docs/:path",
+          "https://github.com/inherent-design/atlas/edit/main/docs/:path",
         text: "Edit this page on GitHub",
       },
 

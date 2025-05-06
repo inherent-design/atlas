@@ -22,9 +22,9 @@ class AtlasQuery:
     def __init__(
         self,
         system_prompt_file: Optional[str] = None,
-        collection_name: str = "atlas_knowledge_base",
+        collection_name: Optional[str] = None,
         db_path: Optional[str] = None,
-        provider_name: str = "anthropic",
+        provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
         config: Optional[AtlasConfig] = None,
     ):
@@ -32,28 +32,34 @@ class AtlasQuery:
         
         Args:
             system_prompt_file: Optional path to a file containing the system prompt.
-            collection_name: Name of the Chroma collection to use.
-            db_path: Path to the knowledge base. If None, use default in home directory.
-            provider_name: Name of the model provider to use.
-            model_name: Optional name of the specific model to use.
-            config: Optional configuration object. If not provided, default values are used.
+            collection_name: Name of the Chroma collection to use. If None, uses environment variable.
+            db_path: Path to the knowledge base. If None, uses environment variable or default.
+            provider_name: Name of the model provider to use. If None, uses environment variable.
+            model_name: Optional name of the specific model to use. If None, uses environment variable.
+            config: Optional configuration object. If not provided, a new one is created.
         """
-        # Create configuration with provided parameters
+        # Create configuration with provided parameters, which will pull from environment variables if needed
         self.config = config or AtlasConfig(
             collection_name=collection_name,
             db_path=db_path,
+            model_name=model_name,
         )
         
-        # Initialize the knowledge base
+        # Use the provider_name if specified, otherwise use the default
+        if provider_name is None:
+            from atlas.core import env
+            provider_name = env.get_string("ATLAS_DEFAULT_PROVIDER", "anthropic")
+        
+        # Initialize the knowledge base - this will use environment variables if needed
         self.knowledge_base = KnowledgeBase(
             collection_name=self.config.collection_name,
             db_path=self.config.db_path,
         )
         
-        # Initialize the agent for query processing
+        # Initialize the agent for query processing - this will create the actual model provider
         self.agent = AtlasAgent(
             system_prompt_file=system_prompt_file,
-            collection_name=collection_name,
+            collection_name=self.config.collection_name,
             config=self.config,
             provider_name=provider_name,
             model_name=model_name,
@@ -172,27 +178,38 @@ class AtlasQuery:
 # Convenience factory function
 def create_query_client(
     system_prompt_file: Optional[str] = None,
-    collection_name: str = "atlas_knowledge_base",
+    collection_name: Optional[str] = None,
     db_path: Optional[str] = None,
-    provider_name: str = "anthropic",
+    provider_name: Optional[str] = None,
     model_name: Optional[str] = None,
 ) -> AtlasQuery:
     """Create a query-only Atlas client.
     
     This function provides a simple way to create an Atlas query client
-    for use in other applications.
+    for use in other applications. It respects environment variables for
+    configuration.
     
     Args:
         system_prompt_file: Optional path to a file containing the system prompt.
-        collection_name: Name of the Chroma collection to use.
-        db_path: Path to the knowledge base. If None, use default in home directory.
-        provider_name: Name of the model provider to use.
-        model_name: Optional name of the specific model to use.
+        collection_name: Name of the Chroma collection to use. If None, uses ATLAS_COLLECTION_NAME env var.
+        db_path: Path to the knowledge base. If None, uses ATLAS_DB_PATH env var or default home directory.
+        provider_name: Name of the model provider to use. If None, uses ATLAS_DEFAULT_PROVIDER env var.
+        model_name: Name of the model to use. If None, uses ATLAS_DEFAULT_MODEL env var.
         
     Returns:
         An initialized AtlasQuery instance.
     """
+    from atlas.core import env
+    
     try:
+        # Get values from environment if not specified in parameters
+        if provider_name is None:
+            provider_name = env.get_string("ATLAS_DEFAULT_PROVIDER", "anthropic")
+            
+        if collection_name is None:
+            collection_name = env.get_string("ATLAS_COLLECTION_NAME", "atlas_knowledge_base")
+            logger.info(f"Using collection name from environment: {collection_name}")
+            
         return AtlasQuery(
             system_prompt_file=system_prompt_file,
             collection_name=collection_name,

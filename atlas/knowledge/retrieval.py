@@ -4,33 +4,47 @@ Knowledge retrieval tools for the Atlas agent.
 
 import os
 import sys
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import chromadb
+from atlas.core import env
 
+logger = logging.getLogger(__name__)
 
 class KnowledgeBase:
     def __init__(
         self,
-        collection_name: str = "atlas_knowledge_base",
+        collection_name: Optional[str] = None,
         db_path: Optional[str] = None,
     ):
         """Initialize the knowledge base.
 
         Args:
-            collection_name: Name of the Chroma collection to use.
-            db_path: Optional path for ChromaDB storage. If None, use default in home directory.
+            collection_name: Name of the Chroma collection to use. If None, use environment variable.
+            db_path: Path for ChromaDB storage. If None, use environment variable or default to home directory.
         """
-        # Create an absolute path for ChromaDB storage (use provided or default to home directory)
+        # Get collection name from parameters, environment, or default
+        self.collection_name = collection_name or env.get_string("ATLAS_COLLECTION_NAME", "atlas_knowledge_base")
+        
+        # Create an absolute path for ChromaDB storage (use provided or environment variable or default)
         if db_path:
             self.db_path = db_path
         else:
-            home_dir = Path.home()
-            db_path = home_dir / "atlas_chroma_db"
-            db_path.mkdir(exist_ok=True)
-            self.db_path = str(db_path.absolute())
+            env_db_path = env.get_string("ATLAS_DB_PATH")
+            if env_db_path:
+                self.db_path = env_db_path
+                # Create directory if it doesn't exist
+                db_path_obj = Path(self.db_path)
+                db_path_obj.mkdir(exist_ok=True, parents=True)
+            else:
+                home_dir = Path.home()
+                db_path_obj = home_dir / "atlas_chroma_db"
+                db_path_obj.mkdir(exist_ok=True)
+                self.db_path = str(db_path_obj.absolute())
 
+        logger.info(f"ChromaDB persistence directory: {self.db_path}")
         print(f"ChromaDB persistence directory: {self.db_path}")
 
         # List contents of directory to debug
@@ -45,44 +59,53 @@ class KnowledgeBase:
                     print(f"  - {item} ({size:.2f} KB)")
         except Exception as e:
             print(f"Error listing DB directory: {e}")
+            logger.error(f"Error listing DB directory: {e}")
 
         try:
             self.chroma_client = chromadb.PersistentClient(path=self.db_path)
-            print(
-                f"ChromaDB client initialized successfully with persistence at: {self.db_path}"
-            )
+            logger.info(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
+            print(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
 
             # List all collections
             try:
                 all_collections = self.chroma_client.list_collections()
                 print(f"Available collections: {[c.name for c in all_collections]}")
+                logger.debug(f"Available collections: {[c.name for c in all_collections]}")
             except Exception as e:
                 print(f"Error listing collections: {e}")
+                logger.error(f"Error listing collections: {e}")
 
             # Get or create collection
             try:
                 self.collection = self.chroma_client.get_or_create_collection(
-                    name=collection_name
+                    name=self.collection_name
                 )
-                print(f"Collection '{collection_name}' accessed successfully")
+                print(f"Collection '{self.collection_name}' accessed successfully")
+                logger.info(f"Collection '{self.collection_name}' accessed successfully")
 
                 # Verify persistence by checking collection count
                 count = self.collection.count()
                 print(f"Collection contains {count} documents")
+                logger.info(f"Collection contains {count} documents")
 
                 if count == 0:
                     print("WARNING: Collection is empty. Has any data been ingested?")
                     print("Try running with -d <directory> flag to ingest documents.")
+                    logger.warning("Collection is empty. No documents have been ingested.")
             except Exception as e:
                 print(f"Error accessing collection: {e}")
+                logger.error(f"Error accessing collection: {e}")
                 raise e
 
         except Exception as e:
-            print(f"Error initializing ChromaDB: {str(e)}")
+            error_msg = f"Error initializing ChromaDB: {str(e)}"
+            print(error_msg)
             print("Using fallback in-memory ChromaDB")
+            logger.error(f"{error_msg}. Using fallback in-memory ChromaDB")
+            
             self.chroma_client = chromadb.Client()
             self.collection = self.chroma_client.get_or_create_collection(
-                name=collection_name
+                name=self.collection_name
             )
 
     def retrieve(
@@ -188,25 +211,28 @@ class KnowledgeBase:
 def retrieve_knowledge(
     state: Dict[str, Any],
     query: Optional[str] = None,
-    collection_name: str = "atlas_knowledge_base",
+    collection_name: Optional[str] = None,
+    db_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Retrieve knowledge from the Atlas knowledge base.
 
     Args:
         state: The current state of the agent.
         query: Optional query override. If not provided, uses the user's last message.
-        collection_name: Name of the Chroma collection to use.
+        collection_name: Name of the Chroma collection to use. If None, use environment variable.
+        db_path: Path to ChromaDB. If None, use environment variable or default.
 
     Returns:
         Updated state with retrieved knowledge.
     """
-    # Initialize knowledge base with specified collection
-    kb = KnowledgeBase(collection_name=collection_name)
+    # Initialize knowledge base with specified collection or from environment variables
+    kb = KnowledgeBase(collection_name=collection_name, db_path=db_path)
 
     # Get the query from the state if not explicitly provided
     if not query:
         messages = state.get("messages", [])
         if not messages:
+            logger.warning("No messages in state, cannot determine query")
             print("No messages in state, cannot determine query")
             state["context"] = {"documents": [], "query": ""}
             return state
@@ -218,18 +244,20 @@ def retrieve_knowledge(
                 break
 
         if not last_user_message:
+            logger.warning("No user messages found in state")
             print("No user messages found in state")
             state["context"] = {"documents": [], "query": ""}
             return state
 
         query = last_user_message
 
-    print(
-        f"Retrieving knowledge for query: {query[:50]}{'...' if len(query) > 50 else ''}"
-    )
+    query_summary = f"{query[:50]}{'...' if len(query) > 50 else ''}"
+    logger.info(f"Retrieving knowledge for query: {query_summary}")
+    print(f"Retrieving knowledge for query: {query_summary}")
 
     # Retrieve relevant documents
     documents = kb.retrieve(query)
+    logger.info(f"Retrieved {len(documents)} relevant documents")
     print(f"Retrieved {len(documents)} relevant documents")
 
     if documents:
@@ -239,6 +267,7 @@ def retrieve_knowledge(
             source = doc["metadata"].get("source", "Unknown")
             score = doc["relevance_score"]
             print(f"  {i + 1}. {source} (score: {score:.4f})")
+            logger.debug(f"Document {i + 1}: {source} (score: {score:.4f})")
 
     # Update state with retrieved documents
     state["context"] = {"documents": documents, "query": query}

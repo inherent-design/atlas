@@ -24,7 +24,19 @@ OPENAI_API_KEY=your_openai_api_key
 ATLAS_ENABLE_TELEMETRY=true
 ATLAS_TELEMETRY_LOG_LEVEL=INFO
 ATLAS_DB_PATH=/path/to/atlas_db
+ATLAS_COLLECTION_NAME=atlas_knowledge_base
+ATLAS_DEFAULT_MODEL=claude-3-7-sonnet-20250219
 ```
+
+### Order of Precedence
+
+When multiple configuration sources are available, Atlas follows this order of precedence:
+
+1. **Command-line arguments** (highest priority) - Parameters passed directly to functions or from CLI commands
+2. **Environment variables** (medium priority) - Set in the OS or in .env files
+3. **Default values** (lowest priority) - Hardcoded in the codebase
+
+This means command-line arguments override environment variables, which override default values.
 
 ### Accessing Environment Variables
 
@@ -74,49 +86,108 @@ missing = env.validate_required_vars(["API_KEY", "DB_PATH"])
 
 ### Core Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ATLAS_ENV_PATH` | Path to .env file | No | `.env` in current directory |
-| `ATLAS_LOG_LEVEL` | Logging level | No | `INFO` |
-| `SKIP_API_KEY_CHECK` | Skip API key validation | No | `false` |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ATLAS_ENV_PATH` | Path to .env file | env.py | `.env` in current directory |
+| `ATLAS_LOG_LEVEL` | Logging level | config.py | `INFO` |
+| `SKIP_API_KEY_CHECK` | Skip API key validation | config.py, factory.py | `false` |
 
 ### API Keys
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ANTHROPIC_API_KEY` | API key for Anthropic Claude | Required for Anthropic | None |
-| `OPENAI_API_KEY` | API key for OpenAI | Required for OpenAI | None |
-| `OPENAI_ORGANIZATION` | Organization ID for OpenAI | No | None |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ANTHROPIC_API_KEY` | API key for Anthropic Claude | config.py, env.py | None |
+| `OPENAI_API_KEY` | API key for OpenAI | env.py, main.py | None |
+| `OPENAI_ORGANIZATION` | Organization ID for OpenAI | env.py | None |
 
 ### Telemetry
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ATLAS_ENABLE_TELEMETRY` | Enable or disable telemetry | No | `true` |
-| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for telemetry | No | `true` |
-| `ATLAS_TELEMETRY_LOG_LEVEL` | Log level for telemetry | No | `INFO` |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ATLAS_ENABLE_TELEMETRY` | Enable or disable telemetry | telemetry.py | `true` |
+| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for telemetry | telemetry.py | `true` |
+| `ATLAS_TELEMETRY_LOG_LEVEL` | Log level for telemetry | telemetry.py | `INFO` |
 
 ### Database
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ATLAS_DB_PATH` | Path to ChromaDB database | No | `~/atlas_chroma_db` |
-| `ATLAS_COLLECTION_NAME` | ChromaDB collection name | No | `atlas_knowledge_base` |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ATLAS_DB_PATH` | Path to ChromaDB database | config.py, retrieval.py | `~/atlas_chroma_db` |
+| `ATLAS_COLLECTION_NAME` | ChromaDB collection name | config.py, retrieval.py | `atlas_knowledge_base` |
 
 ### Model Settings
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ATLAS_DEFAULT_PROVIDER` | Default model provider | No | `anthropic` |
-| `ATLAS_DEFAULT_MODEL` | Default model to use | No | `claude-3-7-sonnet-20250219` |
-| `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | No | `2000` |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ATLAS_DEFAULT_PROVIDER` | Default model provider | factory.py | `anthropic` |
+| `ATLAS_DEFAULT_MODEL` | Default model to use | config.py, factory.py | `claude-3-5-sonnet-20240620` |
+| `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | config.py, factory.py | `2000` |
+| `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | factory.py | Provider-specific default |
 
 ### Development and Testing
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ATLAS_DEV_MODE` | Enable development mode | No | `false` |
-| `ATLAS_MOCK_API` | Use mock API responses | No | `false` |
+| Variable | Description | Used in | Default |
+|----------|-------------|---------|---------|
+| `ATLAS_DEV_MODE` | Enable development mode | config.py | `false` |
+| `ATLAS_MOCK_API` | Use mock API responses | config.py | `false` |
+| `TOKENIZERS_PARALLELISM` | Control tokenizer parallelism | main.py | `false` |
+
+## Configuration in AtlasConfig
+
+The `AtlasConfig` class in `atlas.core.config` is the primary configuration object used throughout the framework. It respects all environment variables and also accepts direct parameter values:
+
+```python
+from atlas.core.config import AtlasConfig
+
+# Create config with defaults (pulls from environment variables)
+config = AtlasConfig()
+
+# Override with specific values
+config = AtlasConfig(
+    collection_name="custom_collection",
+    db_path="/path/to/custom/db",
+    model_name="claude-3-opus-20240229",
+    max_tokens=4000
+)
+```
+
+## Provider Factory Configuration
+
+The provider factory in `atlas.models.factory` allows you to create model providers with environment-aware configurations:
+
+```python
+from atlas.models.factory import create_provider
+
+# Uses environment variables for defaults
+provider = create_provider()
+
+# Specific provider with environment variables for model and tokens
+provider = create_provider(provider_name="anthropic")
+
+# Fully specified configuration (overrides environment variables)
+provider = create_provider(
+    provider_name="openai",
+    model_name="gpt-4o",
+    max_tokens=8000
+)
+```
+
+## Knowledge Base Configuration
+
+The knowledge base in `atlas.knowledge.retrieval` also respects environment variables:
+
+```python
+from atlas.knowledge.retrieval import KnowledgeBase
+
+# Uses environment variables for database path and collection name
+kb = KnowledgeBase()
+
+# Specify custom values (overrides environment variables)
+kb = KnowledgeBase(
+    collection_name="custom_collection",
+    db_path="/path/to/custom/db"
+)
+```
 
 ## Adding New Environment Variables
 
@@ -127,6 +198,15 @@ When adding new environment variables to the codebase:
 3. Update any relevant configuration classes to use the new variables
 4. Add validation for required variables
 5. Register new provider API key variables with `register_api_key_var`
+
+### Standardized Naming
+
+Follow these naming conventions for environment variables:
+
+1. Use `ATLAS_` prefix for all Atlas-specific variables
+2. Use `ATLAS_{PROVIDER}_` prefix for provider-specific variables
+3. Use all caps with underscores as separators
+4. Use descriptive names that clearly indicate the variable's purpose
 
 ## Using the env.py Module
 
@@ -231,3 +311,7 @@ env.register_api_key_var("local_provider", None)
 8. **Group related variables** with consistent prefixes (e.g., `ATLAS_` for Atlas-specific variables)
 9. **Use feature flags** for enabling/disabling features (e.g., `ATLAS_ENABLE_TELEMETRY`)
 10. **Add validation** for critical configuration values
+
+## CLI Tools
+
+For details on how environment variables interact with command-line tools, see [CLI Tools Documentation](cli/README.md).

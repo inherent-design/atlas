@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from atlas.core import env
 from atlas.core.errors import ConfigurationError, ValidationError, ErrorSeverity
 
 logger = logging.getLogger(__name__)
@@ -20,10 +21,10 @@ class AtlasConfig:
     def __init__(
         self,
         anthropic_api_key: Optional[str] = None,
-        collection_name: str = "atlas_knowledge_base",
+        collection_name: Optional[str] = None,
         db_path: Optional[str] = None,
-        model_name: str = "claude-3-5-sonnet-20240620",
-        max_tokens: int = 2000,
+        model_name: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         parallel_enabled: bool = False,
         worker_count: int = 3,
     ):
@@ -31,19 +32,18 @@ class AtlasConfig:
 
         Args:
             anthropic_api_key: API key for Anthropic. If None, read from environment.
-            collection_name: Name of the ChromaDB collection.
-            db_path: Path to ChromaDB storage. If None, use default in home directory.
-            model_name: Name of the Anthropic model to use.
-            max_tokens: Maximum number of tokens in responses.
+            collection_name: Name of the ChromaDB collection. If None, read from environment.
+            db_path: Path to ChromaDB storage. If None, read from environment or default to home directory.
+            model_name: Name of the model to use. If None, read from environment or use default.
+            max_tokens: Maximum tokens in responses. If None, read from environment or use default.
             parallel_enabled: Enable parallel processing with LangGraph.
             worker_count: Number of worker agents in parallel mode.
         """
-        # API key (from args or environment)
-        self.anthropic_api_key = anthropic_api_key or os.environ.get(
-            "ANTHROPIC_API_KEY"
-        )
+        # API key (from args, environment, or env module)
+        self.anthropic_api_key = anthropic_api_key or env.get_string("ANTHROPIC_API_KEY")
+        
         # Only validate API key if not explicitly skipped
-        if not self.anthropic_api_key and not os.environ.get("SKIP_API_KEY_CHECK"):
+        if not self.anthropic_api_key and not env.get_bool("SKIP_API_KEY_CHECK", False):
             raise ConfigurationError(
                 message="ANTHROPIC_API_KEY must be provided or set as an environment variable",
                 severity=ErrorSeverity.ERROR,
@@ -53,23 +53,40 @@ class AtlasConfig:
                 }
             )
 
-        # ChromaDB settings
-        self.collection_name = collection_name
+        # ChromaDB settings - use environment variables if not specified
+        self.collection_name = collection_name or env.get_string("ATLAS_COLLECTION_NAME", "atlas_knowledge_base")
 
-        # Set DB path (default to user's home directory if not specified)
-        if not db_path:
-            home_dir = Path.home()
-            db_path = str(home_dir / "atlas_chroma_db")
+        # Set DB path (use args, environment variable, or default to user's home directory)
+        if db_path:
+            self.db_path = db_path
+        else:
+            env_db_path = env.get_string("ATLAS_DB_PATH")
+            if env_db_path:
+                self.db_path = env_db_path
+            else:
+                home_dir = Path.home()
+                self.db_path = str(home_dir / "atlas_chroma_db")
 
-        self.db_path = db_path
-
-        # Model settings
-        self.model_name = model_name
-        self.max_tokens = max_tokens
+        # Model settings - use environment variables if not specified
+        default_model = "claude-3-5-sonnet-20240620"
+        self.model_name = model_name or env.get_string("ATLAS_DEFAULT_MODEL", default_model)
+        
+        default_max_tokens = 2000
+        if max_tokens is not None:
+            self.max_tokens = max_tokens
+        else:
+            self.max_tokens = env.get_int("ATLAS_MAX_TOKENS", default_max_tokens)
 
         # Parallel processing settings
         self.parallel_enabled = parallel_enabled
         self.worker_count = worker_count
+        
+        # Development settings
+        self.dev_mode = env.get_bool("ATLAS_DEV_MODE", False)
+        self.mock_api = env.get_bool("ATLAS_MOCK_API", False)
+        
+        # Log level from environment
+        self.log_level = env.get_string("ATLAS_LOG_LEVEL", "INFO")
         
         # Validate configuration
         try:
@@ -124,4 +141,7 @@ class AtlasConfig:
             "max_tokens": self.max_tokens,
             "parallel_enabled": self.parallel_enabled,
             "worker_count": self.worker_count,
+            "dev_mode": self.dev_mode,
+            "mock_api": self.mock_api,
+            "log_level": self.log_level,
         }

@@ -176,17 +176,17 @@ def get_provider_class(provider_name: str) -> Type[ModelProvider]:
 
 @traced(name="create_provider")
 def create_provider(
-    provider_name: str,
+    provider_name: Optional[str] = None,
     model_name: Optional[str] = None,
-    max_tokens: int = 2000,
+    max_tokens: Optional[int] = None,
     **kwargs: Any,
 ) -> ModelProvider:
     """Create a model provider instance.
     
     Args:
-        provider_name: Name of the provider to create.
-        model_name: Name of the model to use (if None, use provider default).
-        max_tokens: Maximum tokens for model generation.
+        provider_name: Name of the provider to create (if None, use environment default).
+        model_name: Name of the model to use (if None, use provider default from environment).
+        max_tokens: Maximum tokens for model generation (if None, use environment default).
         **kwargs: Additional provider-specific parameters.
         
     Returns:
@@ -195,22 +195,42 @@ def create_provider(
     Raises:
         ValueError: If the provider is not supported or required configuration is missing.
     """
+    # Get default provider from environment if not specified
+    if provider_name is None:
+        provider_name = env.get_string("ATLAS_DEFAULT_PROVIDER", "anthropic")
+    
     # Normalize provider name
     provider_name = provider_name.lower()
     
     # Get the provider class
     provider_class = get_provider_class(provider_name)
     
+    # Get default max_tokens from environment if not specified
+    if max_tokens is None:
+        max_tokens = env.get_int("ATLAS_MAX_TOKENS", 2000)
+    
     # Set default model name if not provided
     if model_name is None:
-        available_providers = discover_providers()
-        if provider_name in available_providers and available_providers[provider_name]:
-            model_name = available_providers[provider_name][0]
+        # First check environment variable for this specific provider
+        env_model_var = f"ATLAS_{provider_name.upper()}_DEFAULT_MODEL"
+        env_model = env.get_string(env_model_var)
+        
+        if env_model:
+            model_name = env_model
         else:
-            # Use default models
-            model_name = _DEFAULT_MODELS.get(provider_name)
-            if model_name is None:
-                raise ValueError(f"No default model available for provider: {provider_name}")
+            # Then check the general default model variable
+            model_name = env.get_string("ATLAS_DEFAULT_MODEL")
+            
+        # If still not found, use the provider's available models
+        if not model_name:
+            available_providers = discover_providers()
+            if provider_name in available_providers and available_providers[provider_name]:
+                model_name = available_providers[provider_name][0]
+            else:
+                # Fall back to hardcoded defaults
+                model_name = _DEFAULT_MODELS.get(provider_name)
+                if model_name is None:
+                    raise ValueError(f"No default model available for provider: {provider_name}")
     
     # Create provider instance
     try:

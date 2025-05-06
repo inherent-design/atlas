@@ -5,9 +5,10 @@
 **Completed:**
 - ✅ Core infrastructure and testing framework
 - ✅ Multi-provider model support with unified interfaces
-- ✅ Environment management with centralized env.py module
+- ✅ Environment management with robust env.py module
 - ✅ Telemetry with OpenTelemetry integration
 - ✅ Knowledge retrieval and document processing
+- ✅ Environment variable standardization with consistent usage
 
 **Next Focus:**
 - ✅ Foundation: Completed provider module, unified agent implementations, created registry
@@ -20,18 +21,17 @@
 ✅ All critical blockers resolved!
 
 **Next Steps:**
-- ✅ Create examples demonstrating the query-only interface
-- ✅ Organize testing and examples for better structure
 - Enhance provider implementations for OpenAI and Ollama
 - Create comprehensive tests for new functionality
+- Implement provider optimizations like connection pooling
 
 ## MVP Implementation Strategy
 
 The Atlas MVP follows a **Minimal Viable Pipeline** approach that creates a functioning end-to-end system with simplified implementations of all critical components. This ensures users can benefit from basic functionality across all key value areas before any single component is deeply optimized.
 
-### Phase 1: Foundation Stabilization 🔄
+### Phase 1: Foundation Stabilization ✅
 
-**Critical Path [P0]:**
+**Critical Path [P0]:** ✅ COMPLETED
 - [x] Complete streaming implementation for Anthropic provider
 - [x] Implement basic API key validation mechanism
 - [x] Unify agent implementations (AtlasAgent and MultiProviderAgent)
@@ -39,11 +39,14 @@ The Atlas MVP follows a **Minimal Viable Pipeline** approach that creates a func
 - [x] Create edges.py file with conditional routing
 - [x] Enhance error handling across all core components
 - [x] Create query-only version for other agentic clients
+- [x] Standardize environment variable handling across components
 
 **Important [P1]:**
 - [x] Maintain backward compatibility for existing agent code
 - [x] Add basic telemetry throughout agent operations
 - [x] Implement simple factory methods for agent creation
+- [x] Create examples demonstrating the query-only interface
+- [x] Organize testing and examples for better structure
 - [ ] Add missing unit tests for provider functionality
 - [ ] Create simple mocked providers for testing
 
@@ -98,6 +101,22 @@ The Atlas MVP follows a **Minimal Viable Pipeline** approach that creates a func
 - [ ] Implement workflow versioning and history
 - [ ] Create parallel execution optimization
 
+### Phase 4: Environment & Configuration ✅
+
+**Critical Path [P0]:** ✅ COMPLETED
+- [x] Refine environment variable handling with env.py module
+- [x] Implement consistent configuration precedence (CLI > ENV > defaults)
+- [x] Update core modules to respect environment variables
+- [x] Document environment variables and their usage
+- [x] Enhance error reporting for configuration issues
+
+**Important [P1]:** ✅ COMPLETED
+- [x] Add provider-specific environment variables
+- [x] Create validation logic for environment variables
+- [x] Implement development mode configuration
+- [x] Create CLI tools registry documentation
+- [x] Enhance environment variable documentation
+
 ## Acceleration Pathways
 
 These pathways represent specialized areas of functionality that can be accelerated in parallel with the MVP approach, depending on specific user priorities and resource availability.
@@ -131,7 +150,7 @@ These pathways represent specialized areas of functionality that can be accelera
 
 ## File Structure
 
-### Target MVP Structure
+### Current Structure
 
 ```
 atlas/
@@ -160,7 +179,7 @@ atlas/
 │   ├── ingest.py               ✅ DONE  # Document ingestion
 │   ├── retrieval.py            ✅ DONE  # Knowledge retrieval
 │   └── embedding.py            ⏱️ PLANNED [P1]  # Embedding functions
-├── models/                      ✅ DONE  # Provider management (CONSOLIDATED)
+├── models/                      ✅ DONE  # Provider management
 │   ├── __init__.py             ✅ DONE  # Unified export interface
 │   ├── base.py                 ✅ DONE  # Base provider interface
 │   ├── factory.py              ✅ DONE  # Provider factory
@@ -189,9 +208,10 @@ atlas/
 │   ├── test_minimal.py         ✅ DONE  # Minimal verification tests
 │   ├── test_mock.py            ✅ DONE  # Mock tests with no API calls
 │   └── test_models.py          ✅ DONE  # Provider and models unit tests
-└── tools/                       ✅ DONE  # Tool implementations
-    ├── __init__.py             ✅ DONE
-    └── knowledge_retrieval.py  ✅ DONE  # Knowledge retrieval tools
+├── tools/                       ✅ DONE  # Tool implementations
+│   ├── __init__.py             ✅ DONE
+│   └── knowledge_retrieval.py  ✅ DONE  # Knowledge retrieval tools
+└── query.py                     ✅ DONE  # Query client for other agentic systems
 ```
 
 ## Models Module Implementation Status
@@ -202,10 +222,10 @@ atlas/
 - ✅ Provider auto-detection from environment
 - ✅ Environment variable integration with env module
 - ✅ Unit tests for provider functionality
-
-**In Progress:**
 - ✅ Streaming implementation for Anthropic provider
 - ✅ Enhanced API key validation
+
+**In Progress:**
 - 🚧 Streaming implementation for OpenAI and Ollama providers
 - 🚧 Comprehensive testing for all providers
 
@@ -215,49 +235,22 @@ atlas/
 - ⏱️ Advanced error handling with retries
 - ⏱️ Cost optimization strategies
 
-### Implementation Plan for Completion
+## Environment Configuration Status
 
-1. **Complete Streaming Implementation**: ✅
-   - ✅ Finish implementation of streaming for Anthropic provider
-   - ✅ Add robust error handling for streaming connections
-   - ✅ Create examples demonstrating streaming functionality
+**Completed:**
+- ✅ Centralized environment management with env.py
+- ✅ Consistent configuration precedence (CLI args > env vars > defaults)
+- ✅ Enhanced documentation with usage examples
+- ✅ Provider-specific environment variables
+- ✅ Environment validation logic
+- ✅ CLI and environment integration
+- ✅ Environment-aware configuration objects
 
-2. **Enhance Provider Testing**:
-   - 🚧 Create mocked provider implementations for testing
-   - 🚧 Implement comprehensive tests for all providers
-   - 🚧 Add tests for error conditions and edge cases
-
-3. **Add Provider Optimizations**:
-   - ⏱️ Implement connection pooling for performance
-   - ⏱️ Add health checks for provider status
-   - ⏱️ Create retry strategies for failed requests
-
-4. **Extend to Other Providers**:
-   - ⏱️ Implement streaming for OpenAI provider
-   - ⏱️ Implement streaming for Ollama provider
-   - ⏱️ Add provider-specific optimizations
-
-## Completed Tasks Summary
-
-Core infrastructure tasks completed:
-- ✅ Created main.py entry point and established file structure
-- ✅ Implemented LangGraph integration with controller-worker architecture
-- ✅ Built comprehensive testing infrastructure with mock framework
-- ✅ Added API cost tracking and telemetry with OpenTelemetry
-- ✅ Implemented multi-provider support with unified interfaces
-- ✅ Created centralized environment management with validation
-- ✅ Standardized testing approach with comprehensive documentation
-
-Foundation stabilization recently completed:
-- ✅ Completed streaming implementation for Anthropic provider
-- ✅ Implemented basic API key validation mechanism
-- ✅ Unified agent implementations (AtlasAgent and MultiProviderAgent)
-- ✅ Created agent registry with dynamic discovery
-- ✅ Created edges.py file with conditional routing
-- ✅ Enhanced error handling across components
-- ✅ Created query-only version for other agentic clients
-- ✅ Added examples demonstrating key features
-- ✅ Organized testing and examples for better structure and clarity
+**Testing Infrastructure:**
+- ✅ Unified test runner (run_tests.py)
+- ✅ Multiple test types (mock, minimal, unit, API)
+- ✅ Module-specific test targeting
+- ✅ Environment-aware test setup
 
 ## Development Principles
 
@@ -267,6 +260,7 @@ Foundation stabilization recently completed:
 4. **Complete Documentation**: Provide thorough documentation for all new components with clear examples.
 5. **Robust Error Handling**: Implement consistent, informative error handling throughout all components.
 6. **Type Safety**: Use comprehensive type hints and validation for better code quality and reliability.
-7. **Decisive Cutover**: Plan for complete transition to new implementations rather than maintaining dual systems.
+7. **Consistent Environment Configuration**: Maintain a clear precedence model for configuration (CLI args > env vars > defaults).
+8. **Modular Design**: Create loosely coupled components that can be used independently.
 
 See `docs/MVP_STRATEGY.md` for a detailed explanation of the MVP approach, implementation timelines, and prioritization framework.
