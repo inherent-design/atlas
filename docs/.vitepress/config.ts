@@ -15,7 +15,7 @@ export default defineConfig(
     description: "Official documentation for Atlas",
 
     head,
-    base: "/atlas",
+    base: "/atlas/",
 
     lastUpdated: true,
 
