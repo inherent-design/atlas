@@ -212,51 +212,29 @@ def run_cli_mode(args):
     # Import config and agent
     from atlas.core.config import AtlasConfig
     
-    # Use the appropriate agent based on selected provider
-    if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
-        from atlas.agents.multi_provider_base import MultiProviderAgent
-        
-        # Create config with command line parameters
-        config = AtlasConfig(
-            collection_name=args.collection,
-            db_path=args.db_path,
-            model_name=args.model,
-            max_tokens=args.max_tokens,
-        )
-        
-        # Get additional provider params
-        provider_params = {}
-        if args.base_url and args.provider == "ollama":
-            provider_params["base_url"] = args.base_url
-        
-        # Initialize multi-provider agent
-        print(f"Using {args.provider} provider with model: {args.model}")
-        agent = MultiProviderAgent(
-            system_prompt_file=args.system_prompt,
-            collection_name=args.collection,
-            config=config,
-            provider_name=args.provider,
-            model_name=args.model,
-            **provider_params
-        )
-    else:
-        # Fallback to default Anthropic agent
-        from atlas.agents.base import AtlasAgent
-        
-        # Create config with command line parameters
-        config = AtlasConfig(
-            collection_name=args.collection,
-            db_path=args.db_path,
-            model_name=args.model,
-            max_tokens=args.max_tokens,
-        )
-        
-        # Initialize standard Atlas agent
-        agent = AtlasAgent(
-            system_prompt_file=args.system_prompt,
-            collection_name=args.collection,
-            config=config,
-        )
+    # Create config with command line parameters
+    config = AtlasConfig(
+        collection_name=args.collection,
+        db_path=args.db_path,
+        model_name=args.model,
+        max_tokens=args.max_tokens,
+    )
+    
+    # Get additional provider params
+    provider_params = {}
+    if args.base_url and args.provider == "ollama":
+        provider_params["base_url"] = args.base_url
+    
+    # Initialize agent
+    print(f"Using {args.provider} provider with model: {args.model}")
+    agent = AtlasAgent(
+        system_prompt_file=args.system_prompt,
+        collection_name=args.collection,
+        config=config,
+        provider_name=args.provider,
+        model_name=args.model,
+        **provider_params
+    )
 
     print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
     print("---------------------------------------------------")
@@ -291,27 +269,18 @@ def run_cli_mode(args):
         except Exception as e:
             print(f"\nUnexpected error: {str(e)}")
             print("Let's continue with a fresh conversation.")
-            # Reinitialize agent based on provider
-            if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
-                from atlas.agents.multi_provider_base import MultiProviderAgent
-                provider_params = {}
-                if args.base_url and args.provider == "ollama":
-                    provider_params["base_url"] = args.base_url
-                agent = MultiProviderAgent(
-                    system_prompt_file=args.system_prompt,
-                    collection_name=args.collection,
-                    config=config,
-                    provider_name=args.provider,
-                    model_name=args.model,
-                    **provider_params
-                )
-            else:
-                from atlas.agents.base import AtlasAgent
-                agent = AtlasAgent(
-                    system_prompt_file=args.system_prompt,
-                    collection_name=args.collection,
-                    config=config,
-                )
+            # Reinitialize agent
+            provider_params = {}
+            if args.base_url and args.provider == "ollama":
+                provider_params["base_url"] = args.base_url
+            agent = AtlasAgent(
+                system_prompt_file=args.system_prompt,
+                collection_name=args.collection,
+                config=config,
+                provider_name=args.provider,
+                model_name=args.model,
+                **provider_params
+            )
 
 
 def run_query_mode(args):
@@ -333,33 +302,21 @@ def run_query_mode(args):
 
     print(f"Processing query: {args.query}")
 
-    # Use the appropriate agent based on selected provider
-    if args.provider == "anthropic" or args.provider == "openai" or args.provider == "ollama":
-        from atlas.agents.multi_provider_base import MultiProviderAgent
-        
-        # Get additional provider params
-        provider_params = {}
-        if args.base_url and args.provider == "ollama":
-            provider_params["base_url"] = args.base_url
-        
-        # Initialize multi-provider agent
-        print(f"Using {args.provider} provider with model: {args.model}")
-        agent = MultiProviderAgent(
-            system_prompt_file=args.system_prompt,
-            collection_name=args.collection,
-            config=config,
-            provider_name=args.provider,
-            model_name=args.model,
-            **provider_params
-        )
-    else:
-        # Use default Anthropic agent
-        from atlas.agents.base import AtlasAgent
-        agent = AtlasAgent(
-            system_prompt_file=args.system_prompt,
-            collection_name=args.collection,
-            config=config,
-        )
+    # Get additional provider params
+    provider_params = {}
+    if args.base_url and args.provider == "ollama":
+        provider_params["base_url"] = args.base_url
+    
+    # Initialize agent
+    print(f"Using {args.provider} provider with model: {args.model}")
+    agent = AtlasAgent(
+        system_prompt_file=args.system_prompt,
+        collection_name=args.collection,
+        config=config,
+        provider_name=args.provider,
+        model_name=args.model,
+        **provider_params
+    )
 
     response = agent.process_message(args.query)
     print(f"Response: {response}")
