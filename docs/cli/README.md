@@ -20,6 +20,11 @@ uv run python main.py [options]
 - `-m controller` - Multi-agent controller mode
 - `-m worker` - Worker agent mode
 
+**Architecture Notes:**
+- All modes use the unified `AtlasAgent` implementation from `atlas.agents.base`
+- Multiple model providers (Anthropic, OpenAI, Ollama) are supported through a common interface
+- Environment variables are used for configuration with fallbacks to defaults
+
 **Common Options:**
 ```
   -h, --help            show this help message and exit

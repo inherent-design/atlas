@@ -28,6 +28,7 @@ export const sidebar: DefaultTheme.Sidebar = [
     items: [
       statusItem("Testing Guide", "/TESTING", "done"),
       statusItem("Environment Variables", "/ENV_VARIABLES", "done"),
+      statusItem("CLI Tools", "/cli/README", "done"),
     ]
   },
   {

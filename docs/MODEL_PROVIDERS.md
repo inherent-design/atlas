@@ -4,11 +4,13 @@ This document explains how to use Atlas with different model providers beyond th
 
 ## Available Model Providers
 
-Atlas currently supports the following model providers:
+Atlas currently supports the following model providers through a unified interface:
 
 1. **Anthropic (Default)** - Claude models with high-quality reasoning capabilities
 2. **OpenAI** - GPT models for versatile applications
 3. **Ollama** - Local models for privacy and no-cost operation
+
+All providers are accessed through the `AtlasAgent` implementation, which handles provider selection and configuration automatically based on command line arguments and environment variables.
 
 ## Configuration
 
