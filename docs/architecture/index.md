@@ -115,4 +115,5 @@ graph TD
 
 - See [Components](./components.md) for detailed descriptions of each component
 - See [Data Flow](./data_flow.md) for information on how data moves through Atlas
+- See [Module Interaction](./module_interaction.md) for details on how modules integrate with each other
 - See [Getting Started Guide](../guides/getting_started.md) for installation and usage instructions

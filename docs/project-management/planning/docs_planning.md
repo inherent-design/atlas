@@ -18,6 +18,7 @@ docs/
 │   ├── data_flow.md          # Data flow patterns ✅
 │   ├── design_principles.md  # Design patterns & principles ✅
 │   ├── index.md              # Architecture section index/overview ✅
+│   ├── module_interaction.md # Module interaction and integration ✅
 │   └── system_requirements.md # Dependencies & requirements ✅
 ├── components/               # Bottom-up implementation
 │   ├── agents/               # Agent components ✅

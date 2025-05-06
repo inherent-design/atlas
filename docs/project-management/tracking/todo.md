@@ -62,16 +62,47 @@ The Atlas MVP follows a **Minimal Viable Pipeline** approach that creates a func
 
 **Critical Path [P0]:**
 - [ ] Verify and enhance document chunking strategies
+  - Implement adaptive chunking based on document structure
+  - Add overlap controls to maintain context across chunks
+  - Create content-aware boundaries that respect semantic units
+  - Support custom chunking strategies for different document types
 - [ ] Improve metadata handling for documents
+  - Add rich metadata extraction from document content
+  - Implement metadata-based filtering and sorting
+  - Create standardized metadata schema for cross-document queries
+  - Support custom metadata fields for specialized document types
 - [ ] Enhance retrieval with improved relevance scoring
+  - Implement hybrid retrieval combining semantic and lexical search
+  - Add re-ranking capabilities for better result ordering
+  - Create relevance feedback mechanisms
+  - Support configurable similarity thresholds
 - [ ] Add basic filtering capabilities for results
+  - Implement metadata-based filtering
+  - Add content-based filtering options
+  - Create filter combinations with boolean logic
+  - Support date range and numeric range filters
 
 **Important [P1]:**
 - [ ] Implement basic validation of ingested content
+  - Add content quality checks for ingested documents
+  - Implement duplicate detection mechanisms
+  - Create content validation rules for different document types
 - [ ] Add better error handling for ingestion failures
+  - Implement granular error reporting for ingestion steps
+  - Create recovery mechanisms for partial ingestion failures
+  - Add retry logic for transient failures
 - [ ] Create simple caching for frequent queries
+  - Implement in-memory cache for frequent queries
+  - Add cache invalidation based on document changes
+  - Create configurable cache parameters
 - [ ] Add telemetry for knowledge operations
+  - Implement performance metrics for ingestion and retrieval
+  - Add detailed logging for knowledge operations
+  - Create dashboard for monitoring knowledge system performance
 - [ ] Implement document versioning support
+  - Add version tracking for documents
+  - Implement version-specific queries
+  - Create history tracking for document changes
 
 **Nice to Have [P2]:**
 - [ ] Add support for multimedia document types
@@ -280,5 +311,12 @@ atlas/
 6. **Type Safety**: Use comprehensive type hints and validation for better code quality and reliability.
 7. **Consistent Environment Configuration**: Maintain a clear precedence model for configuration (CLI args > env vars > defaults).
 8. **Modular Design**: Create loosely coupled components that can be used independently.
+9. **Documentation-Driven Implementation**: Use documentation to guide implementation while resolving any discrepancies:
+   - Start with thoroughly documenting the expected behavior and interfaces
+   - When discrepancies arise between documentation and implementation needs:
+     - Favor the approach that provides better API design, performance, and maintainability
+     - Update documentation to match implementation decisions when technical requirements necessitate changes
+     - Preserve the original design intent while adapting to technical realities
+   - Keep both implementation and documentation in sync throughout development
 
 See `project-management/roadmap/mvp_strategy.md` for a detailed explanation of the MVP approach, implementation timelines, and prioritization framework.

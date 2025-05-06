@@ -200,6 +200,17 @@ Atlas differentiates between formal tests, usage examples, and testing utilities
    - Suggest alternatives with pros and cons clearly outlined
    - Be explicit about any limitations or potential issues
 
+4. When working with documentation and implementation:
+   - Use a documentation-driven implementation approach
+   - Start by reviewing existing documentation to understand the design intent
+   - When finding discrepancies between documentation and implementation needs:
+     - Evaluate which approach provides better API design, performance, and maintainability
+     - Update documentation to match implementation when technical requirements necessitate changes
+     - Preserve the original design intent while adapting to technical realities
+   - Keep both implementation and documentation in sync throughout development
+   - Use documentation as a design tool to clarify requirements before implementation
+   - Document any implementation decisions that deviate from original specifications
+
 ## Advanced Feature Development Areas
 
 The following areas represent the most important development directions for advancing Atlas capabilities:

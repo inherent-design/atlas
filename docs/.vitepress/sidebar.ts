@@ -34,6 +34,7 @@ export const sidebar: DefaultTheme.Sidebar = [
       { text: "Overview", link: "/architecture/" },
       { text: "Components", link: "/architecture/components" },
       { text: "Data Flow", link: "/architecture/data_flow" },
+      { text: "Module Interaction", link: "/architecture/module_interaction" },
       { text: "Design Principles", link: "/architecture/design_principles" },
       {
         text: "System Requirements",

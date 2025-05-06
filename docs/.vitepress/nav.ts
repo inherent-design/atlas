@@ -25,6 +25,10 @@ export const nav: DefaultTheme.NavItem[] = [
         link: "/architecture/data_flow",
       },
       {
+        text: "Module Interaction",
+        link: "/architecture/module_interaction",
+      },
+      {
         text: "Design Principles",
         link: "/architecture/design_principles",
       },
