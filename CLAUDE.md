@@ -108,19 +108,44 @@ This file contains essential instructions and guidelines for Claude Code when wo
 
 ## Testing and Debugging
 
+### Testing Directory Structure
+
+Atlas differentiates between formal tests, usage examples, and testing utilities:
+
+- **`atlas/tests/`**: Contains all unit tests and integration tests
+  - Test files are named with a `test_` prefix (e.g., `test_models.py`)
+  - Each test file focuses on testing a specific module or component
+
+- **`atlas/scripts/testing/`**: Contains utility scripts for running tests
+  - `run_tests.py`: Unified test runner with various test types
+  - Other utilities for test setup and configuration
+
+- **`examples/`**: Contains example scripts demonstrating Atlas functionality
+  - These are **not** formal tests but usage demonstrations
+  - Can be run with or without an API key (using `SKIP_API_KEY_CHECK=true`)
+
 ### Test Implementation
 
-- Create comprehensive unit tests for all components.
-- Implement integration tests for key workflows.
-- Use mock objects for external dependencies in tests.
-- Document testing strategies and expected outcomes.
+- Create comprehensive unit tests for all components
+- Implement mock tests that don't require API keys
+- Use the agent registry for testing with different agent implementations
+- Create mocked provider implementations for testing without API calls
+- Document testing strategies and expected outcomes
+
+### Test Types
+
+- **Unit Tests**: Test individual components in isolation
+- **Mock Tests**: Use mocked components to test without API dependencies
+- **Integration Tests**: Verify that different components work together
+- **API Tests**: Test real API interactions (requires API keys)
 
 ### Debugging
 
-- Add detailed logging throughout the codebase.
-- Implement debug modes with increased verbosity.
-- Create visualization tools for complex workflows.
-- Document common debugging scenarios and solutions.
+- Add detailed logging throughout the codebase
+- Use the telemetry module to trace function calls and performance
+- Implement debug modes with increased verbosity
+- Create visualization tools for complex workflows
+- Document common debugging scenarios and solutions
 
 ## Implementation Notes for Claude Code
 
@@ -147,14 +172,18 @@ This file contains essential instructions and guidelines for Claude Code when wo
 
 ### Current Development Focus
 
-The immediate development focus is on:
+The current development focus is on:
 
-1. Enhancing the LangGraph integration with improved workflows
-2. Expanding the controller-worker architecture for more complex tasks
-3. Improving knowledge retrieval and processing
-4. Implementing advanced orchestration capabilities
-5. Adding comprehensive testing and debugging tools (✅ Mock testing framework added)
-6. Tracking API usage and estimating costs for better resource management (✅ Implemented)
+1. ✅ Foundation Stabilization: Completed with unified agent implementations, agent registry with dynamic discovery, error handling system, conditional edge routing, and query-only client for other agentic clients
+2. 📚 Knowledge Enhancements: Improving document chunking, metadata handling, retrieval relevance, and filtering capabilities
+3. 🔀 Workflow Improvements: Enhancing message passing between agents and structured message formats with metadata
+4. 🧪 Testing: Creating mocked provider implementations and comprehensive tests for all providers
+5. 📝 Documentation: Documenting new interfaces and components
+
+**Next priorities:**
+1. Complete the provider implementations for OpenAI and Ollama with streaming
+2. Enhance testing for all providers with error conditions and edge cases
+3. Implement provider optimizations like connection pooling and health checks
 
 Refer to the TODO.md file for a detailed implementation plan with specific tasks and priorities.
 
@@ -229,6 +258,9 @@ source .venv/bin/activate
 
 # Install dependencies
 uv pip install -e .
+
+# Install tools
+uv pip install ruff black mypy pytest
 ```
 
 ### Environment Variables
@@ -253,6 +285,8 @@ export ANTHROPIC_API_KEY=your_api_key_here
 
 ### Basic Usage
 
+Atlas can be run in several modes, including CLI mode for interactive use, query mode for one-off questions, and ingest mode for adding documents to the knowledge base:
+
 ```bash
 # Run in CLI mode with default system prompt
 uv run python main.py -m cli
@@ -268,6 +302,31 @@ uv run python main.py -m controller --parallel
 
 # Run a single query
 uv run python main.py -m query -q "What is the trimodal methodology in Atlas?"
+```
+
+### Using the Query Client
+
+Atlas provides a lightweight query-only client that can be used from other applications or agentic systems. This is demonstrated in the examples directory:
+
+```python
+from atlas import create_query_client
+
+# Create a client
+client = create_query_client()
+
+# Simple query with LLM response
+response = client.query("What is the trimodal methodology?")
+print(response)
+
+# Retrieve documents without requiring LLM response (no API key needed)
+documents = client.retrieve_only("knowledge graph structure")
+print(f"Found {len(documents)} relevant documents")
+
+# Streaming response with callback
+def print_streaming(delta, full_text):
+    print(delta, end="", flush=True)
+
+client.query_streaming("Explain conditional edge routing", print_streaming)
 ```
 
 ### Development Commands
@@ -420,8 +479,35 @@ When upgrading dependencies:
 
 ### Running Tests
 
+#### Using the Test Runner Script (Recommended)
+
 ```bash
-# RECOMMENDED: Run mock tests (fast, reliable, no API key required)
+# Run mock tests (fast, reliable, no API key required)
+uv run python atlas/scripts/testing/run_tests.py --test-type mock
+
+# Run unit tests for all modules
+uv run python atlas/scripts/testing/run_tests.py --test-type unit
+
+# Run unit tests for a specific module
+uv run python atlas/scripts/testing/run_tests.py --test-type unit --module models
+
+# Run minimal tests (basic functionality verification)
+uv run python atlas/scripts/testing/run_tests.py --test-type minimal
+
+# Run API tests for the base agent (requires API key)
+uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base
+
+# Run API tests with a custom query
+uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base --query "Your query here"
+
+# Run all tests (both mock and real tests)
+uv run python atlas/scripts/testing/run_tests.py --test-type all
+```
+
+#### Using Direct Test Commands
+
+```bash
+# Run the mock tests directly (no API key required)
 uv run python mock_test.py
 
 # Run only the base agent test (requires API key)
@@ -429,20 +515,31 @@ uv run python test_atlas.py --test base
 
 # Run specific base agent test with custom query (requires API key)
 uv run python test_atlas.py --test base --query "Your query here"
+```
 
-# NOTE: The following tests may encounter LangGraph compatibility issues
-# and are not recommended for regular development testing:
-# uv run python test_atlas.py --test controller
-# uv run python test_atlas.py --test coordinator
-# uv run python test_atlas.py --test workflows
+#### Running Example Files
+
+```bash
+# Run the query example
+uv run python examples/query_example.py
+
+# Run the retrieval example
+uv run python examples/retrieval_example.py
+
+# Run the streaming example
+uv run python examples/streaming_example.py
+
+# Run examples without an API key (using mock responses)
+SKIP_API_KEY_CHECK=true uv run python examples/query_example.py
 ```
 
 > **Important Testing Notes:**
 >
-> 1. The mock tests (`mock_test.py`) are the most reliable way to verify code functionality
-> 2. The real tests using `test_atlas.py` work reliably for the base agent, but may encounter issues with controller and workflow components
-> 3. Regular pytest integration (`uv tool run pytest`) is not recommended due to dependency and collection issues
+> 1. The unified test runner (`atlas/scripts/testing/run_tests.py`) is the recommended way to run tests
+> 2. Mock tests are the most reliable way to verify code functionality without requiring API keys
+> 3. The real tests using API calls work reliably for the base agent, but may encounter issues with controller and workflow components
 > 4. Always run the mock tests before making changes to ensure you have a working baseline
+> 5. Example files in the `examples/` directory demonstrate functionality but are not formal tests
 
 ### API Cost Tracking
 
@@ -489,5 +586,37 @@ def test_atlas_agent():
 - Reference related issues or tasks in commit messages
 - Group related changes in single commits
 - Ensure the codebase remains in a working state after each commit
+
+## Examples and Templates
+
+### Examples Directory
+
+The `examples/` directory contains demonstration scripts that show how to use Atlas:
+
+- `query_example.py`: Demonstrates the query client with various features
+- `retrieval_example.py`: Shows document retrieval without requiring an API key
+- `streaming_example.py`: Demonstrates streaming responses with callbacks
+
+These examples serve as a starting point for integrating Atlas into your projects. They can be run with or without an API key using the `SKIP_API_KEY_CHECK=true` environment variable.
+
+### Project Structure
+
+When creating new features, follow the established project structure:
+
+```
+atlas/
+├── __init__.py                  # Core exports for the package
+├── agents/                      # Agent implementations
+├── core/                        # Core functionality (config, env, etc.)
+├── graph/                       # LangGraph implementation
+├── knowledge/                   # Knowledge management
+├── models/                      # Provider implementations
+├── orchestration/               # Agent orchestration
+├── scripts/                     # Utility scripts
+│   ├── debug/                   # Debugging utilities
+│   └── testing/                 # Testing utilities
+├── tests/                       # Test modules
+└── tools/                       # Tool implementations
+```
 
 By following these guidelines, we can maintain a high-quality, robust implementation of the Atlas framework while continually expanding its capabilities.
