@@ -13,7 +13,7 @@ Atlas requires Python 3.13 or later. We recommend using `uv` for dependency mana
 pip install uv
 
 # Clone the repository
-git clone https://github.com/yourusername/atlas.git
+git clone https://github.com/inherent-design/atlas.git
 cd atlas
 
 # Create and activate a virtual environment
@@ -28,7 +28,7 @@ uv pip install -e .
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/atlas.git
+git clone https://github.com/inherent-design/atlas.git
 cd atlas
 
 # Create and activate a virtual environment

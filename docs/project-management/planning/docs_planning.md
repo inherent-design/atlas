@@ -198,12 +198,20 @@ All Atlas documentation adheres to the following standards:
    - Clear distinction between different types of information
 
 4. **Linking Practices**
-   - Relative paths used for all internal documentation links
-   - Proper syntax for relative links (e.g., `./file.md` or `../folder/file.md`)
-   - Absolute paths (`/folder/file.md`) used for root-relative references
-   - Index files referenced via directory paths (e.g., `./directory/` not `./directory/index.md`)
-   - Links to sibling files use `./filename.md` format
-   - Links to parent directory files use `../filename.md` format
+   - Two different linking styles used for different contexts:
+     
+     a) **Regular Content Links** (for local Markdown compatibility):
+     - Include `.md` extensions for all file links (e.g., `[Link Text](./path/to/file.md)`)
+     - Use directory paths without trailing `index.md` for directory index files (e.g., `[Link Text](./directory/)`)
+     - Links to sibling files use `./filename.md` format
+     - Links to parent directory files use `../filename.md` format
+     - Relative paths preferred for all internal documentation links
+
+     b) **VitePress Frontmatter Links** (hero sections, config files):
+     - Omit `.md` extensions in VitePress-specific sections (e.g., `/guides/getting_started`)
+     - Use directory paths with trailing slash for index pages (e.g., `/directory/`) 
+     - Use absolute paths for root-relative references in VitePress config
+
    - Links checked and verified during the build process
 
 5. **Maintenance Process**

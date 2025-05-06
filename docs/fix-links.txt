@@ -1,0 +1,94 @@
+Files in /Users/zer0cell/Production/Software/llm/atlas/docs with .md links:
+
+1. /Users/zer0cell/Production/Software/llm/atlas/docs/guides/getting_started.md
+   - Line 61: See the [Environment Variables](../reference/env_variables.md) documentation for a complete list of configuration options.
+   - Line 202: - Explore [Query Workflows](../workflows/query.md)
+   - Line 203: - See the [CLI Reference](../reference/cli.md) for all available options
+
+2. /Users/zer0cell/Production/Software/llm/atlas/docs/workflows/query.md
+   - Line 188: - [Retrieval Workflow](./retrieval.md) - Deeper details on document retrieval
+   - Line 189: - [Getting Started Guide](../guides/getting_started.md) - Basic usage tutorial
+
+3. /Users/zer0cell/Production/Software/llm/atlas/docs/components/models/index.md
+   - Line 77: - **Documentation**: [Anthropic Provider](./anthropic.md)
+   - Line 84: - **Documentation**: [OpenAI Provider](./openai.md)
+   - Line 91: - **Documentation**: [Ollama Provider](./ollama.md)
+   - Line 247: - See [Anthropic Provider](./anthropic.md) for details on using Anthropic models
+   - Line 248: - See [OpenAI Provider](./openai.md) for details on using OpenAI models
+   - Line 249: - See [Ollama Provider](./ollama.md) for details on using Ollama models
+   - Line 250: - See [Query Workflow](../../workflows/query.md) for how providers are used in queries
+
+4. /Users/zer0cell/Production/Software/llm/atlas/docs/components/knowledge/index.md
+   - Line 356: - [Document Ingestion](ingestion.md) - Detailed documentation on document processing
+   - Line 357: - [Retrieval System](retrieval.md) - Information about knowledge retrieval functionality
+   - Line 358: - [ChromaDB Integration](../core/env.md) - Details on vector database configuration
+   - Line 359: - [LangGraph Integration](../graph/nodes.md) - Documentation on using knowledge with LangGraph
+
+5. /Users/zer0cell/Production/Software/llm/atlas/docs/workflows/retrieval.md
+   - Line 238: - [Query Workflow](./query.md) - How queries use retrieved documents
+   - Line 240: - [ChromaDB Integration](../components/core/env.md) - Environment configuration for ChromaDB
+
+6. /Users/zer0cell/Production/Software/llm/atlas/docs/workflows/custom_workflows.md
+   - Line 636: - [Multi-Agent Workflow](./multi_agent.md) - Complex workflow example
+   - Line 637: - [Query Workflow](./query.md) - Simple workflow example
+   - Line 638: - [Controller Agent](../components/agents/controller.md) - Documentation on the controller agent
+
+7. /Users/zer0cell/Production/Software/llm/atlas/docs/components/agents/controller.md
+   - Line 368: - [Multi-Agent Workflow](../../workflows/multi_agent.md) - Detailed information about the multi-agent workflow
+   - Line 369: - [Worker Agents](./workers.md) - Documentation on specialized worker agents
+
+8. /Users/zer0cell/Production/Software/llm/atlas/docs/architecture/index.md
+   - Line 116: - See [Components](./components.md) for detailed descriptions of each component
+   - Line 117: - See [Data Flow](./data_flow.md) for information on how data moves through Atlas
+   - Line 118: - See [Getting Started Guide](../guides/getting_started.md) for installation and usage instructions
+
+9. /Users/zer0cell/Production/Software/llm/atlas/docs/components/core/errors.md
+   - Line 211: - [Configuration System](config.md) - Documentation for the configuration system
+   - Line 212: - [Environment Variables Module](env.md) - Documentation for environment variables handling
+   - Line 213: - [Telemetry Module](telemetry.md) - Documentation for telemetry and logging
+
+10. /Users/zer0cell/Production/Software/llm/atlas/docs/components/core/config.md
+    - Line 353: - [Advanced Configuration Guide](../../guides/configuration.md) - Comprehensive configuration patterns and advanced usage
+    - Line 354: - [Environment Variables Reference](../../reference/env_variables.md) - Complete list of supported environment variables
+    - Line 355: - [Environment Module Documentation](env.md) - Details on environment variable handling
+    - Line 356: - [Error System Documentation](errors.md) - Information about the error handling system
+
+11. /Users/zer0cell/Production/Software/llm/atlas/docs/components/core/env.md
+    - Line 271: - [Configuration System](config.md) - Documentation for the configuration system
+    - Line 272: - [Environment Variables Reference](../../reference/env_variables.md) - Complete list of supported environment variables
+    - Line 273: - [Advanced Configuration Guide](../../guides/configuration.md) - Comprehensive guidance on configuration patterns
+
+12. /Users/zer0cell/Production/Software/llm/atlas/docs/components/core/telemetry.md
+    - Line 187: See the full example in the codebase: [`examples/telemetry_example.py`](../../guides/examples/streaming_example.md)
+    - Line 189: - [Advanced Configuration Guide](../../guides/configuration.md)
+
+13. /Users/zer0cell/Production/Software/llm/atlas/docs/components/core/prompts.md
+    - Line 238: - [Agents Documentation](../../components/agents/controller.md) - Information about agent types and interactions
+    - Line 239: - [Configuration System](config.md) - Documentation for the configuration system
+    - Line 240: - [Error System](errors.md) - Information about error handling
+
+14. /Users/zer0cell/Production/Software/llm/atlas/docs/components/graph/state.md
+    - Line 336: - [Graph Nodes](nodes.md) - Documentation for graph node functions
+    - Line 337: - [Graph Edges](edges.md) - Documentation for conditional edge routing
+    - Line 338: - [Workflows](/workflows/multi_agent.md) - Documentation for complete workflows using these state models
+
+15. /Users/zer0cell/Production/Software/llm/atlas/docs/reference/env_variables.md
+    - Line 166: - [CLI Reference](./cli.md) - Details on how environment variables interact with command-line tools
+    - Line 167: - [Getting Started Guide](../guides/getting_started.md) - Setting up your environment
+    - Line 168: - [Configuration Guide](../guides/configuration.md) - Comprehensive configuration information
+
+16. /Users/zer0cell/Production/Software/llm/atlas/docs/reference/cli.md
+    - Line 208: Atlas CLI tools respect all environment variables defined in the project. See the [Environment Variables Reference](./env_variables.md) for a complete list.
+    - Line 370: - [Getting Started Guide](../guides/getting_started.md) - Basic tutorial for using Atlas
+    - Line 371: - [Environment Variables Reference](./env_variables.md) - Complete list of environment variables
+
+17. /Users/zer0cell/Production/Software/llm/atlas/docs/reference/faq.md
+    - Line 171: See the [Environment Variables Reference](env_variables.md) for a complete list.
+    - Line 173: See the [Custom Workflows Guide](../workflows/custom_workflows.md) for detailed instructions.
+    - Line 175: See the [Custom Workflows Guide](../workflows/custom_workflows.md) for examples and best practices.
+    - Line 213: See the [TODO.md](../project-management/tracking/todo.md) file for a detailed implementation plan with specific tasks and priorities.
+    - Line 288: - [API Reference](api.md): Complete API documentation
+    - Line 289: - [Environment Variables Reference](env_variables.md): Configuration options
+    - Line 290: - [CLI Reference](cli.md): Command-line interface options
+    - Line 291: - [Getting Started Guide](../guides/getting_started.md): Introduction to Atlas
+    - Line 292: - [Testing Guide](../guides/testing.md): Testing Atlas components

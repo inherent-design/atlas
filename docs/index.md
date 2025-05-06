@@ -11,10 +11,10 @@ hero:
       link: /guides/getting_started
     - theme: alt
       text: Architecture
-      link: /architecture/overview
+      link: /architecture/
     - theme: alt
       text: Components
-      link: /components/models/overview
+      link: /components/models/
 
 features:
   - icon: 🤖
@@ -53,16 +53,16 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 ### Documentation Sections
 
 #### Architecture (Top-Down Design)
-- **[Architecture Overview](/architecture/)**: High-level system architecture
-- **[Component Relationships](/architecture/components.md)**: How components interact
-- **[Data Flow](/architecture/data_flow.md)**: Data pathways through the system
-- **[Design Principles](/architecture/design_principles.md)**: Core design patterns and principles
+- **[Architecture Overview](./architecture/)**: High-level system architecture
+- **[Component Relationships](./architecture/components.md)**: How components interact
+- **[Data Flow](./architecture/data_flow.md)**: Data pathways through the system
+- **[Design Principles](./architecture/design_principles.md)**: Core design patterns and principles
 
 #### Components (Bottom-Up Implementation)
 - **[Core Components](./components/core/config.md)**: Configuration, environment, errors, and prompts
 - **[Agent System](./components/agents/controller.md)**: Agent implementation and registry
 - **[Knowledge System](./components/knowledge/)**: Document processing and retrieval
-- **[Graph System](./components/graph/state.md)**: State management and workflow construction
+- **[Graph System](./components/graph/)**: State management and workflow construction
 - **[Model Providers](./components/models/)**: Integration with different LLM providers
 
 #### Workflows (Holistic Integration)
