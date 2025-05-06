@@ -7,14 +7,14 @@ hero:
   tagline: Advanced Multi-Modal Learning & Guidance Framework
   actions:
     - theme: brand
-      text: MVP Strategy
-      link: /MVP_STRATEGY
+      text: Getting Started
+      link: /guides/getting_started
     - theme: alt
-      text: Implementation Plan
-      link: /TODO
+      text: Architecture
+      link: /architecture/overview
     - theme: alt
-      text: Configuration
-      link: /ENV_VARIABLES
+      text: Components
+      link: /components/models/overview
 
 features:
   - icon: 🤖
@@ -52,10 +52,38 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 
 ### Documentation Sections
 
-- **[MVP Strategy](MVP_STRATEGY.md)**: Implementation strategy for the minimum viable product
-- **[Implementation Plan](TODO.md)**: Detailed roadmap and task checklist
-- **[Testing Guide](TESTING.md)**: Comprehensive testing approach and patterns
-- **[Environment Variables](ENV_VARIABLES.md)**: Configuration options via environment variables
-- **[Models](MODELS.md)**: Supported language models and capabilities
-- **[Model Providers](MODEL_PROVIDERS.md)**: Available model providers and their integration
-- **[ChromaDB Viewer](CHROMADB_VIEWER.md)**: Tools for inspecting the vector database
+#### Architecture (Top-Down Design)
+- **[Architecture Overview](/architecture/)**: High-level system architecture
+- **[Component Relationships](/architecture/components.md)**: How components interact
+- **[Data Flow](/architecture/data_flow.md)**: Data pathways through the system
+- **[Design Principles](/architecture/design_principles.md)**: Core design patterns and principles
+
+#### Components (Bottom-Up Implementation)
+- **[Core Components](./components/core/config.md)**: Configuration, environment, errors, and prompts
+- **[Agent System](./components/agents/controller.md)**: Agent implementation and registry
+- **[Knowledge System](./components/knowledge/)**: Document processing and retrieval
+- **[Graph System](./components/graph/state.md)**: State management and workflow construction
+- **[Model Providers](./components/models/)**: Integration with different LLM providers
+
+#### Workflows (Holistic Integration)
+- **[Query Workflow](./workflows/query.md)**: Standard query-response flow
+- **[Retrieval Workflow](./workflows/retrieval.md)**: Knowledge retrieval process
+- **[Multi-Agent Workflow](./workflows/multi_agent.md)**: Controller-worker coordination
+- **[Custom Workflows](./workflows/custom_workflows.md)**: Creating specialized workflows
+
+#### Developer Guides
+- **[Getting Started](./guides/getting_started.md)**: Quick start for new developers
+- **[Configuration](./guides/configuration.md)**: Configuring Atlas for your needs
+- **[Testing](./guides/testing.md)**: Testing strategies and tools
+- **[Type Checking](./guides/type_checking.md)**: Type safety and validation
+
+#### Project Management
+- **[MVP Strategy](./project-management/roadmap/mvp_strategy.md)**: Implementation approach for MVP
+- **[Progress Tracking](./project-management/tracking/todo.md)**: Current implementation status
+- **[Documentation Planning](./project-management/planning/docs_planning.md)**: Documentation plans
+
+#### Reference
+- **[API Reference](./reference/api.md)**: Core API documentation
+- **[CLI Options](./reference/cli.md)**: Command-line interface guide
+- **[Environment Variables](./reference/env_variables.md)**: Available configuration options
+- **[FAQ](./reference/faq.md)**: Frequently asked questions

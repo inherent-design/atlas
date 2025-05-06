@@ -263,4 +263,4 @@ atlas/
 7. **Consistent Environment Configuration**: Maintain a clear precedence model for configuration (CLI args > env vars > defaults).
 8. **Modular Design**: Create loosely coupled components that can be used independently.
 
-See `docs/MVP_STRATEGY.md` for a detailed explanation of the MVP approach, implementation timelines, and prioritization framework.
+See `project-management/roadmap/mvp_strategy.md` for a detailed explanation of the MVP approach, implementation timelines, and prioritization framework.
