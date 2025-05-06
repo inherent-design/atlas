@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import chromadb
+
 # Import for LangGraph state management
 
 
@@ -28,9 +29,9 @@ class KnowledgeBase:
             self.db_path = db_path
         else:
             home_dir = Path.home()
-            db_path = home_dir / "atlas_chroma_db"
-            db_path.mkdir(exist_ok=True)
-            self.db_path = str(db_path.absolute())
+            db_path_obj = home_dir / "atlas_chroma_db"
+            db_path_obj.mkdir(exist_ok=True)
+            self.db_path = str(db_path_obj.absolute())
         print(f"ChromaDB persistence directory: {self.db_path}")
 
         # List contents of directory to debug
@@ -225,6 +226,11 @@ def retrieve_knowledge(
             return state
 
         query = last_user_message
+
+    # Check if query is None (should not happen at this point, but type checker needs this)
+    if query is None:
+        print("Warning: Query is None, using empty string instead")
+        query = ""
 
     print(
         f"Retrieving knowledge for query: {query[:50]}{'...' if len(query) > 50 else ''}"

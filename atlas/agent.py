@@ -119,8 +119,11 @@ class AtlasAgent:
             state, query=query, collection_name=self.collection_name
         )
 
-        # Return the documents
-        return updated_state.get("context", {}).get("documents", [])
+        # Return the documents with proper typing
+        documents: List[Dict[str, Any]] = updated_state.get("context", {}).get(
+            "documents", []
+        )
+        return documents
 
     def process_message(self, message: str) -> str:
         """Process a user message and return the agent's response.
@@ -171,8 +174,8 @@ class AtlasAgent:
                 messages=self.messages,
             )
 
-            # Extract response text
-            assistant_message = response.content[0].text
+            # Extract response text with explicit typing
+            assistant_message: str = response.content[0].text
 
             # Add assistant response to history
             self.messages.append({"role": "assistant", "content": assistant_message})
@@ -474,27 +477,35 @@ def run_worker_mode(args):
 
         print(f"Initializing {worker_type} worker...")
 
-        # Create appropriate worker type
+        # Import Union type for type annotation
+        from typing import Union
+
+        # Create appropriate worker type with explicit type annotation
+        worker: Union[AnalysisWorker, DraftWorker, RetrievalWorker]
+
         if worker_type == "analysis":
-            worker = AnalysisWorker(
+            analysis_worker = AnalysisWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
                 config=config,
             )
+            worker = analysis_worker
             worker_desc = "Analysis Worker: Specializes in query analysis and information needs identification"
         elif worker_type == "draft":
-            worker = DraftWorker(
+            draft_worker = DraftWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
                 config=config,
             )
+            worker = draft_worker
             worker_desc = "Draft Worker: Specializes in generating draft responses"
         else:  # Default to retrieval worker
-            worker = RetrievalWorker(
+            retrieval_worker = RetrievalWorker(
                 system_prompt_file=args.system_prompt,
                 collection_name=args.collection,
                 config=config,
             )
+            worker = retrieval_worker
             worker_desc = (
                 "Retrieval Worker: Specializes in document retrieval and summarization"
             )

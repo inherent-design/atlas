@@ -4,16 +4,15 @@ Base agent implementation for Atlas.
 This module defines the unified Atlas agent with multi-provider support.
 """
 
-import sys
 import logging
-from typing import Dict, List, Any, Optional, Union, Callable, Type
+from typing import Dict, List, Any, Optional, Callable
 
 from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
 from atlas.core.telemetry import traced, TracedClass
 from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.models.factory import create_provider, discover_providers
-from atlas.models.base import ModelProvider, ModelResponse, ModelRequest, ModelMessage
+from atlas.models.base import ModelRequest, ModelMessage
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class AtlasAgent(TracedClass):
             config: Optional configuration object. If not provided, default values are used.
             provider_name: Name of the model provider to use (anthropic, openai, ollama).
             model_name: Optional name of the specific model to use (defaults to provider's default).
-            
+
         Raises:
             RuntimeError: If model provider initialization fails.
         """
@@ -54,12 +53,17 @@ class AtlasAgent(TracedClass):
                 model_name=model_name or self.config.model_name,
                 max_tokens=self.config.max_tokens,
             )
-            
+
             # Get model name safely with fallback
-            model_display_name = getattr(self.provider, "model_name", 
-                                        model_name or self.config.model_name or "unknown")
-            
-            logger.info(f"Using {provider_name} provider with model: {model_display_name}")
+            model_display_name = getattr(
+                self.provider,
+                "model_name",
+                model_name or self.config.model_name or "unknown",
+            )
+
+            logger.info(
+                f"Using {provider_name} provider with model: {model_display_name}"
+            )
         except Exception as e:
             error_msg = f"Failed to initialize model provider: {str(e)}"
             logger.error(error_msg)
@@ -71,8 +75,8 @@ class AtlasAgent(TracedClass):
         )
 
         # Initialize conversation history
-        self.messages = []
-        
+        self.messages: List[Dict[str, str]] = []
+
         # Set up agent metadata
         self.agent_id = f"atlas-{provider_name}-{self.provider.model_name}"
         self.agent_version = "1.0.0"  # Should come from version module later
@@ -101,9 +105,9 @@ class AtlasAgent(TracedClass):
         """
         if not documents:
             return ""
-            
+
         context_text = "\n\n## Relevant Knowledge\n\n"
-        
+
         # Use only the top 3 most relevant documents to avoid token limits
         for i, doc in enumerate(documents[:3]):
             source = doc["metadata"].get("source", "Unknown")
@@ -127,7 +131,9 @@ class AtlasAgent(TracedClass):
             self.messages.append({"role": "user", "content": message})
 
             # Retrieve relevant documents from the knowledge base
-            logger.info(f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}")
+            logger.info(
+                f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}"
+            )
             documents = self.query_knowledge_base(message)
             logger.info(f"Retrieved {len(documents)} relevant documents")
 
@@ -151,17 +157,26 @@ class AtlasAgent(TracedClass):
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )
-            
+
             response = self.provider.generate(model_request)
 
             # Extract response text
             assistant_message = response.content
-            
+
             # Log usage statistics
             if response.usage:
-                logger.info(f"API Usage: {response.usage.input_tokens} input tokens, {response.usage.output_tokens} output tokens")
-                logger.info(f"Estimated Cost: {response.cost}")
-            
+                logger.info(
+                    f"API Usage: {response.usage.input_tokens} input tokens, {response.usage.output_tokens} output tokens"
+                )
+                # Safely format cost even if it's a mock object
+                try:
+                    cost_str = str(response.cost)
+                    logger.info(f"Estimated Cost: {cost_str}")
+                except Exception as cost_err:
+                    # Handle format issues with mock objects
+                    logger.info("Estimated Cost: [Cost info not available]")
+                    logger.debug(f"Cost formatting error: {str(cost_err)}")
+
             # Add assistant response to history
             self.messages.append({"role": "assistant", "content": assistant_message})
 
@@ -170,9 +185,11 @@ class AtlasAgent(TracedClass):
         except Exception as e:
             logger.error(f"Error processing message: {str(e)}", exc_info=True)
             return "I'm sorry, I encountered an error processing your request. Please try again."
-            
+
     @traced(name="process_message_streaming")
-    def process_message_streaming(self, message: str, callback: Callable[[str, str], None]) -> str:
+    def process_message_streaming(
+        self, message: str, callback: Callable[[str, str], None]
+    ) -> str:
         """Process a user message with streaming response.
 
         Args:
@@ -187,7 +204,9 @@ class AtlasAgent(TracedClass):
             self.messages.append({"role": "user", "content": message})
 
             # Retrieve relevant documents from the knowledge base
-            logger.info(f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}")
+            logger.info(
+                f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}"
+            )
             documents = self.query_knowledge_base(message)
             logger.info(f"Retrieved {len(documents)} relevant documents")
 
@@ -203,56 +222,69 @@ class AtlasAgent(TracedClass):
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )
-            
+
             # Stream response
             try:
                 initial_response, stream_handler = self.provider.stream(model_request)
-                
+
                 # Define a callback adapter to match our function signature
                 def process_chunk(delta, response):
                     callback(delta, response.content)
-                
+
                 # Process the stream
                 final_response = stream_handler.process_stream(process_chunk)
-                
+
                 # Extract response text
                 assistant_message = final_response.content
-                
+
                 # Log usage statistics
                 if final_response.usage:
                     logger.info(
                         f"API Usage: {final_response.usage.input_tokens} input tokens, "
                         f"{final_response.usage.output_tokens} output tokens"
                     )
-                    logger.info(f"Estimated Cost: {final_response.cost}")
-                
+                    # Safely format cost even if it's a mock object
+                    try:
+                        cost_str = str(final_response.cost)
+                        logger.info(f"Estimated Cost: {cost_str}")
+                    except Exception as cost_err:
+                        # Handle format issues with mock objects
+                        logger.info("Estimated Cost: [Cost info not available]")
+                        logger.debug(f"Cost formatting error: {str(cost_err)}")
+
                 # Add assistant response to history
-                self.messages.append({"role": "assistant", "content": assistant_message})
-                
+                self.messages.append(
+                    {"role": "assistant", "content": assistant_message}
+                )
+
                 return assistant_message
-                
+
             except NotImplementedError:
                 # Fallback to non-streaming if provider doesn't support it
-                logger.warning(f"Streaming not supported by {self.provider.name} provider, fallback to non-streaming")
+                logger.warning(
+                    f"Streaming not supported by {self.provider.name} provider, fallback to non-streaming"
+                )
                 response = self.provider.generate(model_request)
                 assistant_message = response.content
-                
+
                 # Call callback once with full response
                 callback(assistant_message, assistant_message)
-                
+
                 # Add assistant response to history
-                self.messages.append({"role": "assistant", "content": assistant_message})
-                
+                self.messages.append(
+                    {"role": "assistant", "content": assistant_message}
+                )
+
                 return assistant_message
 
         except Exception as e:
             logger.error(f"Error processing streaming message: {str(e)}", exc_info=True)
             error_message = "I'm sorry, I encountered an error processing your request. Please try again."
-            
+
             # Call callback with error message
             callback(error_message, error_message)
             return error_message
-            
+
     def reset_conversation(self):
         """Reset the conversation history."""
         self.messages = []
@@ -261,16 +293,16 @@ class AtlasAgent(TracedClass):
 
 def list_available_providers() -> Dict[str, List[str]]:
     """List all available model providers and their supported models.
-    
+
     Returns:
         Dictionary of provider names to lists of model names.
     """
     providers = discover_providers()
-    
+
     # Format for display
     logger.info("Available Model Providers:")
     for provider, models in providers.items():
         model_list = ", ".join(models)
         logger.info(f"  - {provider}: {model_list}")
-    
+
     return providers

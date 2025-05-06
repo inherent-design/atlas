@@ -9,7 +9,6 @@ import uuid
 from typing import Dict, Any, Optional, Union
 
 
-
 class Task:
     """Task definition for Atlas agents."""
 

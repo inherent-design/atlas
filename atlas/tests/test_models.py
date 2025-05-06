@@ -160,7 +160,9 @@ class TestModelInterfaces(unittest.TestCase):
         self.assertIn("messages", anthropic_request)
         self.assertIn("system", anthropic_request)
         self.assertEqual(anthropic_request["system"], "You are a helpful assistant.")
-        self.assertEqual(len(anthropic_request["messages"]), 1)  # System message is separate
+        self.assertEqual(
+            len(anthropic_request["messages"]), 1
+        )  # System message is separate
         self.assertEqual(anthropic_request["messages"][0]["role"], "user")
         self.assertEqual(anthropic_request["max_tokens"], 100)
         self.assertEqual(anthropic_request["temperature"], 0.7)
@@ -168,7 +170,9 @@ class TestModelInterfaces(unittest.TestCase):
         # Test OpenAI format
         openai_request = request.to_provider_request("openai")
         self.assertIn("messages", openai_request)
-        self.assertEqual(len(openai_request["messages"]), 2)  # System message included in messages
+        self.assertEqual(
+            len(openai_request["messages"]), 2
+        )  # System message included in messages
         self.assertEqual(openai_request["messages"][0]["role"], "system")
         self.assertEqual(openai_request["messages"][1]["role"], "user")
         self.assertEqual(openai_request["max_tokens"], 100)
@@ -248,7 +252,9 @@ class TestModelInterfaces(unittest.TestCase):
         self.assertEqual(response.cost.input_cost, 0.01)
         self.assertEqual(response.cost.output_cost, 0.02)
         self.assertEqual(response.finish_reason, "stop")
-        self.assertEqual(response.raw_response, {"choices": [{"text": "Hello, world!"}]})
+        self.assertEqual(
+            response.raw_response, {"choices": [{"text": "Hello, world!"}]}
+        )
 
         # Test string representation
         self.assertIn("Hello, world!", str(response))
@@ -260,10 +266,23 @@ class TestModelInterfaces(unittest.TestCase):
 class MockAnthropicProvider(ModelProvider):
     """Mock Anthropic provider for testing."""
 
-    def __init__(self, model_name="claude-3-7-sonnet-20250219", max_tokens=2000, **kwargs):
+    def __init__(
+        self, model_name="claude-3-7-sonnet-20250219", max_tokens=2000, **kwargs
+    ):
+        # Keep the private attributes
         self._model_name = model_name
         self._max_tokens = max_tokens
         self._kwargs = kwargs
+
+    @property
+    def model_name(self) -> str:
+        """Get the model name."""
+        return self._model_name
+
+    @property
+    def max_tokens(self) -> int:
+        """Get the max tokens."""
+        return self._max_tokens
 
     @property
     def name(self) -> str:
@@ -315,12 +334,11 @@ class MockAnthropicProvider(ModelProvider):
 class TestProviderFactory(unittest.TestCase):
     """Test the provider factory."""
 
-    @mock.patch("atlas.models.factory._PROVIDER_REGISTRY", {
-        "mock": "atlas.tests.test_models.MockAnthropicProvider"
-    })
-    @mock.patch("atlas.models.factory._DEFAULT_MODELS", {
-        "mock": "mock-model"
-    })
+    @mock.patch(
+        "atlas.models.factory._PROVIDER_REGISTRY",
+        {"mock": "atlas.tests.test_models.MockAnthropicProvider"},
+    )
+    @mock.patch("atlas.models.factory._DEFAULT_MODELS", {"mock": "mock-model"})
     @mock.patch("atlas.models.factory.discover_providers")
     def test_get_provider_class(self, mock_discover):
         """Test getting a provider class."""
@@ -337,12 +355,11 @@ class TestProviderFactory(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_provider_class("unknown")
 
-    @mock.patch("atlas.models.factory._PROVIDER_REGISTRY", {
-        "mock": "atlas.tests.test_models.MockAnthropicProvider"
-    })
-    @mock.patch("atlas.models.factory._DEFAULT_MODELS", {
-        "mock": "mock-model"
-    })
+    @mock.patch(
+        "atlas.models.factory._PROVIDER_REGISTRY",
+        {"mock": "atlas.tests.test_models.MockAnthropicProvider"},
+    )
+    @mock.patch("atlas.models.factory._DEFAULT_MODELS", {"mock": "mock-model"})
     @mock.patch("atlas.models.factory.discover_providers")
     def test_create_provider(self, mock_discover):
         """Test creating a provider."""
@@ -354,12 +371,16 @@ class TestProviderFactory(unittest.TestCase):
         # Create a provider
         provider = create_provider("mock", model_name="mock-model", max_tokens=100)
         self.assertIsInstance(provider, MockAnthropicProvider)
-        self.assertEqual(provider._model_name, "mock-model")
-        self.assertEqual(provider._max_tokens, 100)
+        self.assertEqual(
+            provider._model_name, "mock-model"
+        )  # Changed back to _model_name
+        self.assertEqual(provider._max_tokens, 100)  # Changed back to _max_tokens
 
         # Test with default model
         provider = create_provider("mock")
-        self.assertEqual(provider._model_name, "mock-model")
+        self.assertEqual(
+            provider._model_name, "mock-model"
+        )  # Changed back to _model_name
 
         # Test with unknown provider
         with self.assertRaises(ValueError):
@@ -369,17 +390,20 @@ class TestProviderFactory(unittest.TestCase):
         """Test registering a provider."""
         # Get original registry size
         from atlas.models.factory import _PROVIDER_REGISTRY
+
         original_providers = set(_PROVIDER_REGISTRY.keys())
-        
+
         # Register a provider
         register_provider("test_provider", "test.module.TestProvider")
-        
+
         # Check it was added
         try:
             new_providers = set(_PROVIDER_REGISTRY.keys())
             self.assertIn("test_provider", new_providers)
-            self.assertEqual(_PROVIDER_REGISTRY["test_provider"], "test.module.TestProvider")
-            
+            self.assertEqual(
+                _PROVIDER_REGISTRY["test_provider"], "test.module.TestProvider"
+            )
+
             # Restore original registry
             _PROVIDER_REGISTRY.pop("test_provider", None)
         except:
@@ -391,15 +415,16 @@ class TestProviderFactory(unittest.TestCase):
         """Test setting the default model."""
         # Get original default models
         from atlas.models.factory import _DEFAULT_MODELS
+
         original_default = _DEFAULT_MODELS.get("test_provider", None)
-        
+
         # Set the default model
         set_default_model("test_provider", "test-model-default")
-        
+
         # Verify it was set
         try:
             self.assertEqual(_DEFAULT_MODELS["test_provider"], "test-model-default")
-            
+
             # Restore original state
             if original_default is None:
                 _DEFAULT_MODELS.pop("test_provider", None)
@@ -417,46 +442,55 @@ class TestProviderFactory(unittest.TestCase):
         """Test the ProviderFactory class."""
         # Create a factory
         factory = ProviderFactory()
-        
+
         # Register a mock provider for testing
         from atlas.models.factory import _PROVIDER_REGISTRY
+
         original_registry = dict(_PROVIDER_REGISTRY)
         _PROVIDER_REGISTRY["mock"] = "atlas.tests.test_models.MockAnthropicProvider"
-        
+
         # Mock discover_providers
         original_discover = factory.discover
-        factory.discover = lambda: {"mock"}
-        
+        factory._discover_providers = lambda: {
+            "mock"
+        }  # Changed to use a private method that actually exists
+
         try:
             # Test create method with registered mock provider
             provider = factory.create("mock", model_name="custom-model", max_tokens=200)
             self.assertIsInstance(provider, MockAnthropicProvider)
-            self.assertEqual(provider._model_name, "custom-model")
-            self.assertEqual(provider._max_tokens, 200)
-            
+            self.assertEqual(
+                provider._model_name, "custom-model"
+            )  # Changed back to _model_name
+            self.assertEqual(provider._max_tokens, 200)  # Changed back to _max_tokens
+
             # Store the created provider
             factory._providers["mock"] = provider
-            
+
             # Test set_default method
             factory.set_default("mock")
             self.assertEqual(factory._default_provider, "mock")
-            
+
             # Test get method (returns existing instance)
             same_provider = factory.get("mock")
             self.assertIs(same_provider, provider)
-            
+
             # Test get with default
             default_provider = factory.get()
             self.assertIs(default_provider, provider)
-            
+
         finally:
             # Restore original state
-            factory.discover = original_discover
+            factory._discover_providers = (
+                lambda: original_discover()
+            )  # Restore with a lambda wrapper
             _PROVIDER_REGISTRY.clear()
             _PROVIDER_REGISTRY.update(original_registry)
 
 
-@unittest.skip("These tests require actual API keys - run manually or with API keys set")
+@unittest.skip(
+    "These tests require actual API keys - run manually or with API keys set"
+)
 class TestLiveProviders(unittest.TestCase):
     """Test actual provider implementations (requires API keys)."""
 
@@ -493,15 +527,16 @@ class TestLiveProviders(unittest.TestCase):
 
         # Generate a response
         request = ModelRequest(
-            messages=[ModelMessage.user("Say hello!")],
-            max_tokens=20
+            messages=[ModelMessage.user("Say hello!")], max_tokens=20
         )
         response = provider.generate(request)
         self.assertIsInstance(response, ModelResponse)
         self.assertIsNotNone(response.content)
         self.assertEqual(response.provider, "anthropic")
         print(f"Anthropic response: {response.content}")
-        print(f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output")
+        print(
+            f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output"
+        )
         print(f"Cost: {response.cost}")
 
     def test_openai_provider(self):
@@ -525,15 +560,16 @@ class TestLiveProviders(unittest.TestCase):
 
         # Generate a response
         request = ModelRequest(
-            messages=[ModelMessage.user("Say hello!")],
-            max_tokens=20
+            messages=[ModelMessage.user("Say hello!")], max_tokens=20
         )
         response = provider.generate(request)
         self.assertIsInstance(response, ModelResponse)
         self.assertIsNotNone(response.content)
         self.assertEqual(response.provider, "openai")
         print(f"OpenAI response: {response.content}")
-        print(f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output")
+        print(
+            f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output"
+        )
         print(f"Cost: {response.cost}")
 
     def test_ollama_provider(self):
@@ -557,15 +593,16 @@ class TestLiveProviders(unittest.TestCase):
         # Generate a response if models are available
         if models:
             request = ModelRequest(
-                messages=[ModelMessage.user("Say hello!")],
-                max_tokens=20
+                messages=[ModelMessage.user("Say hello!")], max_tokens=20
             )
             response = provider.generate(request)
             self.assertIsInstance(response, ModelResponse)
             self.assertIsNotNone(response.content)
             self.assertEqual(response.provider, "ollama")
             print(f"Ollama response: {response.content}")
-            print(f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output")
+            print(
+                f"Token usage: {response.usage.input_tokens} input, {response.usage.output_tokens} output"
+            )
             print(f"Cost: {response.cost}")
 
 

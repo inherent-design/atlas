@@ -14,7 +14,7 @@ from atlas.core.telemetry import traced, TracedClass
 from atlas.graph.state import AgentState, ControllerState
 
 # Type aliases
-StateType = TypeVar('StateType')
+StateType = TypeVar("StateType")
 EdgeConditionFunction = Callable[[StateType], bool]
 EdgeLabelType = Union[str, int, bool, None]
 
@@ -23,16 +23,16 @@ logger = logging.getLogger(__name__)
 
 class EdgeType(str, Enum):
     """Types of edges in the graph."""
-    
-    NORMAL = "normal"      # Standard edge
+
+    NORMAL = "normal"  # Standard edge
     CONDITIONAL = "conditional"  # Edge with condition
     FALLBACK = "fallback"  # Edge taken when others fail
-    DEFAULT = "default"    # Default edge for conditional routing
+    DEFAULT = "default"  # Default edge for conditional routing
 
 
 class Edge(TracedClass, Generic[StateType]):
     """Base class for graph edges in Atlas workflows."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -42,7 +42,7 @@ class Edge(TracedClass, Generic[StateType]):
         description: Optional[str] = None,
     ):
         """Initialize an edge.
-        
+
         Args:
             source_node: Name of the source node.
             target_node: Name of the target node.
@@ -55,33 +55,33 @@ class Edge(TracedClass, Generic[StateType]):
         self.edge_type = edge_type
         self.label = label
         self.description = description or f"Edge from {source_node} to {target_node}"
-    
+
     def get_target(self, state: StateType) -> str:
         """Get the target node for this edge.
-        
+
         Args:
             state: The current state.
-            
+
         Returns:
             Name of the target node.
         """
         return self.target_node
-    
+
     def should_follow(self, state: StateType) -> bool:
         """Determine if this edge should be followed.
-        
+
         Args:
             state: The current state.
-            
+
         Returns:
             True if this edge should be followed, False otherwise.
         """
         # Base edge is always followed
         return True
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the edge to a dictionary representation.
-        
+
         Returns:
             Dictionary representation of the edge.
         """
@@ -92,10 +92,10 @@ class Edge(TracedClass, Generic[StateType]):
             "label": self.label,
             "description": self.description,
         }
-    
+
     def __str__(self) -> str:
         """Get string representation of the edge.
-        
+
         Returns:
             String representation.
         """
@@ -104,7 +104,7 @@ class Edge(TracedClass, Generic[StateType]):
 
 class ConditionalEdge(Edge[StateType]):
     """Edge with a condition function that determines if it should be followed."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -114,7 +114,7 @@ class ConditionalEdge(Edge[StateType]):
         description: Optional[str] = None,
     ):
         """Initialize a conditional edge.
-        
+
         Args:
             source_node: Name of the source node.
             target_node: Name of the target node.
@@ -130,26 +130,28 @@ class ConditionalEdge(Edge[StateType]):
             description=description,
         )
         self.condition = condition
-    
+
     def should_follow(self, state: StateType) -> bool:
         """Determine if this edge should be followed based on the condition.
-        
+
         Args:
             state: The current state.
-            
+
         Returns:
             True if this edge should be followed, False otherwise.
         """
         try:
             return self.condition(state)
         except Exception as e:
-            logger.error(f"Error evaluating condition for edge {self}: {e}", exc_info=True)
+            logger.error(
+                f"Error evaluating condition for edge {self}: {e}", exc_info=True
+            )
             return False
 
 
 class FallbackEdge(Edge[StateType]):
     """Edge that is followed when no other edges from the source are followed."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -158,7 +160,7 @@ class FallbackEdge(Edge[StateType]):
         description: Optional[str] = None,
     ):
         """Initialize a fallback edge.
-        
+
         Args:
             source_node: Name of the source node.
             target_node: Name of the target node.
@@ -170,18 +172,19 @@ class FallbackEdge(Edge[StateType]):
             target_node=target_node,
             edge_type=EdgeType.FALLBACK,
             label=label,
-            description=description or f"Fallback edge from {source_node} to {target_node}",
+            description=description
+            or f"Fallback edge from {source_node} to {target_node}",
         )
-    
+
     def should_follow(self, state: StateType) -> bool:
         """Determine if this edge should be followed.
-        
+
         For fallback edges, this method doesn't determine routing directly.
         The graph executor will try this edge if no other edges are followed.
-        
+
         Args:
             state: The current state.
-            
+
         Returns:
             Always returns True for fallback edges.
         """
@@ -198,7 +201,7 @@ def create_edge(
     description: Optional[str] = None,
 ) -> Edge:
     """Create an edge based on the specified type.
-    
+
     Args:
         source: Name of the source node.
         target: Name of the target node.
@@ -206,10 +209,10 @@ def create_edge(
         condition: For conditional edges, the condition function.
         label: Optional label for the edge.
         description: Optional description of the edge.
-        
+
     Returns:
         The created edge.
-        
+
     Raises:
         ValueError: If invalid parameters are provided.
     """
@@ -249,14 +252,14 @@ def create_conditional_edge(
     description: Optional[str] = None,
 ) -> ConditionalEdge:
     """Create a conditional edge.
-    
+
     Args:
         source: Name of the source node.
         target: Name of the target node.
         condition: Function that determines if the edge should be followed.
         label: Optional label for the edge.
         description: Optional description of the edge.
-        
+
     Returns:
         A ConditionalEdge instance.
     """
@@ -277,13 +280,13 @@ def create_fallback_edge(
     description: Optional[str] = None,
 ) -> FallbackEdge:
     """Create a fallback edge.
-    
+
     Args:
         source: Name of the source node.
         target: Name of the target node.
         label: Optional label for the edge.
         description: Optional description of the edge.
-        
+
     Returns:
         A FallbackEdge instance.
     """
@@ -299,10 +302,10 @@ def create_fallback_edge(
 @traced(name="is_error_condition")
 def is_error_condition(state: Union[AgentState, ControllerState]) -> bool:
     """Check if an error has occurred.
-    
+
     Args:
         state: The agent or controller state.
-        
+
     Returns:
         True if an error has occurred, False otherwise.
     """
@@ -312,10 +315,10 @@ def is_error_condition(state: Union[AgentState, ControllerState]) -> bool:
 @traced(name="is_process_complete_condition")
 def is_process_complete_condition(state: AgentState) -> bool:
     """Check if processing is complete.
-    
+
     Args:
         state: The agent state.
-        
+
     Returns:
         True if processing is complete, False otherwise.
     """
@@ -325,10 +328,10 @@ def is_process_complete_condition(state: AgentState) -> bool:
 @traced(name="are_all_tasks_assigned_condition")
 def are_all_tasks_assigned_condition(state: ControllerState) -> bool:
     """Check if all tasks have been assigned.
-    
+
     Args:
         state: The controller state.
-        
+
     Returns:
         True if all tasks have been assigned, False otherwise.
     """
@@ -338,10 +341,10 @@ def are_all_tasks_assigned_condition(state: ControllerState) -> bool:
 @traced(name="are_all_tasks_completed_condition")
 def are_all_tasks_completed_condition(state: ControllerState) -> bool:
     """Check if all tasks have been completed.
-    
+
     Args:
         state: The controller state.
-        
+
     Returns:
         True if all tasks have been completed, False otherwise.
     """
@@ -351,9 +354,9 @@ def are_all_tasks_completed_condition(state: ControllerState) -> bool:
 @traced(name="add_edges_to_graph")
 def add_edges_to_graph(graph, edges: List[Edge]) -> None:
     """Add a list of edges to the graph.
-    
+
     This function adapts the Edge objects to the format expected by LangGraph.
-    
+
     Args:
         graph: A LangGraph StateGraph instance.
         edges: A list of Edge objects.
@@ -372,5 +375,5 @@ def add_edges_to_graph(graph, edges: List[Edge]) -> None:
         else:
             # Add as a regular edge
             graph.add_edge(edge.source_node, edge.target_node)
-            
+
         logger.debug(f"Added edge to graph: {edge}")

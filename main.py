@@ -88,24 +88,21 @@ def parse_args():
         type=str,
         choices=["anthropic", "openai", "ollama"],
         default="anthropic",
-        help="Model provider to use (anthropic, openai, ollama)"
+        help="Model provider to use (anthropic, openai, ollama)",
     )
     parser.add_argument(
         "--model",
         type=str,
         default="claude-3-7-sonnet-20250219",
-        help="Model to use (provider-specific, e.g., claude-3-opus-20240229, gpt-4o, llama3)"
+        help="Model to use (provider-specific, e.g., claude-3-opus-20240229, gpt-4o, llama3)",
     )
     parser.add_argument(
-        "--max-tokens", 
-        type=int, 
-        default=2000, 
-        help="Maximum tokens in model responses"
+        "--max-tokens", type=int, default=2000, help="Maximum tokens in model responses"
     )
     parser.add_argument(
         "--base-url",
         type=str,
-        help="Base URL for API (used primarily with Ollama, default: http://localhost:11434)"
+        help="Base URL for API (used primarily with Ollama, default: http://localhost:11434)",
     )
 
     # Query options
@@ -118,10 +115,10 @@ def parse_args():
 
 def check_environment(provider="anthropic"):
     """Check for required environment variables based on provider.
-    
+
     Args:
         provider: The model provider to use (anthropic, openai, ollama)
-        
+
     Returns:
         Boolean indicating if the required environment variables are set.
     """
@@ -143,18 +140,23 @@ def check_environment(provider="anthropic"):
         # No API key required for Ollama, but we should check if it's running
         try:
             import requests
+
             response = requests.get("http://localhost:11434/api/version", timeout=1)
             if response.status_code != 200:
-                print("WARNING: Ollama server doesn't appear to be running at http://localhost:11434")
+                print(
+                    "WARNING: Ollama server doesn't appear to be running at http://localhost:11434"
+                )
                 print("Please start Ollama before running Atlas with Ollama provider.")
                 print("Example: ollama serve")
                 print("Continuing anyway, but expect connection errors...")
-        except:
-            print("WARNING: Could not connect to Ollama server at http://localhost:11434")
+        except (requests.RequestException, ImportError) as e:
+            print(
+                f"WARNING: Could not connect to Ollama server at http://localhost:11434 - {str(e)}"
+            )
             print("Please make sure Ollama is installed and running.")
             print("Example: ollama serve")
             print("Continuing anyway, but expect connection errors...")
-    
+
     return True
 
 
@@ -211,7 +213,7 @@ def run_cli_mode(args):
 
     # Import config and agent
     from atlas.core.config import AtlasConfig
-    
+
     # Create config with command line parameters
     config = AtlasConfig(
         collection_name=args.collection,
@@ -219,12 +221,12 @@ def run_cli_mode(args):
         model_name=args.model,
         max_tokens=args.max_tokens,
     )
-    
+
     # Get additional provider params
     provider_params = {}
     if args.base_url and args.provider == "ollama":
         provider_params["base_url"] = args.base_url
-    
+
     # Initialize agent
     print(f"Using {args.provider} provider with model: {args.model}")
     agent = AtlasAgent(
@@ -233,7 +235,7 @@ def run_cli_mode(args):
         config=config,
         provider_name=args.provider,
         model_name=args.model,
-        **provider_params
+        **provider_params,
     )
 
     print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
@@ -279,7 +281,7 @@ def run_cli_mode(args):
                 config=config,
                 provider_name=args.provider,
                 model_name=args.model,
-                **provider_params
+                **provider_params,
             )
 
 
@@ -306,7 +308,7 @@ def run_query_mode(args):
     provider_params = {}
     if args.base_url and args.provider == "ollama":
         provider_params["base_url"] = args.base_url
-    
+
     # Initialize agent
     print(f"Using {args.provider} provider with model: {args.model}")
     agent = AtlasAgent(
@@ -315,7 +317,7 @@ def run_query_mode(args):
         config=config,
         provider_name=args.provider,
         model_name=args.model,
-        **provider_params
+        **provider_params,
     )
 
     response = agent.process_message(args.query)
@@ -402,21 +404,30 @@ def run_worker_mode(args):
 
         print(f"Initializing {worker_type} worker...")
 
+        # Import Union type for type annotation
+        from typing import Union
+
         # Create appropriate worker type
+        # Use a variable with the right type annotation
+        worker: Union[AnalysisWorker, DraftWorker, RetrievalWorker]
+
         if worker_type == "analysis":
-            worker = AnalysisWorker(
+            analysis_worker = AnalysisWorker(
                 system_prompt_file=args.system_prompt, collection_name=args.collection
             )
+            worker = analysis_worker
             worker_desc = "Analysis Worker: Specializes in query analysis and information needs identification"
         elif worker_type == "draft":
-            worker = DraftWorker(
+            draft_worker = DraftWorker(
                 system_prompt_file=args.system_prompt, collection_name=args.collection
             )
+            worker = draft_worker
             worker_desc = "Draft Worker: Specializes in generating draft responses"
         else:  # Default to retrieval worker
-            worker = RetrievalWorker(
+            retrieval_worker = RetrievalWorker(
                 system_prompt_file=args.system_prompt, collection_name=args.collection
             )
+            worker = retrieval_worker
             worker_desc = (
                 "Retrieval Worker: Specializes in document retrieval and summarization"
             )

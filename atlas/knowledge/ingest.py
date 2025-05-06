@@ -41,9 +41,9 @@ class DocumentProcessor:
             self.db_path = db_path
         else:
             home_dir = Path.home()
-            db_path = home_dir / "atlas_chroma_db"
-            db_path.mkdir(exist_ok=True)
-            self.db_path = str(db_path.absolute())
+            db_path_obj = home_dir / "atlas_chroma_db"
+            db_path_obj.mkdir(exist_ok=True)
+            self.db_path = str(db_path_obj.absolute())
 
         print(f"ChromaDB persistence directory: {self.db_path}")
 
@@ -169,7 +169,8 @@ class DocumentProcessor:
         """
         # Convert to relative path
         rel_path = os.path.relpath(path, os.getcwd())
-        return self.gitignore_spec.match_file(rel_path)
+        # Explicitly cast to bool to avoid Any return type
+        return bool(self.gitignore_spec.match_file(rel_path))
 
     def get_all_markdown_files(self, base_dir: str) -> List[str]:
         """Get all markdown files in the specified directory and its subdirectories.

@@ -94,10 +94,10 @@ def create_controller_worker_graph(
             "generate_final_response": lambda state: state.all_tasks_completed,
             "create_worker_tasks": lambda state: not state.all_tasks_assigned,
             "process_worker_results": lambda state: (
-                state.all_tasks_assigned and 
-                len(state.completed_workers) >= len(state.active_workers)
-            )
-        }
+                state.all_tasks_assigned
+                and len(state.completed_workers) >= len(state.active_workers)
+            ),
+        },
     )
 
     # Define edges

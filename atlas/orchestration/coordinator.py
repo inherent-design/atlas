@@ -55,7 +55,7 @@ class AgentCoordinator:
         )
 
         # Initialize worker registry
-        self.workers = {}
+        self.workers: Dict[str, WorkerAgent] = {}
         self._create_default_workers()
 
     def _create_default_workers(self) -> None:

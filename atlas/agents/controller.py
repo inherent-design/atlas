@@ -43,8 +43,8 @@ class ControllerAgent(AtlasAgent):
 
         # Worker management
         self.worker_count = worker_count
-        self.workers = {}
-        self.worker_results = {}
+        self.workers: Dict[str, Any] = {}
+        self.worker_results: Dict[str, Any] = {}
 
     def process_message(self, message: str) -> str:
         """Process a user message using the controller-worker architecture.

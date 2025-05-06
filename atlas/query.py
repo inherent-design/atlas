@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class AtlasQuery:
     """Lightweight query-only interface for Atlas."""
-    
+
     def __init__(
         self,
         system_prompt_file: Optional[str] = None,
@@ -29,7 +29,7 @@ class AtlasQuery:
         config: Optional[AtlasConfig] = None,
     ):
         """Initialize the Atlas query interface.
-        
+
         Args:
             system_prompt_file: Optional path to a file containing the system prompt.
             collection_name: Name of the Chroma collection to use. If None, uses environment variable.
@@ -44,18 +44,19 @@ class AtlasQuery:
             db_path=db_path,
             model_name=model_name,
         )
-        
+
         # Use the provider_name if specified, otherwise use the default
         if provider_name is None:
             from atlas.core import env
+
             provider_name = env.get_string("ATLAS_DEFAULT_PROVIDER", "anthropic")
-        
+
         # Initialize the knowledge base - this will use environment variables if needed
         self.knowledge_base = KnowledgeBase(
             collection_name=self.config.collection_name,
             db_path=self.config.db_path,
         )
-        
+
         # Initialize the agent for query processing - this will create the actual model provider
         self.agent = AtlasAgent(
             system_prompt_file=system_prompt_file,
@@ -64,44 +65,44 @@ class AtlasQuery:
             provider_name=provider_name,
             model_name=model_name,
         )
-        
+
         # Set up query metadata
         self.query_client_id = f"atlas-query-{provider_name}"
-        
+
         logger.debug(f"Initialized Atlas query interface with {provider_name} provider")
-    
+
     def query(self, query_text: str) -> str:
         """Query Atlas with a simple text input.
-        
+
         This is the simplest interface for querying Atlas - it takes a text query
         and returns a text response.
-        
+
         Args:
             query_text: The text query to process.
-            
+
         Returns:
             The response text.
         """
         return self.agent.process_message(query_text)
-    
+
     def query_with_context(self, query_text: str) -> Dict[str, Any]:
         """Query Atlas and return both the response and context used.
-        
+
         This method is useful for debugging or for applications that need
         to understand what knowledge was used to generate the response.
-        
+
         Args:
             query_text: The text query to process.
-            
+
         Returns:
             Dictionary containing the response and context used.
         """
         # Retrieve relevant documents from the knowledge base
         documents = self.knowledge_base.retrieve(query_text)
-        
+
         # Process the query using the agent
         response = self.agent.process_message(query_text)
-        
+
         # Format the response with context
         return {
             "response": response,
@@ -117,18 +118,20 @@ class AtlasQuery:
                 "query": query_text,
             },
         }
-    
-    def query_streaming(self, query_text: str, callback: Callable[[str, str], None]) -> str:
+
+    def query_streaming(
+        self, query_text: str, callback: Callable[[str, str], None]
+    ) -> str:
         """Query Atlas with streaming response.
-        
+
         This method is useful for applications that want to display partial responses
         as they are generated, creating a more interactive experience.
-        
+
         Args:
             query_text: The text query to process.
             callback: Function called for each chunk of the response, with arguments
                       (delta_text, full_text).
-            
+
         Returns:
             The complete response text.
         """
@@ -139,7 +142,9 @@ class AtlasQuery:
                 return self.agent.process_message_streaming(query_text, callback)
             else:
                 # Fallback to non-streaming if not available
-                logger.warning("Streaming not supported by agent - falling back to regular query")
+                logger.warning(
+                    "Streaming not supported by agent - falling back to regular query"
+                )
                 response = self.agent.process_message(query_text)
                 # Call the callback once with the full response
                 callback(response, response)
@@ -149,21 +154,21 @@ class AtlasQuery:
             # Fall back to regular query
             response = self.agent.process_message(query_text)
             return response
-    
+
     def retrieve_only(self, query_text: str) -> List[Dict[str, Any]]:
         """Retrieve documents from the knowledge base without generating a response.
-        
+
         This method is useful for applications that want to access Atlas's knowledge
         retrieval capabilities without generating a model response.
-        
+
         Args:
             query_text: The text query to search for.
-            
+
         Returns:
             List of relevant documents with their metadata.
         """
         documents = self.knowledge_base.retrieve(query_text)
-        
+
         # Format and return documents
         return [
             {
@@ -173,7 +178,7 @@ class AtlasQuery:
             }
             for doc in documents
         ]
-    
+
 
 # Convenience factory function
 def create_query_client(
@@ -184,32 +189,34 @@ def create_query_client(
     model_name: Optional[str] = None,
 ) -> AtlasQuery:
     """Create a query-only Atlas client.
-    
+
     This function provides a simple way to create an Atlas query client
     for use in other applications. It respects environment variables for
     configuration.
-    
+
     Args:
         system_prompt_file: Optional path to a file containing the system prompt.
         collection_name: Name of the Chroma collection to use. If None, uses ATLAS_COLLECTION_NAME env var.
         db_path: Path to the knowledge base. If None, uses ATLAS_DB_PATH env var or default home directory.
         provider_name: Name of the model provider to use. If None, uses ATLAS_DEFAULT_PROVIDER env var.
         model_name: Name of the model to use. If None, uses ATLAS_DEFAULT_MODEL env var.
-        
+
     Returns:
         An initialized AtlasQuery instance.
     """
     from atlas.core import env
-    
+
     try:
         # Get values from environment if not specified in parameters
         if provider_name is None:
             provider_name = env.get_string("ATLAS_DEFAULT_PROVIDER", "anthropic")
-            
+
         if collection_name is None:
-            collection_name = env.get_string("ATLAS_COLLECTION_NAME", "atlas_knowledge_base")
+            collection_name = env.get_string(
+                "ATLAS_COLLECTION_NAME", "atlas_knowledge_base"
+            )
             logger.info(f"Using collection name from environment: {collection_name}")
-            
+
         return AtlasQuery(
             system_prompt_file=system_prompt_file,
             collection_name=collection_name,

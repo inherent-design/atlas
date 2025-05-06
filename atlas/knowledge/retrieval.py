@@ -13,6 +13,7 @@ from atlas.core import env
 
 logger = logging.getLogger(__name__)
 
+
 class KnowledgeBase:
     def __init__(
         self,
@@ -26,9 +27,12 @@ class KnowledgeBase:
             db_path: Path for ChromaDB storage. If None, use environment variable or default to home directory.
         """
         # Get collection name from parameters, environment, or default
-        self.collection_name = collection_name or env.get_string("ATLAS_COLLECTION_NAME", "atlas_knowledge_base")
-        
+        self.collection_name = collection_name or env.get_string(
+            "ATLAS_COLLECTION_NAME", "atlas_knowledge_base"
+        )
+
         # Create an absolute path for ChromaDB storage (use provided or environment variable or default)
+        self.db_path: str = ""
         if db_path:
             self.db_path = db_path
         else:
@@ -63,14 +67,20 @@ class KnowledgeBase:
 
         try:
             self.chroma_client = chromadb.PersistentClient(path=self.db_path)
-            logger.info(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
-            print(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
+            logger.info(
+                f"ChromaDB client initialized successfully with persistence at: {self.db_path}"
+            )
+            print(
+                f"ChromaDB client initialized successfully with persistence at: {self.db_path}"
+            )
 
             # List all collections
             try:
                 all_collections = self.chroma_client.list_collections()
                 print(f"Available collections: {[c.name for c in all_collections]}")
-                logger.debug(f"Available collections: {[c.name for c in all_collections]}")
+                logger.debug(
+                    f"Available collections: {[c.name for c in all_collections]}"
+                )
             except Exception as e:
                 print(f"Error listing collections: {e}")
                 logger.error(f"Error listing collections: {e}")
@@ -81,7 +91,9 @@ class KnowledgeBase:
                     name=self.collection_name
                 )
                 print(f"Collection '{self.collection_name}' accessed successfully")
-                logger.info(f"Collection '{self.collection_name}' accessed successfully")
+                logger.info(
+                    f"Collection '{self.collection_name}' accessed successfully"
+                )
 
                 # Verify persistence by checking collection count
                 count = self.collection.count()
@@ -91,7 +103,9 @@ class KnowledgeBase:
                 if count == 0:
                     print("WARNING: Collection is empty. Has any data been ingested?")
                     print("Try running with -d <directory> flag to ingest documents.")
-                    logger.warning("Collection is empty. No documents have been ingested.")
+                    logger.warning(
+                        "Collection is empty. No documents have been ingested."
+                    )
             except Exception as e:
                 print(f"Error accessing collection: {e}")
                 logger.error(f"Error accessing collection: {e}")
@@ -102,7 +116,7 @@ class KnowledgeBase:
             print(error_msg)
             print("Using fallback in-memory ChromaDB")
             logger.error(f"{error_msg}. Using fallback in-memory ChromaDB")
-            
+
             self.chroma_client = chromadb.Client()
             self.collection = self.chroma_client.get_or_create_collection(
                 name=self.collection_name
@@ -251,12 +265,14 @@ def retrieve_knowledge(
 
         query = last_user_message
 
-    query_summary = f"{query[:50]}{'...' if len(query) > 50 else ''}"
+    # At this point, query is guaranteed to be a string
+    query_str: str = query if isinstance(query, str) else ""
+    query_summary = f"{query_str[:50]}{'...' if len(query_str) > 50 else ''}"
     logger.info(f"Retrieving knowledge for query: {query_summary}")
     print(f"Retrieving knowledge for query: {query_summary}")
 
     # Retrieve relevant documents
-    documents = kb.retrieve(query)
+    documents = kb.retrieve(query_str)
     logger.info(f"Retrieved {len(documents)} relevant documents")
     print(f"Retrieved {len(documents)} relevant documents")
 
