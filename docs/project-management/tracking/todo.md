@@ -6,51 +6,95 @@
 - ✅ Core infrastructure and provider implementations
 - ✅ Knowledge system with hybrid retrieval and settings interface
 - ✅ Documentation system with comprehensive coverage
-- ✅ Environment management and telemetry integration
-- ✅ Import system optimization and progress indicators
 
-**Next Focus:**
-- 🔄 Workflow & Multi-Agent: Enhanced message passing and specialized agents
-- 🔄 Caching System: Performance optimization for knowledge operations
-- 🔄 Provider Optimization: Reliability and cost management
+**Current Focus:**
+- 🔄 Multi-Agent Orchestration: Structured messaging and tool-capable agents
+- 🔄 MCP Integration: Model Context Protocol for tool integration
+- 🔄 Specialized Agents: Purpose-built agents with specific capabilities
 
-**Current Blockers:**
-✅ All critical blockers resolved!
+**Implementation Priority:**
+1. Structured message system for agent communication
+2. Tool integration framework with MCP support
+3. Specialized worker agents with tool capabilities
 
-**MVP Completion Roadmap:**
+## Proposed File Structure Changes
 
-1. **Workflow & Multi-Agent Orchestration (High Priority)**
-   - [ ] Implement structured message format with metadata support
+```
+atlas/
+├── agents/
+│   ├── __init__.py
+│   ├── base.py             # Keep - extend with tool capabilities
+│   ├── controller.py       # Keep - enhance with message routing
+│   ├── registry.py         # Keep - extend for capability discovery
+│   ├── worker.py           # Keep - extend for specialized workers
+│   ├── messaging/          # NEW directory for agent communication
+│   │   ├── __init__.py
+│   │   ├── message.py      # NEW - StructuredMessage implementation
+│   │   ├── routing.py      # NEW - Message routing and delivery
+│   │   └── serialization.py # NEW - Message serialization/deserialization
+│   └── specialized/        # NEW directory for specialized agents
+│       ├── __init__.py
+│       ├── knowledge_agent.py # NEW - Specialized for knowledge operations
+│       ├── tool_agent.py   # NEW - Tool-capable agent base class
+│       └── research_agent.py # NEW - Research-focused agent
+├── tools/                  # NEW top-level directory for tools
+│   ├── __init__.py
+│   ├── base.py             # NEW - Tool interface definition
+│   ├── registry.py         # NEW - Tool registration and discovery
+│   ├── permissions.py      # NEW - Tool access control
+│   ├── standard/           # NEW - Standard built-in tools
+│   │   ├── __init__.py
+│   │   ├── knowledge_tools.py # NEW - Knowledge base interaction tools
+│   │   ├── web_tools.py    # NEW - Web interaction tools
+│   │   └── utility_tools.py # NEW - Utility functions as tools
+│   └── mcp/                # NEW - MCP integration
+│       ├── __init__.py
+│       ├── adapter.py      # NEW - MCP protocol adapter
+│       ├── converter.py    # NEW - Convert MCP tools to Atlas tools
+│       └── registry.py     # NEW - MCP tool registration
+└── orchestration/          # ENHANCE existing directory
+    ├── __init__.py
+    ├── coordinator.py      # Enhance for tool orchestration
+    ├── parallel.py         # Keep
+    ├── scheduler.py        # Keep
+    ├── messaging/          # NEW - Messaging infrastructure
+    │   ├── __init__.py
+    │   ├── broker.py       # NEW - Message broker implementation
+    │   └── queue.py        # NEW - Message queue implementation
+    └── workflow/           # NEW - Workflow definitions
+        ├── __init__.py
+        ├── patterns.py     # NEW - Common workflow patterns
+        └── templates.py    # NEW - Workflow templates
+```
+
+## Implementation Tasks
+
+1. **Multi-Agent System (High Priority)**
+   - [ ] Implement StructuredMessage class with metadata and tool call support
    - [ ] Create specialized worker agent base class with tool capabilities
-   - [ ] Develop agent protocol for standardized communication
-   - [ ] Add Model Context Protocol (MCP) integration capabilities
-   - [ ] Implement message routing and delivery system
-   - [ ] Create agent discovery and registration mechanisms
-   - [ ] Add context preservation between agent interactions
-   - [ ] Implement task delegation and result aggregation
-   - [ ] Create parallel processing for independent agent tasks
-   - [ ] Add monitoring and observability for multi-agent workflows
+   - [ ] Develop AgentToolkit for tool registration and discovery
+   - [ ] Add MCP integration adapter for external tools
+   - [ ] Implement message routing and broker system
+   - [ ] Create context preservation between agent interactions
+   - [ ] Build task delegation and result aggregation system
+   - [ ] Add parallel processing for independent agent tasks
 
-2. **Caching System Implementation (Medium Priority)**
-   - [ ] Implement in-memory cache for frequent queries
-   - [ ] Add cache invalidation based on document changes
-   - [ ] Create configurable cache parameters
-   - [ ] Add telemetry for cache performance 
-   - [ ] Implement LRU/TTL-based eviction strategies
+2. **Tool System Implementation (High Priority)**
+   - [ ] Create Tool base class with schema validation
+   - [ ] Implement ToolRegistry for tool discovery
+   - [ ] Add permission system for tool access control
+   - [ ] Develop standard tool set for common operations
+   - [ ] Create MCP adapter for external tool integration
+   - [ ] Implement tool execution and result handling
+   - [ ] Add tool capability advertising mechanism
+   - [ ] Build tool call serialization and transport
 
-3. **Provider Optimization (Medium Priority)**
-   - [ ] Implement connection pooling
-   - [ ] Add health monitoring and diagnostics
-   - [ ] Create automated fallback mechanisms
-   - [ ] Implement cost-optimized provider selection
-   - [ ] Add request throttling and rate limiting
-
-4. **Import System Optimization (Low Priority)**
-   - ✅ Fix circular import warnings
-   - ✅ Standardize import patterns across codebase
-   - ✅ Consolidate duplicate implementations
-   - ✅ Improve module-level vs function-level imports
-   - [ ] Address core env/factory circular dependency
+3. **Workflow Enhancement (Medium Priority)**
+   - [ ] Create workflow templates for common patterns
+   - [ ] Implement advanced edge routing with tool awareness
+   - [ ] Add workflow monitoring and observability
+   - [ ] Build parallel execution coordinator
+   - [ ] Create visualization system for workflow inspection
 
 ## MVP Implementation Strategy
 
@@ -238,54 +282,13 @@ These pathways represent specialized areas of functionality that can be accelera
 - [ ] Create provider switching based on cost/performance needs
 - [ ] Implement fallback mechanisms between providers
 
-## Next Major Areas of Focus
+## Key Implementation Components
 
-### 1. Caching System for Knowledge Operations
-
-A prioritized enhancement to improve performance, reduce costs, and speed up frequently accessed information:
-
-```python
-class QueryCache:
-    """In-memory cache for frequently accessed queries."""
-    
-    def __init__(self, max_size=1000, ttl_seconds=3600):
-        """Initialize cache with size and time-to-live limits."""
-        self.cache = {}  # query_hash -> {result, timestamp}
-        self.max_size = max_size
-        self.ttl_seconds = ttl_seconds
-        
-    def get(self, query, filter=None):
-        """Get cached result for query if exists and valid."""
-        cache_key = self._create_key(query, filter)
-        if cache_key in self.cache:
-            entry = self.cache[cache_key]
-            if self._is_valid(entry["timestamp"]):
-                return entry["result"]
-        return None
-    
-    def put(self, query, result, filter=None):
-        """Store result in cache."""
-        if len(self.cache) >= self.max_size:
-            self._evict_oldest()
-        
-        cache_key = self._create_key(query, filter)
-        self.cache[cache_key] = {
-            "result": result,
-            "timestamp": time.time()
-        }
-    
-    def invalidate(self, query=None, filter=None):
-        """Invalidate specific entry or all entries matching pattern."""
-        # Implementation details...
-```
-
-### 2. Workflow & Multi-Agent Orchestration
-
-Enhanced communication and coordination between specialized agents with tool capabilities:
+### 1. Structured Message System
 
 ```python
 class StructuredMessage:
-    """Structured message format for agent communication."""
+    """Structured message format for agent communication with tool capability."""
     
     def __init__(self, content, metadata=None, task_id=None, tool_calls=None):
         self.content = content
@@ -307,7 +310,23 @@ class StructuredMessage:
             "source_agent": self.source_agent,
             "target_agent": self.target_agent
         }
+        
+    @classmethod
+    def from_dict(cls, data):
+        """Create message from dictionary."""
+        msg = cls(
+            content=data["content"],
+            metadata=data["metadata"],
+            task_id=data["task_id"],
+            tool_calls=data["tool_calls"]
+        )
+        msg.timestamp = data["timestamp"]
+        msg.source_agent = data["source_agent"]
+        msg.target_agent = data["target_agent"]
+        return msg
 ```
+
+### 2. Agent Toolkit for Tool Management
 
 ```python
 class AgentToolkit:
@@ -332,33 +351,73 @@ class AgentToolkit:
             for name, tool in self.tools.items()
             if self.has_permission(agent_id, name)
         }
+        
+    def execute_tool(self, agent_id, tool_name, arguments):
+        """Execute a tool if agent has permission."""
+        if not self.has_permission(agent_id, tool_name):
+            raise PermissionError(f"Agent {agent_id} doesn't have permission to use {tool_name}")
+            
+        if tool_name not in self.tools:
+            raise ValueError(f"Tool {tool_name} not found in registry")
+            
+        tool = self.tools[tool_name]
+        return tool["function"](**arguments)
+        
+    def has_permission(self, agent_id, tool_name):
+        """Check if agent has permission to use tool."""
+        if agent_id not in self.permissions:
+            return False
+            
+        if "*" in self.permissions[agent_id]:
+            return True
+            
+        return tool_name in self.permissions[agent_id]
 ```
 
-### 3. Provider Optimization
-
-Improving provider management for better performance and reliability:
+### 3. Specialized Worker Agent
 
 ```python
-class ProviderPool:
-    """Connection pool for model providers."""
+class ToolCapableAgent(WorkerAgent):
+    """Worker agent with tool execution capabilities."""
     
-    def __init__(self, provider_class, max_connections=5, **kwargs):
-        self.provider_class = provider_class
-        self.max_connections = max_connections
-        self.provider_args = kwargs
-        self.connections = []
-        self.in_use = set()
-        self.lock = threading.RLock()
-    
-    def get_connection(self):
-        """Get an available connection or create a new one."""
-        with self.lock:
-            # Implementation details...
-    
-    def release_connection(self, connection):
-        """Return a connection to the pool."""
-        with self.lock:
-            # Implementation details...
+    def __init__(self, name, model_provider, toolkit=None):
+        super().__init__(name, model_provider)
+        self.toolkit = toolkit or AgentToolkit()
+        self.capabilities = []
+        
+    def register_capability(self, capability):
+        """Register a capability this agent provides."""
+        self.capabilities.append(capability)
+        
+    def handle_message(self, message):
+        """Process incoming message and execute any tool calls."""
+        # Handle basic message content
+        response_content = self._process_content(message.content)
+        
+        # Handle any tool calls in the message
+        tool_results = []
+        for tool_call in message.tool_calls:
+            result = self.toolkit.execute_tool(
+                self.id,
+                tool_call["name"],
+                tool_call["arguments"]
+            )
+            tool_results.append({
+                "name": tool_call["name"],
+                "result": result
+            })
+            
+        # Create response message
+        response = StructuredMessage(
+            content=response_content,
+            metadata={"type": "response", "in_reply_to": message.task_id},
+            task_id=str(uuid.uuid4()),
+            tool_results=tool_results
+        )
+        response.source_agent = self.id
+        response.target_agent = message.source_agent
+        
+        return response
 ```
 
 ## Models Module Implementation Status

@@ -2,13 +2,11 @@
 
 This document outlines the planning and tracking system for Atlas documentation, including the documentation structure, completed tasks, and ongoing plans for documentation improvement.
 
-## Current Implementation Status
+## Current Status
 
 ```
-✅ Completed documentation (60 files)
-✅ Implemented hybrid retrieval with consistent settings interface
-✅ Enhanced document processing with improved IDs and progress indicators
-🚀 Next focus: Query caching, Structured messaging, Provider pooling
+✅ Documentation system with 60+ completed files
+✅ Next focus: Multi-agent orchestration, MCP integration, and tool systems
 ```
 
 ## Documentation Structure
@@ -25,6 +23,9 @@ docs/
 ├── components/               # Bottom-up implementation
 │   ├── agents/               # Agent components ✅
 │   │   ├── controller.md     # Controller agent ✅
+│   │   ├── index.md          # Agents overview ⏳
+│   │   ├── messaging.md      # NEW - Agent messaging system ⏳
+│   │   ├── specialized.md    # NEW - Specialized agent types ⏳
 │   │   └── workers.md        # Worker agents ✅
 │   ├── core/                 # Core components ✅
 │   │   ├── config.md         # Configuration ✅
@@ -41,12 +42,21 @@ docs/
 │   │   ├── index.md          # Knowledge section index/overview ✅
 │   │   ├── ingestion.md      # Document ingestion ✅
 │   │   └── retrieval.md      # Retrieval functionality ✅
-│   └── models/               # Model providers ✅
-│       ├── anthropic.md      # Anthropic integration ✅
-│       ├── index.md          # Models section index/overview ✅
-│       ├── mock.md           # Mock provider for testing ✅
-│       ├── ollama.md         # Ollama integration ✅
-│       └── openai.md         # OpenAI integration ✅
+│   ├── models/               # Model providers ✅
+│   │   ├── anthropic.md      # Anthropic integration ✅
+│   │   ├── index.md          # Models section index/overview ✅
+│   │   ├── mock.md           # Mock provider for testing ✅
+│   │   ├── ollama.md         # Ollama integration ✅
+│   │   └── openai.md         # OpenAI integration ✅
+│   ├── tools/                # NEW - Tools components ⏳
+│   │   ├── core.md           # NEW - Tool core concepts ⏳
+│   │   ├── index.md          # NEW - Tools overview ⏳
+│   │   ├── mcp.md            # NEW - MCP integration ⏳
+│   │   └── standard.md       # NEW - Standard tool documentation ⏳
+│   └── orchestration/        # NEW - Orchestration components ⏳
+│       ├── index.md          # NEW - Orchestration overview ⏳
+│       ├── messaging.md      # NEW - Messaging system ⏳
+│       └── workflows.md      # NEW - Workflow patterns ⏳
 ├── guides/                   # Developer guides ✅
 │   ├── configuration.md      # Configuration guide ✅
 │   ├── examples/             # Code examples ✅
@@ -77,7 +87,9 @@ docs/
     ├── custom_workflows.md   # Creating custom workflows ✅
     ├── multi_agent.md        # Multi-agent workflows ✅
     ├── query.md              # Query workflow ✅
-    └── retrieval.md          # Retrieval workflow ✅
+    ├── retrieval.md          # Retrieval workflow ✅
+    ├── tool_workflows.md     # NEW - Tool-based workflow examples ⏳
+    └── specialized_agents.md # NEW - Working with specialized agents ⏳
 ```
 
 ## Completed Documentation Tasks
@@ -90,19 +102,25 @@ docs/
 - [x] User guides (getting started, configuration, testing)
 - [x] Reference documentation (API, CLI, env variables)
 
-## Recent Implementation Changes
+## Current Documentation Focus
 
-- [x] **Core Systems**
-  - Provider implementations with streaming support
-  - Token usage tracking and cost calculation
-  - Knowledge system with hybrid retrieval
-  - Settings interfaces for consistent configuration
+- [ ] **Multi-Agent System Documentation**
+  - Structured messaging and routing
+  - Specialized agent implementations
+  - Tool capability integration
+  - Agent communication patterns
 
-- [x] **User Experience**
-  - Progress indicators and improved formatting
-  - Enhanced error handling and diagnostics
-  - Simplified document ID format
-  - Command-line improvements and argument support
+- [ ] **MCP Integration Documentation**
+  - Model Context Protocol implementation
+  - Tool schema and representation
+  - Permission and capability management
+  - Integration with existing agent system
+
+- [ ] **Workflow Enhancements Documentation**
+  - Task delegation and coordination
+  - Workflow patterns for common scenarios
+  - Parallel processing capabilities
+  - Observability and monitoring
 
 ## Content Migration Tracking
 
@@ -215,22 +233,7 @@ All Atlas documentation adheres to the following standards:
 
 ## New Documentation Tasks
 
-1. **Caching System Documentation**
-   - [ ] Create new file: `knowledge/caching.md`
-     - [ ] Document QueryCache implementation and interface
-     - [ ] Document caching strategies (TTL, LRU, size limits)
-     - [ ] Explain cache invalidation mechanisms
-     - [ ] Provide examples of cache configuration
-   - [ ] Add caching section to `knowledge/retrieval.md`
-     - [ ] Document how caching integrates with retrieval
-     - [ ] Explain performance benefits with metrics
-     - [ ] Show configuration options for caching
-   - [ ] Create example documentation: `guides/examples/caching_example.py`
-     - [ ] Demonstrate cache usage patterns
-     - [ ] Show performance comparison with/without caching
-     - [ ] Include cache hit/miss statistics
-
-2. **Structured Message Format Documentation**
+1. **Multi-Agent Orchestration Documentation**
    - [ ] Create new file: `components/agents/messaging.md`
      - [ ] Document StructuredMessage class and interface
      - [ ] Explain message metadata and serialization
@@ -240,64 +243,73 @@ All Atlas documentation adheres to the following standards:
      - [ ] Add section on message passing protocols
      - [ ] Document message handling between agents
      - [ ] Include diagram of message flow patterns
+   - [ ] Create new file: `components/orchestration/workflows.md`
+     - [ ] Document workflow patterns for agent coordination
+     - [ ] Explain parallel task execution
+     - [ ] Detail task delegation and result aggregation
+     - [ ] Show configuration for workflow optimization
 
-3. **Provider Optimization Documentation**
-   - [ ] Create new file: `components/models/pooling.md`
-     - [ ] Document ProviderPool implementation and interface
-     - [ ] Explain connection management strategies
-     - [ ] Detail resource optimization techniques
-     - [ ] Show configuration options for different providers
-   - [ ] Update provider-specific documentation
-     - [ ] Add sections on performance optimization
-     - [ ] Document provider-specific pooling considerations
-     - [ ] Include configuration examples
+2. **MCP Integration Documentation**
+   - [ ] Create new file: `components/tools/mcp.md`
+     - [ ] Document Model Context Protocol implementation
+     - [ ] Explain tool representation and execution
+     - [ ] Show integration with LLM providers
+     - [ ] Provide examples of MCP tool usage
+   - [ ] Create new file: `components/tools/index.md`
+     - [ ] Overview of tool system architecture
+     - [ ] Document tool registry and discovery mechanisms
+     - [ ] Explain tool permissions and access control
+     - [ ] Show integration with agent workflows
 
-## Key Implementation Accomplishments
+3. **Specialized Agent Documentation**
+   - [ ] Create new file: `components/agents/specialized.md`
+     - [ ] Document specialized worker agent implementations
+     - [ ] Explain tool capability integration
+     - [ ] Show agent toolkit usage patterns
+     - [ ] Document agent capability discovery and advertising
+   - [ ] Create new file: `components/tools/standard.md`
+     - [ ] Document standard tool implementations
+     - [ ] Explain tool interface requirements
+     - [ ] Show tool registration process
+     - [ ] Provide examples of creating custom tools
 
-### 1. System Improvements
+## New Documentation Example: Structured Messaging
 
-We've made several core system improvements:
-
-1. **Code Quality**
-   - Fixed circular import warnings and standardized import patterns
-   - Consolidated duplicate implementations and improved code organization
-   - Created consistent interfaces and settings classes
-
-2. **Document Processing**
-   - Simplified document IDs to parent_dir/filename.md format
-   - Added progress indicators with visual feedback
-   - Improved metadata handling and content identification
-
-### 2. Retrieval System Enhancement
-
-The knowledge system now provides a consistent retrieval interface:
+The following example demonstrates the kind of documentation planned for the new messaging system:
 
 ```python
-# Example using RetrievalSettings
-from atlas.knowledge.settings import RetrievalSettings
+# Example of StructuredMessage usage
+from atlas.agents.messaging import StructuredMessage, MessageType
 
-# Create retrieval settings with hybrid search
-settings = RetrievalSettings(
-    use_hybrid_search=True,  # Enable hybrid search
-    semantic_weight=0.7,     # 70% weight for semantic results
-    keyword_weight=0.3,      # 30% weight for keyword results
-    num_results=5,           # Number of results to return
-    min_relevance_score=0.25 # Minimum relevance threshold
+# Create a structured message with tool calls
+message = StructuredMessage(
+    content="Please analyze this document", 
+    metadata={
+        "priority": "high",
+        "sender": "controller_agent",
+        "task_id": "doc_analysis_123"
+    },
+    tool_calls=[{
+        "name": "knowledge_retrieval",
+        "arguments": {
+            "query": "document structure patterns",
+            "max_results": 3
+        }
+    }]
 )
 
-# Perform retrieval with settings
-documents = kb.retrieve(
-    query="knowledge graph structure",
-    settings=settings,
-    filter=RetrievalFilter.from_metadata(file_type="md")
-)
+# Message can be serialized for transport
+serialized = message.to_dict()
+
+# And reconstructed by the receiving agent
+received = StructuredMessage.from_dict(serialized)
 ```
 
-## Next Steps
+## Next Documentation Tasks
 
-1. **Query Caching**: Add caching for frequently accessed queries
-2. **Message Passing**: Develop structured message formats for agent communication
-3. **Provider Optimization**: Implement connection pooling and health monitoring
+1. **Create Tool System Documentation**: Document the new tool system architecture, standards, and integration patterns
+2. **Develop Agent Messaging Docs**: Document the structured messaging system for agent communication
+3. **Update Workflow Documentation**: Enhance existing workflow docs with new orchestration capabilities
 
 ## Documentation Review Process
 
