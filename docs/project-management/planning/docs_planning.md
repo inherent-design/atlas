@@ -5,11 +5,12 @@ This document outlines the planning and tracking system for Atlas documentation,
 ## Current Implementation Status
 
 ```
-✅ Completed documentation     (59 files)
+✅ Completed documentation     (60 files)
 ✅ Fixed import system issues  (Fixed circular imports, consolidated KnowledgeBase implementation)
-✅ Verified hybrid search implementation
+✅ Verified hybrid search implementation with RetrievalSettings interface
 ✅ Enhanced document ID format (parent_dir/filename.md instead of full relative paths)
 ✅ Added progress indicators for ingestion and embedding processes
+✅ Added consistent settings classes (RetrievalSettings, ProcessingSettings)
 🚀 Next focus: Query caching system, Structured message format, Provider pooling
 ```
 
@@ -46,12 +47,14 @@ docs/
 │   └── models/               # Model providers ✅
 │       ├── anthropic.md      # Anthropic integration ✅
 │       ├── index.md          # Models section index/overview ✅
+│       ├── mock.md           # Mock provider for testing ✅
 │       ├── ollama.md         # Ollama integration ✅
 │       └── openai.md         # OpenAI integration ✅
 ├── guides/                   # Developer guides ✅
 │   ├── configuration.md      # Configuration guide ✅
 │   ├── examples/             # Code examples ✅
 │   │   ├── advanced_examples.md  # Advanced usage patterns ✅
+│   │   ├── hybrid_retrieval_example.md  # Hybrid search example ✅
 │   │   ├── index.md          # Examples index/overview (formerly README.md) ✅
 │   │   ├── multi_agent_example.md # Multi-agent workflows ✅
 │   │   ├── query_example.md  # Query client usage ✅
@@ -369,27 +372,29 @@ We've significantly improved progress reporting during document ingestion:
    - Duplicate detection reporting
    - Collection size information
 
-### 4. Verified Hybrid Retrieval
+### 4. Enhanced Retrieval System
 
-The knowledge system's hybrid retrieval capability is fully implemented and works as expected:
+The knowledge system's hybrid retrieval capability is fully implemented with a consistent interface:
 
 ```python
-# Example from knowledge/retrieval.py
-def retrieve_hybrid(self, query, n_results=5, filter=None, 
-                  semantic_weight=0.7, keyword_weight=0.3):
-    """Retrieve documents using hybrid semantic and keyword search.
-    
-    Args:
-        query: The query to search for.
-        n_results: Number of results to return.
-        filter: Optional metadata filter.
-        semantic_weight: Weight for semantic search (0-1).
-        keyword_weight: Weight for keyword search (0-1).
-        
-    Returns:
-        List of RetrievalResult objects.
-    """
-    # Implementation verified and working
+# Example using RetrievalSettings
+from atlas.knowledge.settings import RetrievalSettings
+
+# Create retrieval settings with hybrid search enabled
+settings = RetrievalSettings(
+    use_hybrid_search=True,  # Enable hybrid search
+    semantic_weight=0.7,     # 70% weight for semantic results
+    keyword_weight=0.3,      # 30% weight for keyword results
+    num_results=5,           # Return top 5 documents
+    min_relevance_score=0.25 # Minimum relevance threshold
+)
+
+# Perform retrieval with settings
+documents = kb.retrieve(
+    query="knowledge graph structure",
+    settings=settings,
+    filter=RetrievalFilter.from_metadata(file_type="md")
+)
 ```
 
 ## Next Steps
