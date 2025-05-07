@@ -341,15 +341,25 @@ The knowledge system includes robust error handling:
 3. **File Access Problems**: Skips problematic files during ingestion
 4. **Invalid Content**: Handles malformed documents gracefully
 
+## Core Features
+
+The knowledge system includes several key features:
+
+1. **Advanced Chunking Strategies**: Sophisticated document splitting based on semantic boundaries
+2. **Hybrid Retrieval**: Combining embedding similarity with keyword search for optimal results
+3. **Metadata Filtering**: Fine-grained control over document selection based on attributes
+4. **Customizable Processing**: Configurable settings for different document types and use cases
+5. **Versioned Content**: Support for tracking different versions of the knowledge base
+
 ## Future Enhancements
 
 Planned improvements to the knowledge system include:
 
-1. **Advanced Chunking Strategies**: More sophisticated document splitting algorithms
-2. **Hybrid Search**: Combining embedding similarity with keyword search
-3. **Result Reranking**: Post-retrieval scoring to improve relevance
-4. **Cross-Reference Analysis**: Identifying relationships between documents
-5. **Incremental Updates**: Better handling of document changes and updates
+1. **Cross-Reference Analysis**: Identifying relationships between documents
+2. **Advanced Reranking**: More sophisticated post-retrieval scoring algorithms
+3. **Incremental Updates**: Better handling of document changes and updates
+4. **Cache Management**: Query caching for better performance
+5. **Multimedia Support**: Handling of non-text document types
 
 ## Related Documentation
 

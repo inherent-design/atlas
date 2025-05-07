@@ -4,13 +4,15 @@ This document explains the knowledge retrieval system in Atlas, which enables ag
 
 ## Overview
 
-The retrieval system in Atlas provides semantic search capabilities that allow agents to find relevant information based on natural language queries. Key features include:
+The retrieval system in Atlas provides powerful search capabilities that allow agents to find relevant information based on natural language queries. Key features include:
 
 1. **Semantic Search**: Find documents based on meaning, not just keywords
-2. **Relevance Ranking**: Sort results by similarity to the query
-3. **Metadata Filtering**: Filter documents by version, source, or other attributes
-4. **LangGraph Integration**: Seamless use in graph-based workflows
-5. **Persistent Storage**: Efficient access to stored knowledge
+2. **Keyword Search**: Find exact matches for specific terms and phrases
+3. **Hybrid Retrieval**: Combine semantic and keyword search for optimal results
+4. **Relevance Ranking**: Sort results by similarity to the query
+5. **Metadata Filtering**: Filter documents by version, source, or other attributes
+6. **LangGraph Integration**: Seamless use in graph-based workflows
+7. **Persistent Storage**: Efficient access to stored knowledge
 
 The system is designed to be:
 
@@ -418,15 +420,85 @@ except Exception as e:
     return []  # Return empty results on error
 ```
 
+## Hybrid Retrieval
+
+The Atlas knowledge system provides hybrid retrieval capabilities that combine semantic search with keyword-based search for more robust and accurate results.
+
+### Overview
+
+Hybrid search leverages two complementary approaches:
+
+1. **Semantic (Vector) Search**: Uses embeddings to find conceptually similar content, even when exact keywords aren't present
+2. **Keyword (BM25) Search**: Finds exact text matches for specific terms or phrases
+
+By combining these approaches with configurable weights, hybrid retrieval can achieve better results than either method alone.
+
+### Using Hybrid Retrieval
+
+You can use hybrid retrieval via the `RetrievalSettings` class:
+
+```python
+from atlas.knowledge.retrieval import KnowledgeBase, RetrievalFilter
+from atlas.knowledge.settings import RetrievalSettings
+
+# Initialize knowledge base
+kb = KnowledgeBase()
+
+# Create retrieval settings with hybrid search enabled
+settings = RetrievalSettings(
+    use_hybrid_search=True,  # Enable hybrid search
+    semantic_weight=0.7,     # 70% weight for semantic results
+    keyword_weight=0.3,      # 30% weight for keyword results
+    num_results=5,           # Return top 5 documents
+    min_relevance_score=0.25 # Minimum relevance threshold
+)
+
+# Perform hybrid retrieval
+documents = kb.retrieve(
+    query="knowledge graph structure with nodes and edges",
+    settings=settings,
+    filter=RetrievalFilter.from_metadata(file_type="md")
+)
+```
+
+### Adjusting Hybrid Weights
+
+You can customize the balance between semantic and keyword search:
+
+- **Conceptual Queries**: Use higher semantic weight (e.g., 0.8/0.2) for abstract or conceptual questions
+- **Specific Term Queries**: Use higher keyword weight (e.g., 0.3/0.7) when looking for specific terms or phrases
+- **Balanced Approach**: Equal weights (0.5/0.5) provide good general-purpose results
+
+The weights are automatically normalized if they don't sum to 1.0.
+
+### LangGraph Integration
+
+Hybrid retrieval can be used with LangGraph workflows via the `retrieve_knowledge` function:
+
+```python
+from atlas.knowledge.retrieval import retrieve_knowledge
+from atlas.knowledge.settings import RetrievalSettings
+
+# Define settings with hybrid search
+settings = RetrievalSettings(use_hybrid_search=True)
+
+# Use as a node in a LangGraph workflow
+updated_state = retrieve_knowledge(
+    state=current_state,
+    query="What is the knowledge graph structure?",
+    settings=settings
+)
+```
+
 ## Future Enhancements
 
 Planned improvements to the retrieval system include:
 
-1. **Hybrid Search**: Combining embedding similarity with keyword matching
-2. **Re-ranking**: Post-retrieval scoring to improve relevance
-3. **Enhanced Filtering**: More flexible metadata filtering options
-4. **Result Enrichment**: Adding contextual information to search results
-5. **Query Expansion**: Automatically enhancing queries for better results
+1. **Advanced Re-ranking**: More sophisticated post-retrieval scoring
+2. **Enhanced Filtering**: More flexible metadata filtering options
+3. **Result Enrichment**: Adding contextual information to search results
+4. **Query Expansion**: Automatically enhancing queries for better results
+5. **Multi-stage Retrieval**: Sequential retrieval with context refinement
 
 ## Related Documentation
 

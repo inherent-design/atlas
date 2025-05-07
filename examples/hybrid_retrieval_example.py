@@ -18,6 +18,7 @@ from typing import List, Dict, Any, Optional
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from atlas.knowledge.retrieval import KnowledgeBase, RetrievalFilter, RetrievalResult
+from atlas.knowledge.settings import RetrievalSettings
 from atlas.knowledge.embedding import EmbeddingStrategyFactory
 from atlas.knowledge.ingest import DocumentProcessor
 
@@ -100,23 +101,33 @@ def main():
     )
     
     # Execute standard semantic search
+    semantic_settings = RetrievalSettings(
+        use_hybrid_search=False,
+        rerank_results=True,
+        num_results=5
+    )
+    
     semantic_results = kb.retrieve(
         query=args.query,
-        n_results=5,
         filter=filter,
-        rerank=True,  # Apply reranking
+        settings=semantic_settings
     )
     
     # Print semantic search results
     print_retrieval_results(semantic_results, "Semantic Search Results")
     
     # Execute hybrid search (combining semantic and keyword search)
-    hybrid_results = kb.retrieve_hybrid(
-        query=args.query,
-        n_results=5,
-        filter=filter,
+    hybrid_settings = RetrievalSettings(
+        use_hybrid_search=True,
         semantic_weight=0.7,  # Weight for semantic search (70%)
         keyword_weight=0.3,   # Weight for keyword search (30%)
+        num_results=5
+    )
+    
+    hybrid_results = kb.retrieve(
+        query=args.query,
+        filter=filter,
+        settings=hybrid_settings
     )
     
     # Print hybrid search results

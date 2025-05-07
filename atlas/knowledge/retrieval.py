@@ -16,6 +16,7 @@ import re
 import numpy as np
 from atlas.core import env
 from atlas.knowledge.embedding import EmbeddingStrategy, EmbeddingStrategyFactory
+from atlas.knowledge.settings import RetrievalSettings
 
 logger = logging.getLogger(__name__)
 
@@ -321,6 +322,7 @@ class KnowledgeBase:
         n_results: int = 5,
         filter: Optional[RetrievalFilter] = None,
         rerank: bool = False,
+        settings: Optional[RetrievalSettings] = None,
     ) -> List[RetrievalResult]:
         """Retrieve relevant documents based on a query.
         
@@ -329,10 +331,25 @@ class KnowledgeBase:
             n_results: Number of results to return.
             filter: Optional filter to apply to the query.
             rerank: Whether to rerank results using additional criteria.
+            settings: Optional retrieval settings to use. If provided, overrides other parameters.
             
         Returns:
             A list of relevant documents with their metadata.
         """
+        # Use settings if provided, otherwise use individual parameters
+        if settings:
+            # If settings specify hybrid search, delegate to retrieve_hybrid
+            if settings.use_hybrid_search:
+                return self.retrieve_hybrid(
+                    query=query,
+                    n_results=settings.num_results,
+                    filter=filter,
+                    semantic_weight=settings.semantic_weight,
+                    keyword_weight=settings.keyword_weight,
+                )
+            n_results = settings.num_results
+            rerank = settings.rerank_results
+        
         # Prepare filters if any
         where_clause = filter.where if filter else None
         
@@ -381,6 +398,10 @@ class KnowledgeBase:
                 relevance_score = 1.0 - (distance / 2.0)  # Normalize to 0-1
                 # Ensure score is in valid range
                 relevance_score = max(0.0, min(1.0, relevance_score))
+                
+                # Apply minimum relevance score filter if specified in settings
+                if settings and relevance_score < settings.min_relevance_score:
+                    continue
                 
                 retrieval_results.append(
                     RetrievalResult(
@@ -630,7 +651,8 @@ def retrieve_knowledge(
     collection_name: Optional[str] = None,
     db_path: Optional[str] = None,
     filter: Optional[RetrievalFilter] = None,
-    use_hybrid: bool = False,
+    settings: Optional[RetrievalSettings] = None,
+    use_hybrid: bool = False,  # For backward compatibility
 ) -> Dict[str, Any]:
     """Retrieve knowledge from the Atlas knowledge base.
     
@@ -640,7 +662,8 @@ def retrieve_knowledge(
         collection_name: Name of the Chroma collection to use. If None, use environment variable.
         db_path: Path to ChromaDB. If None, use environment variable or default.
         filter: Optional filter for retrieval.
-        use_hybrid: Whether to use hybrid retrieval.
+        settings: Optional retrieval settings for fine-grained control.
+        use_hybrid: Whether to use hybrid retrieval (deprecated; use settings instead).
         
     Returns:
         Updated state with retrieved knowledge.
@@ -677,11 +700,12 @@ def retrieve_knowledge(
     logger.info(f"Retrieving knowledge for query: {query_summary}")
     print(f"Retrieving knowledge for query: {query_summary}")
     
+    # Create settings if use_hybrid is specified but no settings provided
+    if use_hybrid and not settings:
+        settings = RetrievalSettings(use_hybrid_search=True)
+    
     # Retrieve relevant documents
-    if use_hybrid:
-        documents = kb.retrieve_hybrid(query_str, filter=filter)
-    else:
-        documents = kb.retrieve(query_str, filter=filter)
+    documents = kb.retrieve(query_str, filter=filter, settings=settings)
     
     logger.info(f"Retrieved {len(documents)} relevant documents")
     print(f"Retrieved {len(documents)} relevant documents")
