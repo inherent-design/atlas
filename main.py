@@ -21,6 +21,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from atlas.agents.base import AtlasAgent
+# Import DocumentProcessor at module level to standardize imports
 from atlas.knowledge.ingest import DocumentProcessor
 
 

@@ -10,7 +10,9 @@ from typing import Dict, List, Any, Optional
 
 from anthropic import Anthropic
 
-from atlas.tools.knowledge_retrieval import retrieve_knowledge
+# Use the retrieve_knowledge from knowledge.retrieval instead of tools.knowledge_retrieval
+from atlas.knowledge.retrieval import retrieve_knowledge
+from atlas.knowledge.ingest import DocumentProcessor
 
 
 # Default system prompt
@@ -305,7 +307,6 @@ def ingest_documents(args):
             print(f"  - {dir_path}")
 
         print(f"Using ChromaDB at: {db_path}")
-        from atlas.knowledge.ingest import DocumentProcessor
 
         processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
 
@@ -318,8 +319,6 @@ def ingest_documents(args):
     else:
         print(f"Ingesting documents from {args.directory}")
         print(f"Using ChromaDB at: {db_path}")
-
-        from atlas.knowledge.ingest import DocumentProcessor
 
         processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
 

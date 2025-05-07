@@ -92,6 +92,7 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "Anthropic", link: "/components/models/anthropic" },
           { text: "OpenAI", link: "/components/models/openai" },
           { text: "Ollama", link: "/components/models/ollama" },
+          { text: "Mock", link: "/components/models/mock" },
         ],
       },
     ],

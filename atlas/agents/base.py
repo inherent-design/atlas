@@ -94,11 +94,12 @@ class AtlasAgent(TracedClass):
         return self.knowledge_base.retrieve(query)
 
     @traced(name="format_knowledge_context")
-    def format_knowledge_context(self, documents: List[Dict[str, Any]]) -> str:
+    def format_knowledge_context(self, documents: List[Any]) -> str:
         """Format retrieved documents as context for the model.
 
         Args:
             documents: List of documents retrieved from knowledge base.
+                Can be either dictionaries or RetrievalResult objects.
 
         Returns:
             Formatted context string to append to system prompt.
@@ -110,8 +111,16 @@ class AtlasAgent(TracedClass):
 
         # Use only the top 3 most relevant documents to avoid token limits
         for i, doc in enumerate(documents[:3]):
-            source = doc["metadata"].get("source", "Unknown")
-            content = doc["content"]
+            # Handle both dictionary format and RetrievalResult objects
+            if hasattr(doc, 'metadata') and hasattr(doc, 'content'):
+                # RetrievalResult object
+                source = doc.metadata.get("source", "Unknown")
+                content = doc.content
+            else:
+                # Dictionary format
+                source = doc["metadata"].get("source", "Unknown")
+                content = doc["content"]
+                
             context_text += f"### Document {i + 1}: {source}\n{content}\n\n"
 
         return context_text
@@ -141,8 +150,15 @@ class AtlasAgent(TracedClass):
                 # Log top documents for debugging
                 logger.debug("Top relevant documents:")
                 for i, doc in enumerate(documents[:3]):
-                    source = doc["metadata"].get("source", "Unknown")
-                    score = doc["relevance_score"]
+                    # Handle both dictionary format and RetrievalResult objects
+                    if hasattr(doc, 'metadata') and hasattr(doc, 'relevance_score'):
+                        # RetrievalResult object
+                        source = doc.metadata.get("source", "Unknown")
+                        score = doc.relevance_score
+                    else:
+                        # Dictionary format
+                        source = doc["metadata"].get("source", "Unknown")
+                        score = doc["relevance_score"]
                     logger.debug(f"  {i + 1}. {source} (score: {score:.4f})")
 
             # Create system message with context
