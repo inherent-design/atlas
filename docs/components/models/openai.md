@@ -37,7 +37,7 @@ classDiagram
 
 The OpenAI provider offers the following key features:
 
-1. **Latest GPT Models**: Supports GPT-4o, GPT-4-turbo, GPT-4, and GPT-3.5-turbo
+1. **Latest GPT Models**: Supports GPT-4.1, GPT-4o, and specialized models
 2. **Streaming Support**: Native streaming for interactive UI experiences
 3. **Cost Tracking**: Built-in token usage tracking and cost estimation
 4. **Organization Support**: Support for OpenAI organization IDs
@@ -47,12 +47,35 @@ The OpenAI provider offers the following key features:
 
 The provider supports the following OpenAI models:
 
-| Model           | Description                  | Use Case                            |
-| --------------- | ---------------------------- | ----------------------------------- |
-| `gpt-4o`        | Latest GPT-4 model (default) | Best performance for most tasks     |
-| `gpt-4-turbo`   | GPT-4 Turbo model            | High-quality with better throughput |
-| `gpt-4`         | Original GPT-4 model         | Legacy support                      |
-| `gpt-3.5-turbo` | Efficient GPT-3.5 model      | Fast responses for simpler tasks    |
+### Latest Models (GPT-4.1 Series)
+
+| Model           | Description                   | Use Case                            |
+| --------------- | ----------------------------- | ----------------------------------- |
+| `gpt-4.1`       | Flagship GPT-4.1 (default)    | Complex reasoning and tasks         |
+| `gpt-4.1-mini`  | Smaller GPT-4.1 model         | Balance of cost and performance     |
+| `gpt-4.1-nano`  | Smallest GPT-4.1 model        | Fast, cost-effective processing     |
+
+### Reasoning Models (o-Series)
+
+| Model           | Description                   | Use Case                            |
+| --------------- | ----------------------------- | ----------------------------------- |
+| `o3`            | Advanced reasoning model      | Math, coding, and vision tasks      |
+| `o4-mini`       | Cost-efficient reasoning      | Efficient multi-step reasoning      |
+
+### GPT-4o Series
+
+| Model           | Description                   | Use Case                            |
+| --------------- | ----------------------------- | ----------------------------------- |
+| `gpt-4o`        | GPT-4 omni-capable model      | General-purpose tasks with vision   |
+| `gpt-4o-mini`   | Smaller GPT-4o model          | Cost-efficient multi-modal tasks    |
+
+### Legacy Models
+
+| Model           | Description                   | Use Case                            |
+| --------------- | ----------------------------- | ----------------------------------- |
+| `gpt-4-turbo`   | GPT-4 Turbo model             | High-quality with better throughput |
+| `gpt-4`         | Original GPT-4 model          | Legacy support                      |
+| `gpt-3.5-turbo` | Efficient GPT-3.5 model       | Fast responses for simpler tasks    |
 
 ## Initialization
 
@@ -66,7 +89,7 @@ provider = OpenAIProvider()
 
 # Custom configuration
 provider = OpenAIProvider(
-    model_name="gpt-4-turbo",
+    model_name="gpt-4.1",  # Using the latest GPT-4.1 model
     max_tokens=4000,
     api_key="your_api_key_here",  # Optional: defaults to OPENAI_API_KEY env var
     organization="your_org_id"     # Optional: defaults to OPENAI_ORGANIZATION env var
@@ -152,7 +175,7 @@ from atlas.models.openai import OpenAIProvider
 from atlas.models.base import TokenUsage
 
 # Create provider
-provider = OpenAIProvider(model_name="gpt-4o")
+provider = OpenAIProvider(model_name="gpt-4.1")
 
 # Calculate cost estimate
 usage = TokenUsage(input_tokens=1000, output_tokens=500)
@@ -161,10 +184,28 @@ cost = provider.get_cost_estimate(usage)
 print(f"Input cost: ${cost.input_cost:.4f}")
 print(f"Output cost: ${cost.output_cost:.4f}")
 print(f"Total cost: ${cost.total_cost:.4f}")
+
+# Dictionary representation
+cost_dict = cost.to_dict()
+print(f"Cost dictionary: {cost_dict}")
 ```
 
-Current pricing (as of 2025):
-- GPT-4o: $5.00/M input tokens, $15.00/M output tokens
+Current pricing (as of May 2025):
+
+**GPT-4.1 Series:**
+- GPT-4.1: $2.00/M input tokens, $8.00/M output tokens
+- GPT-4.1-mini: $0.40/M input tokens, $1.60/M output tokens
+- GPT-4.1-nano: $0.10/M input tokens, $0.40/M output tokens
+
+**o-Series Reasoning Models:**
+- o3: $10.00/M input tokens, $40.00/M output tokens
+- o4-mini: $1.10/M input tokens, $4.40/M output tokens
+
+**GPT-4o Series:**
+- GPT-4o: $5.00/M input tokens, $20.00/M output tokens
+- GPT-4o-mini: $0.60/M input tokens, $2.40/M output tokens
+
+**Legacy Models:**
 - GPT-4-turbo: $10.00/M input tokens, $30.00/M output tokens
 - GPT-4: $30.00/M input tokens, $60.00/M output tokens
 - GPT-3.5-turbo: $0.50/M input tokens, $1.50/M output tokens
@@ -211,13 +252,13 @@ The provider respects several environment variables:
 | ---------------------------- | -------------------------- | --------------- |
 | `OPENAI_API_KEY`             | API key for OpenAI         | None (required) |
 | `OPENAI_ORGANIZATION`        | Organization ID for OpenAI | None (optional) |
-| `ATLAS_OPENAI_DEFAULT_MODEL` | Default model to use       | `gpt-4o`        |
+| `ATLAS_OPENAI_DEFAULT_MODEL` | Default model to use       | `gpt-4.1`       |
 
 Example `.env` configuration:
 ```
 OPENAI_API_KEY=your_api_key_here
 OPENAI_ORGANIZATION=org-abc123
-ATLAS_OPENAI_DEFAULT_MODEL=gpt-4-turbo
+ATLAS_OPENAI_DEFAULT_MODEL=gpt-4.1-mini # Use smaller model for efficiency
 ```
 
 ## Implementation Details
@@ -285,9 +326,58 @@ provider = OpenAIProvider(
 )
 ```
 
+### Token Usage and Cost Tracking
+
+The OpenAI provider includes comprehensive token usage tracking and cost estimation:
+
+```python
+from atlas.models.openai import OpenAIProvider
+from atlas.models.base import ModelRequest, ModelMessage
+
+# Create a provider and request
+provider = OpenAIProvider(model_name="gpt-4.1-mini")
+request = ModelRequest(
+    messages=[ModelMessage.user("Explain token usage tracking")],
+    max_tokens=100
+)
+
+# Generate a response
+response = provider.generate(request)
+
+# Access token usage information
+usage = response.usage
+print(f"Token usage: {usage.input_tokens} input, {usage.output_tokens} output, {usage.total_tokens} total")
+print(f"Token usage dict: {usage.to_dict()}")
+
+# Access cost information
+cost = response.cost
+print(f"Cost: {cost}")
+```
+
+The `TokenUsage` and `CostEstimate` classes provide the following methods:
+
+```python
+# TokenUsage methods
+token_usage = response.usage
+total = token_usage.total_tokens  # Sum of input and output tokens
+as_dict = token_usage.to_dict()   # Dictionary representation
+
+# CostEstimate methods
+cost = response.cost
+total_cost = cost.total_cost      # Sum of input and output costs
+as_dict = cost.to_dict()          # Dictionary representation
+```
+
+Cost formatting varies based on the magnitude:
+- Large costs ($0.01+): Two decimal places
+- Small costs ($0.001 to $0.01): Four decimal places
+- Very small costs ($0.000001 to $0.001): Six decimal places
+- Extremely small costs (< $0.000001): Scientific notation
+
 ## Related Documentation
 
 - [Models Overview](./) - Overview of all model providers
 - [Anthropic Provider](./anthropic.md) - Documentation for the Anthropic provider
 - [Ollama Provider](./ollama.md) - Documentation for the Ollama provider
 - [Environment Variables](../../reference/env_variables.md) - Configuration options
+- [Streaming Example](../../guides/examples/streaming_example.md) - Streaming with tokens and costs

@@ -20,6 +20,7 @@ _PROVIDER_REGISTRY: Dict[str, str] = {
     "anthropic": "atlas.models.anthropic.AnthropicProvider",
     "openai": "atlas.models.openai.OpenAIProvider",
     "ollama": "atlas.models.ollama.OllamaProvider",
+    "mock": "atlas.models.mock.MockProvider",
 }
 
 # Default models by provider
@@ -27,6 +28,7 @@ _DEFAULT_MODELS: Dict[str, str] = {
     "anthropic": "claude-3-7-sonnet-20250219",
     "openai": "gpt-4o",
     "ollama": "llama3",
+    "mock": "mock-standard",
 }
 
 # Cache for provider availability
@@ -113,6 +115,10 @@ def discover_providers() -> Dict[str, List[str]]:
         except Exception as e:
             # Ollama is not available
             logger.debug(f"Ollama provider not available: {e}")
+
+    # Always include the mock provider, which doesn't need any API key
+    providers["mock"] = ["mock-standard", "mock-basic", "mock-advanced"]
+    logger.debug("Added mock provider for testing without API access")
 
     # Cache the results
     _AVAILABLE_PROVIDERS = providers

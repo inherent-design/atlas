@@ -1,15 +1,20 @@
-# Atlas: Advanced Multi-Modal Learning & Guidance Framework
+# Atlas: Enterprise-Ready Framework for Knowledge-Driven AI Agent Systems
 
-Atlas is a comprehensive meta-framework for knowledge representation, documentation, and adaptive guidance systems. It integrates advanced graph-based knowledge structures with a controller-worker architecture and LangGraph implementation to create a powerful system for knowledge management and AI-assisted guidance.
+<div align="center">
+  <!-- Add logo image once available -->
+  <p><strong>Build sophisticated AI agent systems with deep knowledge integration, powerful multi-agent orchestration, and flexible provider support</strong></p>
+</div>
+
+Atlas is an open source framework that empowers organizations to build advanced AI agent systems with enterprise-grade reliability. It combines sophisticated document processing with powerful orchestration capabilities to create knowledge-driven applications while maintaining control, flexibility, and cost-efficiency.
 
 ## Key Features
 
-- **Multi-Agent Architecture**: Controller-worker pattern for parallel processing and specialization
-- **LangGraph Integration**: Graph-based workflows for complex agent behaviors
+- **Knowledge-First Design**: Advanced document processing with semantic chunking, rich metadata management, and sophisticated retrieval that goes beyond basic RAG implementations
+- **Multi-Agent Orchestration**: Powerful coordination of specialized agents with structured messaging, conditional workflows, and parallel processing
+- **Provider Independence**: Unified interface supporting Anthropic, OpenAI, and Ollama with streaming support and resource optimization
+- **Enterprise Readiness**: Comprehensive error handling, detailed monitoring, and production-grade reliability features
+- **LangGraph Integration**: Graph-based workflows for complex, conditional agent behaviors
 - **Knowledge Persistence**: Maintains context across sessions using ChromaDB vector storage
-- **Documentation Indexing**: Automatically processes and indexes documentation with gitignore-aware filtering
-- **Intelligent Retrieval**: Retrieves relevant context based on user queries
-- **Consistent Identity**: Maintains the Atlas identity and principles in all interactions
 
 ## Getting Started
 

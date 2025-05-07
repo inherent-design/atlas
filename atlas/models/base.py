@@ -255,6 +255,18 @@ class TokenUsage:
         """Calculate total_tokens if not explicitly set."""
         if self.total_tokens == 0 and (self.input_tokens > 0 or self.output_tokens > 0):
             self.total_tokens = self.input_tokens + self.output_tokens
+            
+    def to_dict(self) -> Dict[str, int]:
+        """Convert the token usage to a dictionary.
+        
+        Returns:
+            A dictionary representation of the token usage.
+        """
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens
+        }
 
 
 @dataclass
@@ -281,7 +293,34 @@ class CostEstimate:
         Returns:
             A formatted cost string.
         """
-        return f"${self.total_cost:.6f} (Input: ${self.input_cost:.6f}, Output: ${self.output_cost:.6f})"
+        # Format costs based on their magnitude for better readability
+        if self.total_cost < 0.0000001:
+            # For extremely small costs (nearly zero), use scientific notation
+            return f"${self.total_cost:.2e} (Input: ${self.input_cost:.2e}, Output: ${self.output_cost:.2e})"
+        elif self.total_cost < 0.000001:
+            # For extremely small costs, use 7 decimal places
+            return f"${self.total_cost:.7f} (Input: ${self.input_cost:.7f}, Output: ${self.output_cost:.7f})"
+        elif self.total_cost < 0.001:
+            # For very small costs, use 6 decimal places
+            return f"${self.total_cost:.6f} (Input: ${self.input_cost:.6f}, Output: ${self.output_cost:.6f})"
+        elif self.total_cost < 0.01:
+            # For small costs, use 4 decimal places
+            return f"${self.total_cost:.4f} (Input: ${self.input_cost:.4f}, Output: ${self.output_cost:.4f})"
+        else:
+            # For larger costs, use 2 decimal places
+            return f"${self.total_cost:.2f} (Input: ${self.input_cost:.2f}, Output: ${self.output_cost:.2f})"
+            
+    def to_dict(self) -> Dict[str, float]:
+        """Convert the cost estimate to a dictionary.
+        
+        Returns:
+            A dictionary representation of the cost estimate.
+        """
+        return {
+            "input_cost": self.input_cost,
+            "output_cost": self.output_cost,
+            "total_cost": self.total_cost
+        }
 
 
 @dataclass

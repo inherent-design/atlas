@@ -39,21 +39,28 @@ except ImportError:
 class AnthropicProvider(ModelProvider):
     """Anthropic Claude model provider."""
 
-    # Current Anthropic pricing per million tokens (as of the latest update)
+    # Current Anthropic pricing per million tokens (as of the latest update - May 2025)
     # These should be moved to a configuration file in the future
     PRICING = {
-        "claude-3-5-sonnet-20240620": {
-            "input": 3.0,
-            "output": 15.0,
-        },  # $3.00/M input, $15.00/M output
+        # Latest models
         "claude-3-7-sonnet-20250219": {
             "input": 3.0,
             "output": 15.0,
         },  # $3.00/M input, $15.00/M output
+        "claude-3-5-sonnet-20240620": {
+            "input": 3.0,
+            "output": 15.0,
+        },  # $3.00/M input, $15.00/M output
+        "claude-3-5-haiku-20240620": {
+            "input": 0.80,
+            "output": 4.0,
+        },  # $0.80/M input, $4.00/M output
         "claude-3-opus-20240229": {
             "input": 15.0,
             "output": 75.0,
         },  # $15.00/M input, $75.00/M output
+        
+        # Legacy models
         "claude-3-sonnet-20240229": {
             "input": 3.0,
             "output": 15.0,
@@ -62,6 +69,7 @@ class AnthropicProvider(ModelProvider):
             "input": 0.25,
             "output": 1.25,
         },  # $0.25/M input, $1.25/M output
+        
         # Fallback pricing for unknown models
         "default": {"input": 3.0, "output": 15.0},
     }
@@ -217,9 +225,13 @@ class AnthropicProvider(ModelProvider):
         """
         # This is a static list as Anthropic doesn't provide an API for this yet
         return [
+            # Latest models
             "claude-3-7-sonnet-20250219",
             "claude-3-5-sonnet-20240620",
+            "claude-3-5-haiku-20240620",
             "claude-3-opus-20240229",
+            
+            # Legacy models
             "claude-3-sonnet-20240229",
             "claude-3-haiku-20240307",
         ]

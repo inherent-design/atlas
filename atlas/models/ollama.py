@@ -5,11 +5,19 @@ This module provides integration with Ollama for local model inference.
 """
 
 import logging
+import threading
 import json
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple, Union, Iterator, Callable
 
 from atlas.core.telemetry import traced, TracedClass
 from atlas.core import env
+from atlas.core.errors import (
+    APIError,
+    AuthenticationError,
+    ValidationError,
+    ErrorSeverity,
+    safe_execute,
+)
 from atlas.models.base import (
     ModelProvider,
     ModelRequest,
@@ -51,14 +59,18 @@ class OllamaProvider(ModelProvider):
             **kwargs: Additional provider-specific parameters.
 
         Raises:
-            ValueError: If the Requests package is not installed.
+            ValidationError: If the Requests package is not installed.
         """
         # Check if Requests is available
         if not REQUESTS_AVAILABLE:
-            raise ValueError("Requests package is not installed")
+            raise ValidationError(
+                message="Requests package is not installed",
+                severity=ErrorSeverity.ERROR,
+            )
 
         self._model_name = model_name
         self._max_tokens = max_tokens
+        self._additional_params = kwargs or {}
 
         # Get API endpoint from env module or use default
         self._api_endpoint = api_endpoint or env.get_string(
@@ -75,9 +87,6 @@ class OllamaProvider(ModelProvider):
             f"Initialized Ollama provider with model {model_name} at {self._api_endpoint}"
         )
 
-        # Store additional parameters
-        self._additional_params = kwargs
-
     @property
     def name(self) -> str:
         """Get the name of the provider.
@@ -93,17 +102,30 @@ class OllamaProvider(ModelProvider):
         Returns:
             True if the API endpoint is accessible, False otherwise.
         """
-        # For Ollama, we're actually validating the server availability
-        # rather than an API key
-        try:
+        # For Ollama, we're validating server availability rather than an API key
+        # Wrap this in safe_execute for consistent error handling
+        def check_server_availability() -> bool:
             # Try to get the Ollama version
             response = requests.get(f"{self._api_endpoint}/version", timeout=2)
-            return response.status_code == 200
-        except Exception as e:
-            logger.warning(
-                f"Failed to connect to Ollama API at {self._api_endpoint}: {e}"
-            )
-            return False
+            if response.status_code == 200:
+                logger.info(f"Successfully connected to Ollama server at {self._api_endpoint}")
+                return True
+            else:
+                logger.warning(
+                    f"Ollama server responded with status code {response.status_code}"
+                )
+                return False
+
+        # Use safe execution to handle errors
+        result = safe_execute(
+            check_server_availability,
+            default=False,
+            error_msg=f"Failed to connect to Ollama server at {self._api_endpoint}",
+            error_cls=APIError,
+            log_error=True,
+        )
+
+        return result
 
     def get_available_models(self) -> List[str]:
         """Get a list of available models for this provider.
@@ -111,7 +133,8 @@ class OllamaProvider(ModelProvider):
         Returns:
             A list of model identifiers.
         """
-        try:
+        # Define function for the API call
+        def fetch_models() -> List[str]:
             # Get models from API
             response = requests.get(f"{self._api_endpoint}/tags", timeout=5)
             if response.status_code == 200:
@@ -122,10 +145,17 @@ class OllamaProvider(ModelProvider):
                     f"Failed to get models from Ollama API (status code {response.status_code})"
                 )
                 return ["llama3", "mistral", "gemma"]
-        except Exception as e:
-            logger.warning(f"Failed to get available models from Ollama API: {e}")
-            # Return default models
-            return ["llama3", "mistral", "gemma"]
+
+        # Use safe execution to handle errors
+        models = safe_execute(
+            fetch_models,
+            default=["llama3", "mistral", "gemma"],  # Default models
+            error_msg="Failed to get available models from Ollama API",
+            error_cls=APIError,
+            log_error=True,
+        )
+
+        return models
 
     def generate(self, request: ModelRequest) -> ModelResponse:
         """Generate a response from the model.
@@ -137,7 +167,7 @@ class OllamaProvider(ModelProvider):
             A ModelResponse containing the generated content and metadata.
 
         Raises:
-            ValueError: If the model is not available.
+            APIError: If there is an error with the API call.
         """
         # Ollama doesn't support the ChatML format directly, so we need to convert
         # the request to a prompt string
@@ -149,66 +179,91 @@ class OllamaProvider(ModelProvider):
         system_content = None
         prompt_parts = []
 
-        for message in request.messages:
-            role = message.role.value
-            if isinstance(message.content, str):
-                content = message.content
-            else:
-                # Handle complex content - Ollama only supports text
-                content = (
-                    message.content.text
-                    if hasattr(message.content, "text")
-                    else str(message.content)
+        # Process the messages to build a prompt Ollama can understand
+        def build_prompt() -> Dict[str, Any]:
+            nonlocal system_content, prompt_parts
+
+            for message in request.messages:
+                role = message.role.value
+                if isinstance(message.content, str):
+                    content = message.content
+                else:
+                    # Handle complex content - Ollama only supports text
+                    content = (
+                        message.content.text
+                        if hasattr(message.content, "text")
+                        else str(message.content)
+                    )
+
+                if role == "system":
+                    system_content = content
+                elif role == "user":
+                    prompt_parts.append(f"User: {content}")
+                elif role == "assistant":
+                    prompt_parts.append(f"Assistant: {content}")
+                elif role == "function":
+                    # Ollama doesn't support function calls, so we include them as user messages
+                    prompt_parts.append(f"Function ({message.name}): {content}")
+
+            # Add final user prompt if not already included
+            if prompt_parts and not prompt_parts[-1].startswith("User:"):
+                prompt_parts.append("Assistant:")
+
+            # Build the final prompt
+            prompt = "\n\n".join(prompt_parts)
+
+            # Prepare the API request
+            api_request = {
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": request.max_tokens or self._max_tokens,
+                },
+            }
+
+            # Add system content if available
+            if system_content:
+                api_request["system"] = system_content
+
+            # Add additional parameters
+            if request.temperature is not None:
+                api_request["options"]["temperature"] = request.temperature
+
+            # Add any additional parameters from initialization
+            for key, value in self._additional_params.items():
+                if key not in api_request and key != "options":
+                    api_request[key] = value
+                elif key == "options":
+                    for option_key, option_value in value.items():
+                        if option_key not in api_request["options"]:
+                            api_request["options"][option_key] = option_value
+
+            return api_request
+
+        # Define a function for the API call for use with safe_execute
+        def make_api_call() -> ModelResponse:
+            # Skip actual API call if in testing mode
+            if env.get_bool("SKIP_API_KEY_CHECK", False):
+                # Return a mock response for testing
+                logger.info("Skipping actual API call due to SKIP_API_KEY_CHECK=true")
+                return ModelResponse(
+                    content="This is a mock response since SKIP_API_KEY_CHECK is true.",
+                    model=model,
+                    provider=self.name,
+                    usage=TokenUsage(
+                        input_tokens=10, output_tokens=10, total_tokens=20
+                    ),
+                    cost=CostEstimate(input_cost=0.0, output_cost=0.0, total_cost=0.0),
+                    finish_reason="stop",
+                    raw_response={},
                 )
 
-            if role == "system":
-                system_content = content
-            elif role == "user":
-                prompt_parts.append(f"User: {content}")
-            elif role == "assistant":
-                prompt_parts.append(f"Assistant: {content}")
-            elif role == "function":
-                # Ollama doesn't support function calls, so we include them as user messages
-                prompt_parts.append(f"Function ({message.name}): {content}")
+            # Build API request
+            api_request = build_prompt()
+            logger.debug(f"Calling Ollama API with model {model}")
 
-        # Add final user prompt if not already included
-        if prompt_parts and not prompt_parts[-1].startswith("User:"):
-            prompt_parts.append("Assistant:")
-
-        # Build the final prompt
-        prompt = "\n\n".join(prompt_parts)
-
-        # Prepare the API request
-        api_request = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "num_predict": request.max_tokens or self._max_tokens,
-            },
-        }
-
-        # Add system content if available
-        if system_content:
-            api_request["system"] = system_content
-
-        # Add additional parameters
-        if request.temperature is not None:
-            api_request["options"]["temperature"] = request.temperature
-
-        # Add any additional parameters from initialization
-        for key, value in self._additional_params.items():
-            if key not in api_request and key != "options":
-                api_request[key] = value
-            elif key == "options":
-                for option_key, option_value in value.items():
-                    if option_key not in api_request["options"]:
-                        api_request["options"][option_key] = option_value
-
-        logger.debug(f"Calling Ollama API with model {model}")
-
-        # Make the API call
-        try:
+            # Make the actual API call
             response = requests.post(
                 f"{self._api_endpoint}/generate",
                 json=api_request,
@@ -216,8 +271,10 @@ class OllamaProvider(ModelProvider):
             )
 
             if response.status_code != 200:
-                raise ValueError(
-                    f"Ollama API returned status code {response.status_code}: {response.text}"
+                raise APIError(
+                    message=f"Ollama API returned status code {response.status_code}: {response.text}",
+                    severity=ErrorSeverity.ERROR,
+                    details={"status_code": response.status_code, "response": response.text},
                 )
 
             response_data = response.json()
@@ -232,7 +289,7 @@ class OllamaProvider(ModelProvider):
             cost = self.calculate_cost(usage, model)
 
             # Create the response
-            model_response = ModelResponse(
+            return ModelResponse(
                 content=content,
                 model=model,
                 provider=self.name,
@@ -242,11 +299,41 @@ class OllamaProvider(ModelProvider):
                 raw_response=response_data,
             )
 
-            return model_response
+        # Error handler for API errors
+        def api_error_handler(e: Exception) -> None:
+            # Handle connection errors
+            if isinstance(e, requests.ConnectionError):
+                raise APIError(
+                    message=f"Failed to connect to Ollama server at {self._api_endpoint}: {e}",
+                    cause=e,
+                    retry_possible=True,
+                    severity=ErrorSeverity.ERROR,
+                    details={"endpoint": self._api_endpoint},
+                ) from e
 
+            # Handle timeout errors
+            if isinstance(e, requests.Timeout):
+                raise APIError(
+                    message=f"Timeout connecting to Ollama server: {e}",
+                    cause=e,
+                    retry_possible=True,
+                    severity=ErrorSeverity.WARNING,
+                ) from e
+
+            # General API errors
+            raise APIError(message=f"Error calling Ollama API: {e}", cause=e) from e
+
+        # Execute the API call safely with standardized error handling
+        try:
+            return safe_execute(
+                make_api_call,
+                error_handler=api_error_handler,
+                error_msg="Failed to generate response from Ollama API",
+                error_cls=APIError,
+            )
         except Exception as e:
-            logger.error(f"Error calling Ollama API: {e}")
-            raise ValueError(f"Error calling Ollama API: {e}")
+            logger.error(f"Error calling Ollama API: {e}", exc_info=True)
+            raise  # Re-raise the error after logging it
 
     def calculate_token_usage(self, request: ModelRequest, response: Any) -> TokenUsage:
         """Calculate token usage for a request and response.
@@ -263,7 +350,7 @@ class OllamaProvider(ModelProvider):
         eval_tokens = response.get("eval_count", 0)
 
         # If prompt tokens is 0, estimate based on character count
-        if prompt_tokens == 0 and isinstance(request.messages, list):
+        if prompt_tokens == 0 and hasattr(request, "messages") and isinstance(request.messages, list):
             # Rough estimate: ~4 characters per token
             prompt_text = "".join(
                 [
@@ -311,84 +398,157 @@ class OllamaProvider(ModelProvider):
             total_cost=0.0,
         )
 
-    def stream(self, request: ModelRequest) -> Tuple[ModelResponse, Any]:
+    def stream(self, request: ModelRequest) -> Tuple[ModelResponse, "StreamHandler"]:
         """Stream a response from the model.
 
         Args:
             request: The model request.
 
         Returns:
-            A tuple of (final ModelResponse, stream iterator).
-        """
-        # TODO: Implement streaming
-        # This is a placeholder implementation similar to generate but with streaming
+            A tuple of (initial ModelResponse, StreamHandler).
 
+        Raises:
+            APIError: If there is an error with the API call.
+        """
         # Get the model to use
         model = request.model or self._model_name
 
-        # Build the prompt from messages
+        # Build the prompt from messages - similar to generate() method
         system_content = None
         prompt_parts = []
 
-        for message in request.messages:
-            role = message.role.value
-            if isinstance(message.content, str):
-                content = message.content
-            else:
-                # Handle complex content - Ollama only supports text
-                content = (
-                    message.content.text
-                    if hasattr(message.content, "text")
-                    else str(message.content)
+        # Process the messages to build a prompt Ollama can understand
+        def build_prompt() -> Dict[str, Any]:
+            nonlocal system_content, prompt_parts
+
+            for message in request.messages:
+                role = message.role.value
+                if isinstance(message.content, str):
+                    content = message.content
+                else:
+                    # Handle complex content - Ollama only supports text
+                    content = (
+                        message.content.text
+                        if hasattr(message.content, "text")
+                        else str(message.content)
+                    )
+
+                if role == "system":
+                    system_content = content
+                elif role == "user":
+                    prompt_parts.append(f"User: {content}")
+                elif role == "assistant":
+                    prompt_parts.append(f"Assistant: {content}")
+                elif role == "function":
+                    prompt_parts.append(f"Function ({message.name}): {content}")
+
+            # Add final user prompt if not already included
+            if prompt_parts and not prompt_parts[-1].startswith("User:"):
+                prompt_parts.append("Assistant:")
+
+            # Build the final prompt
+            prompt = "\n\n".join(prompt_parts)
+
+            # Prepare the API request
+            api_request = {
+                "model": model,
+                "prompt": prompt,
+                "stream": True,  # Enable streaming
+                "options": {
+                    "num_predict": request.max_tokens or self._max_tokens,
+                },
+            }
+
+            # Add system content if available
+            if system_content:
+                api_request["system"] = system_content
+
+            # Add additional parameters
+            if request.temperature is not None:
+                api_request["options"]["temperature"] = request.temperature
+
+            # Add any additional parameters from initialization
+            for key, value in self._additional_params.items():
+                if key not in api_request and key != "options":
+                    api_request[key] = value
+                elif key == "options":
+                    for option_key, option_value in value.items():
+                        if option_key not in api_request["options"]:
+                            api_request["options"][option_key] = option_value
+
+            return api_request
+
+        # Define function for API call to use with safe_execute
+        def create_stream():
+            # Skip actual API call if in testing mode
+            if env.get_bool("SKIP_API_KEY_CHECK", False):
+                # Create a mock stream for testing
+                logger.info("Using mock stream due to SKIP_API_KEY_CHECK=true")
+
+                # Create an initial response object that will be updated
+                initial_response = ModelResponse(
+                    content="",  # Will be populated during streaming
+                    model=model,
+                    provider=self.name,
+                    usage=TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0),
+                    cost=CostEstimate(input_cost=0.0, output_cost=0.0, total_cost=0.0),
+                    finish_reason=None,
+                    raw_response={},
                 )
 
-            if role == "system":
-                system_content = content
-            elif role == "user":
-                prompt_parts.append(f"User: {content}")
-            elif role == "assistant":
-                prompt_parts.append(f"Assistant: {content}")
-            elif role == "function":
-                prompt_parts.append(f"Function ({message.name}): {content}")
+                # Create a mock stream of JSON lines
+                def mock_stream_generator():
+                    # Initial response
+                    yield '{"model":"mock-model","created_at":"2023-01-01T00:00:00.000000Z"}'
 
-        # Add final user prompt if not already included
-        if prompt_parts and not prompt_parts[-1].startswith("User:"):
-            prompt_parts.append("Assistant:")
+                    # Stream several chunks
+                    chunks = [
+                        "This ",
+                        "is ",
+                        "a ",
+                        "mock ",
+                        "response ",
+                        "from ",
+                        "Ollama ",
+                        "since ",
+                        "SKIP_API_KEY_CHECK ",
+                        "is ",
+                        "true."
+                    ]
+                    
+                    for chunk in chunks:
+                        yield json.dumps({"response": chunk, "done": False})
+                    
+                    # Final chunk with completion stats
+                    yield json.dumps({
+                        "response": "",
+                        "done": True,
+                        "context": [1, 2, 3],  # Fake context
+                        "total_duration": 1000000000,
+                        "load_duration": 100000000,
+                        "prompt_eval_count": 10,
+                        "prompt_eval_duration": 200000000,
+                        "eval_count": 20,
+                        "eval_duration": 700000000
+                    })
 
-        # Build the final prompt
-        prompt = "\n\n".join(prompt_parts)
+                # Create a MockResponse with an iterator for the content
+                class MockResponse:
+                    def __init__(self, content_iter):
+                        self.iter_lines = lambda: content_iter
+                        self.status_code = 200
 
-        # Prepare the API request
-        api_request = {
-            "model": model,
-            "prompt": prompt,
-            "stream": True,  # Enable streaming
-            "options": {
-                "num_predict": request.max_tokens or self._max_tokens,
-            },
-        }
+                mock_response = MockResponse(mock_stream_generator())
+                
+                return initial_response, StreamHandler(
+                    mock_response, self, model, initial_response
+                )
 
-        # Add system content if available
-        if system_content:
-            api_request["system"] = system_content
+            # Build API request
+            api_request = build_prompt()
+            logger.debug(f"Calling Ollama API with streaming for model {model}")
 
-        # Add additional parameters
-        if request.temperature is not None:
-            api_request["options"]["temperature"] = request.temperature
-
-        # Add any additional parameters from initialization
-        for key, value in self._additional_params.items():
-            if key not in api_request and key != "options":
-                api_request[key] = value
-            elif key == "options":
-                for option_key, option_value in value.items():
-                    if option_key not in api_request["options"]:
-                        api_request["options"][option_key] = option_value
-
-        logger.debug(f"Calling Ollama API with streaming for model {model}")
-
-        # Make the API call
-        try:
+            # Make the API call
             response = requests.post(
                 f"{self._api_endpoint}/generate",
                 json=api_request,
@@ -397,23 +557,242 @@ class OllamaProvider(ModelProvider):
             )
 
             if response.status_code != 200:
-                raise ValueError(
-                    f"Ollama API returned status code {response.status_code}: {response.text}"
+                raise APIError(
+                    message=f"Ollama API returned status code {response.status_code}: {response.text}",
+                    severity=ErrorSeverity.ERROR,
+                    details={"status_code": response.status_code, "response": response.text},
                 )
 
-            # Return a partial response and the stream
-            # The caller will need to handle processing the stream
-            return (
-                ModelResponse(
-                    content="",  # Will be populated during streaming
-                    model=model,
-                    provider=self.name,
-                    usage=TokenUsage(),  # Will be populated at end of stream
-                    cost=CostEstimate(),  # Will be populated at end of stream
-                ),
-                response,
+            # Create an initial response object that will be updated
+            initial_response = ModelResponse(
+                content="",  # Will be populated during streaming
+                model=model,
+                provider=self.name,
+                usage=TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0),
+                cost=CostEstimate(input_cost=0.0, output_cost=0.0, total_cost=0.0),
+                finish_reason=None,
+                raw_response={},
             )
 
+            return initial_response, StreamHandler(
+                response, self, model, initial_response
+            )
+
+        # Error handler for API errors
+        def stream_error_handler(e: Exception) -> None:
+            # Handle connection errors
+            if isinstance(e, requests.ConnectionError):
+                raise APIError(
+                    message=f"Failed to connect to Ollama server at {self._api_endpoint}: {e}",
+                    cause=e,
+                    retry_possible=True,
+                    severity=ErrorSeverity.ERROR,
+                    details={"endpoint": self._api_endpoint},
+                ) from e
+
+            # Handle timeout errors
+            if isinstance(e, requests.Timeout):
+                raise APIError(
+                    message=f"Timeout connecting to Ollama server: {e}",
+                    cause=e,
+                    retry_possible=True,
+                    severity=ErrorSeverity.WARNING,
+                ) from e
+
+            # General API errors
+            raise APIError(
+                message=f"Error calling Ollama streaming API: {e}", cause=e
+            ) from e
+
+        # Execute the API call safely with standardized error handling
+        try:
+            result: Tuple[ModelResponse, "StreamHandler"] = safe_execute(
+                create_stream,
+                error_handler=stream_error_handler,
+                error_msg="Failed to create streaming response from Ollama API",
+                error_cls=APIError,
+            )
+            return result
         except Exception as e:
-            logger.error(f"Error calling Ollama API for streaming: {e}")
-            raise ValueError(f"Error calling Ollama API for streaming: {e}")
+            logger.error(
+                f"Error calling Ollama API for streaming: {e}", exc_info=True
+            )
+            raise  # Re-raise the error after logging it
+
+    def stream_with_callback(
+        self, request: ModelRequest, callback: Callable[[str, ModelResponse], None]
+    ) -> ModelResponse:
+        """Stream a response from the model and process it with a callback.
+
+        Args:
+            request: The model request.
+            callback: Function taking (delta, response) parameters called for each chunk.
+
+        Returns:
+            The final ModelResponse after processing the entire stream.
+
+        Raises:
+            APIError: If there is an error with the API call.
+        """
+        _, stream_handler = self.stream(request)
+        return stream_handler.process_stream(callback)
+
+
+class StreamHandler:
+    """Handler for processing Ollama streaming responses."""
+
+    def __init__(self, stream, provider, model, initial_response):
+        """Initialize the stream handler.
+
+        Args:
+            stream: The Ollama stream response object.
+            provider: The OllamaProvider instance.
+            model: The model being used.
+            initial_response: The initial ModelResponse object to update.
+        """
+        self.stream = stream
+        self.provider = provider
+        self.model = model
+        self.response = initial_response
+        self.full_text = ""
+        self.event_count = 0
+        self.finished = False
+        self.usage = None
+        self._lock = threading.Lock()
+        self.line_iter = self.stream.iter_lines(decode_unicode=True)
+        self.metadata = {}
+
+    def __iter__(self):
+        """Make the handler iterable for processing in a for loop."""
+        return self
+
+    def __next__(self):
+        """Process the next stream event.
+
+        Returns:
+            A tuple of (delta, ModelResponse) where delta is the new content.
+
+        Raises:
+            StopIteration: When the stream is exhausted.
+        """
+        if self.finished:
+            raise StopIteration
+
+        try:
+            # Get the next line from the stream
+            line = next(self.line_iter)
+
+            # Skip empty lines
+            if not line:
+                return "", self.response
+
+            # Process the JSON response
+            try:
+                chunk = json.loads(line)
+                return self._process_chunk(chunk)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to decode JSON from Ollama stream: {e}")
+                return "", self.response
+
+        except StopIteration:
+            self.finished = True
+            self._finalize_response()
+            raise
+        except Exception as e:
+            logger.error(f"Error processing Ollama stream: {e}", exc_info=True)
+            self.finished = True
+            self._finalize_response()
+            raise StopIteration
+
+    def _process_chunk(self, chunk):
+        """Process a chunk from the Ollama stream.
+
+        Args:
+            chunk: The chunk data as a Python dict.
+
+        Returns:
+            A tuple of (delta, ModelResponse).
+        """
+        with self._lock:
+            self.event_count += 1
+            delta = ""
+
+            # Store metadata
+            for key, value in chunk.items():
+                if key != "response":
+                    self.metadata[key] = value
+
+            # Extract content
+            if "response" in chunk:
+                delta = chunk["response"]
+                self.full_text += delta
+                self.response.content = self.full_text
+
+            # Check if this is the final chunk
+            if chunk.get("done", False):
+                self.finished = True
+                self._finalize_response()
+
+            return delta, self.response
+
+    def _finalize_response(self):
+        """Update the final response with metadata and token usage."""
+        # Extract token usage if available
+        prompt_eval_count = self.metadata.get("prompt_eval_count", 0)
+        eval_count = self.metadata.get("eval_count", 0)
+
+        # If no token counts are available, estimate based on text length
+        if prompt_eval_count == 0 and eval_count == 0:
+            # Rough estimate: ~4 characters per token
+            eval_count = len(self.full_text) // 4
+
+        # Update usage information
+        self.usage = TokenUsage(
+            input_tokens=prompt_eval_count,
+            output_tokens=eval_count,
+            total_tokens=prompt_eval_count + eval_count,
+        )
+        self.response.usage = self.usage
+
+        # Calculate and update cost (always 0 for Ollama)
+        self.response.cost = self.provider.calculate_cost(self.usage, self.model)
+
+        # Update finish reason
+        self.response.finish_reason = "stop"
+
+        # Update raw response
+        self.response.raw_response = self.metadata
+
+    def process_stream(self, callback=None):
+        """Process the entire stream, optionally calling a callback for each chunk.
+
+        Args:
+            callback: Optional function taking (delta, response) parameters
+                     to call for each chunk of the stream.
+
+        Returns:
+            The final ModelResponse after processing the entire stream.
+        """
+        # Stream processing function for safe_execute
+        def process_stream_safely():
+            # Process all chunks in the stream
+            for delta, response in self:
+                if callback and delta:
+                    try:
+                        callback(delta, response)
+                    except Exception as callback_error:
+                        logger.error(f"Error in stream callback: {callback_error}")
+                        # Continue processing even if callback fails
+
+            return self.response
+
+        # Use safe_execute to handle errors
+        result = safe_execute(
+            process_stream_safely,
+            default=self.response,  # Return partial response on error
+            error_msg="Error processing Ollama stream",
+            error_cls=APIError,
+            log_error=True,
+        )
+
+        return result

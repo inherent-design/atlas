@@ -1,11 +1,12 @@
 [project]
 name = "atlas"
 version = "0.1.0"
+authors = [{ name = "zer0cell", email = "mannie@inherent.design" }]
 description = "Advanced Multi-Modal Learning & Guidance Framework"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "langgraph==0.4.1",
+    "langgraph==0.4.2",
     "chromadb>=1.0.8",
     "anthropic>=0.50.0",
     "pydantic>=2.11.4",
@@ -20,7 +21,7 @@ dependencies = [
 atlas = "atlas.agent:main"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -28,3 +29,20 @@ packages = ["atlas"]
 
 [dependency-groups]
 dev = ["types-requests>=2.32.0.20250328"]
+
+[tool.pydoc-markdown]
+module = "atlas"
+build = true
+site-dir = "./docs/api"
+
+[[tool.pydoc-markdown.loaders]]
+type = "python"
+search_path = ["."]
+
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+show_error_codes = true
+exclude = ["docs", "tests", "examples"]

@@ -122,4 +122,39 @@ export const nav: DefaultTheme.NavItem[] = [
       },
     ],
   },
+  {
+    text: "Project",
+    items: [
+      {
+        text: "Planning",
+        items: [
+          {
+            text: "MVP Strategy",
+            link: "/project-management/roadmap/mvp_strategy",
+          },
+          {
+            text: "MVP Completion",
+            link: "/project-management/planning/mvp_completion_strategy",
+          },
+          {
+            text: "Open Source Strategy",
+            link: "/project-management/planning/open_source_strategy",
+          },
+        ],
+      },
+      {
+        text: "Business & Marketing",
+        items: [
+          {
+            text: "Monetization Strategy",
+            link: "/project-management/business/monetization_strategy",
+          },
+          {
+            text: "Project Overview",
+            link: "/project-management/marketing/project_overview",
+          },
+        ],
+      },
+    ],
+  },
 ];

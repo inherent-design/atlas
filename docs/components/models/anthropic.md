@@ -50,9 +50,10 @@ The provider supports the following Anthropic Claude models:
 | ---------------------------- | ------------------------------------ | --------------------------------------- |
 | `claude-3-7-sonnet-20250219` | Latest Claude Sonnet model (default) | Best balance of quality and performance |
 | `claude-3-5-sonnet-20240620` | High-quality general-purpose model   | General tasks with good performance     |
+| `claude-3-5-haiku-20240620`  | New efficient Haiku model            | Faster responses with good quality      |
 | `claude-3-opus-20240229`     | Highest capability Claude model      | Complex reasoning and generation        |
 | `claude-3-sonnet-20240229`   | Older Sonnet model                   | Legacy support                          |
-| `claude-3-haiku-20240307`    | Fastest, most efficient Claude model | Fast responses, simpler tasks           |
+| `claude-3-haiku-20240307`    | Original Haiku model                 | Legacy fast responses                   |
 
 ## Initialization
 
@@ -142,6 +143,37 @@ print("\nStreaming completed")
 
 ## Advanced Features
 
+### Model Selection
+
+You can easily switch between different Claude models based on performance needs and cost considerations:
+
+```python
+from atlas.models.anthropic import AnthropicProvider
+from atlas.models.base import ModelRequest
+
+# For high-performance tasks
+opus_provider = AnthropicProvider(model_name="claude-3-opus-20240229")
+
+# For balanced performance and cost
+sonnet_provider = AnthropicProvider(model_name="claude-3-7-sonnet-20250219")  # default
+
+# For cost-effective, faster responses
+haiku_provider = AnthropicProvider(model_name="claude-3-5-haiku-20240620")
+
+# Create a request
+request = ModelRequest(
+    messages=[
+        {"role": "user", "content": "Summarize the key benefits of knowledge graphs in 3 bullet points"}
+    ],
+    system_prompt="You are a helpful AI assistant specialized in concise responses."
+)
+
+# Get a fast response with the Haiku model
+response = haiku_provider.generate(request)
+print(f"Claude 3.5 Haiku response:\n{response.content}")
+print(f"Cost: ${response.cost_estimate.total_cost:.6f}")
+```
+
 ### Cost Estimation
 
 The provider includes built-in cost estimation based on current Anthropic pricing:
@@ -164,6 +196,8 @@ print(f"Total cost: ${cost.total_cost:.4f}")
 
 Current pricing (as of 2025):
 - Claude 3.7 Sonnet: $3.00/M input tokens, $15.00/M output tokens
+- Claude 3.5 Sonnet: $3.00/M input tokens, $15.00/M output tokens
+- Claude 3.5 Haiku: $0.80/M input tokens, $4.00/M output tokens
 - Claude 3 Opus: $15.00/M input tokens, $75.00/M output tokens
 - Claude 3 Haiku: $0.25/M input tokens, $1.25/M output tokens
 
@@ -263,9 +297,80 @@ def generate(self, request: ModelRequest) -> ModelResponse:
     # Implementation with telemetry tracing
 ```
 
+## Troubleshooting
+
+### Token Usage and Cost Tracking Issues
+
+If you encounter issues with token usage tracking or cost estimation, check the following:
+
+1. **Empty or Zero Token Counts**
+   - Verify the response object contains the expected attributes
+   - Check for proper API key access (incorrect keys may return mock responses)
+   - Ensure you're using the correct model name in your request
+
+   ```python
+   # Verify token usage is properly populated
+   response = provider.generate(request)
+   if response.usage and response.usage.total_tokens > 0:
+       print(f"Token tracking is working correctly: {response.usage}")
+   else:
+       print("Problem with token tracking!")
+   ```
+
+2. **Inaccurate Cost Estimates**
+   - Confirm the provider is using the correct pricing tier for your model
+   - Check that the model name matches exactly with one of the pricing entries
+   - Update your code if pricing has changed since your last update
+
+   ```python
+   # Check which pricing tier is being used
+   import inspect
+   print(provider.PRICING.get(provider.model_name, provider.PRICING["default"]))
+   ```
+
+3. **Streaming Token Issues**
+   - Streaming may show partial token counts during generation
+   - Final token counts are only available after the entire response is complete
+   - Use the stream_with_callback method to get the final response with token information
+
+   ```python
+   # Track streaming token usage
+   tokens_so_far = 0
+   
+   def token_tracking_callback(delta, response):
+       nonlocal tokens_so_far
+       print(delta, end="", flush=True)
+       
+       # Check if token info has been updated
+       if hasattr(response, "usage") and response.usage:
+           if tokens_so_far != response.usage.output_tokens:
+               tokens_so_far = response.usage.output_tokens
+               print(f"\n[Generated {tokens_so_far} tokens so far]", end="\r")
+   
+   final_response = provider.stream_with_callback(request, token_tracking_callback)
+   print(f"\nFinal tokens: {final_response.usage.total_tokens}")
+   print(f"Final cost: ${final_response.cost.total_cost:.6f}")
+   ```
+
+4. **Mock Mode Considerations**
+   - When `SKIP_API_KEY_CHECK=true`, token counts are simulated
+   - Mock responses use fixed token counts (usually 10 input, 20 output)
+   - For accurate testing, use real API keys in a controlled environment
+
+### Common Error Messages
+
+| Error | Cause | Solution |
+| ----- | ----- | -------- |
+| `AnthropicProvider requires the Anthropic SDK` | The 'anthropic' package is not installed | Run `uv add anthropic` to install |
+| `Anthropic API key not provided` | Missing API key | Set `ANTHROPIC_API_KEY` environment variable |
+| `Authentication error calling Anthropic API` | Invalid API key | Check key format and validity |
+| `Rate limit exceeded calling Anthropic API` | Too many requests | Implement exponential backoff or reduce request frequency |
+| `Failed to generate response from Anthropic API` | General API error | Check Anthropic service status and request parameters |
+
 ## Related Documentation
 
 - [Models Overview](./) - Overview of all model providers
 - [OpenAI Provider](./openai.md) - Documentation for the OpenAI provider
 - [Ollama Provider](./ollama.md) - Documentation for the Ollama provider
 - [Environment Variables](../../reference/env_variables.md) - Configuration options
+- [Streaming Example](../../guides/examples/streaming_example.md) - Example of using streaming with Anthropic

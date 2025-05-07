@@ -6,7 +6,8 @@ This document outlines the planning and tracking system for Atlas documentation,
 
 ```
 ✅ Completed documentation     (59 files)
-🚧 Pending documentation      (0 files)
+🔄 Updated documentation      (3 files - OpenAI provider, Anthropic provider, streaming example)
+✅ All documentation updates complete
 ```
 
 ## Documentation Structure
@@ -78,61 +79,33 @@ docs/
 
 ## Completed Documentation Tasks
 
-### Core Components
+- [x] Core system components (config, env, errors, prompts)
+- [x] Knowledge system (overview, ingestion, retrieval)
+- [x] Graph system (state, nodes, edges)  
+- [x] Model providers (base, anthropic, openai, ollama)
+- [x] Workflow documentation (query, retrieval, multi-agent)
+- [x] User guides (getting started, configuration, testing)
+- [x] Reference documentation (API, CLI, env variables)
 
-- [x] **Configuration System** (components/core/config.md)
-  - Document the AtlasConfig class and configuration validation
-  - Explain configuration precedence and override mechanisms
-  - Show examples of different configuration patterns
+## Recent Implementation Changes
 
-- [x] **Environment Handling** (components/core/env.md)
-  - Document the environment variable handling system
-  - Explain .env file handling and variable precedence
-  - Show type conversion and validation utilities
+- [x] **Provider Implementations**
+  - OpenAI and Ollama providers with streaming support
+  - Token usage tracking and cost calculation
+  - Enhanced error handling and API key validation
+  - Updated pricing for all providers
 
-- [x] **Error System** (components/core/errors.md)
-  - Document the structured error handling system
-  - Explain error categories, severity levels, and recovery strategies
-  - Show how to extend the error system for custom errors
+- [x] **Token Usage System**
+  - TokenUsage and CostEstimate classes with to_dict() methods
+  - Cost formatting with precision based on magnitude
+  - Provider-specific cost calculation implementations
+  - Comprehensive token tracking tests
 
-- [x] **Prompt System** (components/core/prompts.md)
-  - Document the prompt templating and management system
-  - Explain how prompts are loaded, rendered, and used
-  - Show how to create and customize system prompts
-
-### Knowledge System
-
-- [x] **Knowledge System Overview** (components/knowledge/overview.md)
-  - Provide a holistic view of the knowledge management system
-  - Explain the vector database integration and embedding strategy
-  - Show the relationship between ingestion and retrieval
-
-- [x] **Document Ingestion** (components/knowledge/ingestion.md)
-  - Document the document processing and chunking strategies
-  - Explain metadata handling and filtering mechanisms
-  - Show how to customize the ingestion process
-
-- [x] **Retrieval System** (components/knowledge/retrieval.md)
-  - Document the semantic search capabilities
-  - Explain relevance scoring and re-ranking algorithms
-  - Show how to optimize retrieval for different use cases
-
-### Graph System
-
-- [x] **State Management** (components/graph/state.md)
-  - Document the state models used in graph workflows
-  - Explain the state transition system and validation
-  - Show how to create custom state models for specific needs
-
-- [x] **Graph Nodes** (components/graph/nodes.md)
-  - Document node types and implementation patterns
-  - Explain node function signatures and return values
-  - Show how to create custom nodes for specialized workflows
-
-- [x] **Graph Edges** (components/graph/edges.md)
-  - Document edge types and routing mechanisms
-  - Explain conditional edge evaluation and decision logic
-  - Show how to create advanced routing patterns
+- [x] **Streaming Functionality**
+  - Stream handler implementation for all providers
+  - Callback-based streaming for interactive UIs
+  - Token and cost tracking during streaming
+  - Command-line argument support in examples
 
 ## Content Migration Tracking
 
@@ -226,6 +199,46 @@ All Atlas documentation adheres to the following standards:
    - No inline styling in diagrams (rely on VitePress theme styling)
    - Consistent diagram types for similar content
    - Simple, focused diagrams that illustrate key concepts
+
+## Documentation Update Tasks
+
+### Provider Implementation Updates
+
+1. **Update Model Provider Documentation**
+   - [x] Update pricing information to match latest implementations (high priority)
+     - [x] Update OpenAI pricing in openai.md with GPT-4.1, GPT-4.1-mini, and GPT-4.1-nano models
+     - [x] Update GPT-4o pricing from $15.00/M to $20.00/M for output tokens
+     - [x] Add o-series models (o3, o4-mini) documentation and pricing
+     - [x] Update Anthropic pricing with Claude 3.5 Haiku ($0.80/M input, $4.0/M output)
+   - [x] Update model lists and defaults in provider documentation
+     - [x] Change OpenAI default model from GPT-4o to GPT-4.1 in examples
+     - [x] Add GPT-4o-mini to model list and examples
+     - [x] Add Claude 3.5 Haiku to Anthropic model list and examples
+   - [x] Update code examples to use latest models and APIs
+     - [x] Update streaming examples with latest implementation patterns
+     - [x] Add command-line argument documentation for streaming_example.py
+     - [x] Include token tracking and cost calculation examples
+
+2. **Update Token Usage Documentation**
+   - [x] Document the TokenUsage class and to_dict() method (OpenAI provider)
+   - [x] Document the CostEstimate class and to_dict() method (OpenAI provider)
+   - [x] Add examples of token usage tracking across different providers (OpenAI example)
+   - [x] Document cost estimation formatting for different magnitudes
+   - [x] Add troubleshooting section for token tracking issues
+
+3. **Update Streaming Documentation**
+   - [x] Add multi-provider streaming examples
+   - [x] Document the streaming_example.py command-line interface
+   - [x] Add token tracking during streaming examples
+   - [x] Update stream_with_callback documentation with latest patterns
+   - [x] Document streaming error handling and recovery strategies
+
+4. **Testing Documentation Updates**
+   - [ ] Document mock provider usage for testing without API keys
+   - [ ] Document token usage testing patterns and tools
+   - [ ] Add examples of testing streaming functionality
+   - [ ] Document the token_usage test module structure and usage
+   - [ ] Add troubleshooting guide for common testing issues
 
 ## Future Documentation Enhancements
 

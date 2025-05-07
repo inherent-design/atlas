@@ -141,16 +141,68 @@ export const sidebar: DefaultTheme.Sidebar = [
     collapsed: true,
     items: [
       {
-        text: "MVP Strategy",
-        link: "/project-management/roadmap/mvp_strategy",
+        text: "Planning",
+        collapsed: true,
+        items: [
+          {
+            text: "MVP Strategy",
+            link: "/project-management/roadmap/mvp_strategy",
+          },
+          {
+            text: "MVP Completion Strategy",
+            link: "/project-management/planning/mvp_completion_strategy",
+          },
+          {
+            text: "Open Source Strategy",
+            link: "/project-management/planning/open_source_strategy",
+          },
+          {
+            text: "Documentation Planning",
+            link: "/project-management/planning/docs_planning",
+          },
+        ],
+      },
+      {
+        text: "Business",
+        collapsed: true,
+        items: [
+          {
+            text: "Monetization Strategy",
+            link: "/project-management/business/monetization_strategy",
+          },
+        ],
+      },
+      {
+        text: "Legal",
+        collapsed: true,
+        items: [
+          {
+            text: "License Selection",
+            link: "/project-management/legal/license_selection",
+          },
+        ],
+      },
+      {
+        text: "Marketing",
+        collapsed: true,
+        items: [
+          {
+            text: "Project Overview",
+            link: "/project-management/marketing/project_overview",
+          },
+          {
+            text: "Press Release Template",
+            link: "/project-management/marketing/press_release_template",
+          },
+          {
+            text: "Pitch Deck Outline",
+            link: "/project-management/marketing/pitch_deck_outline",
+          },
+        ],
       },
       {
         text: "Implementation Plan",
         link: "/project-management/tracking/todo",
-      },
-      {
-        text: "Documentation Planning",
-        link: "/project-management/planning/docs_planning",
       },
     ],
   },
