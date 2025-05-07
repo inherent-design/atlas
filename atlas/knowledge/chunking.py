@@ -76,10 +76,11 @@ class ChunkingStrategy(ABC):
             chunk_index: The index of the chunk within the document.
             
         Returns:
-            A unique chunk ID.
+            A unique chunk ID using simplified format if available.
         """
-        source = metadata.get("source", "unknown")
-        return f"{source}#{chunk_index}"
+        # Use simplified ID if available, otherwise fall back to source
+        id_base = metadata.get("simple_id", metadata.get("source", "unknown"))
+        return f"{id_base}#{chunk_index}"
 
 
 class FixedSizeChunker(ChunkingStrategy):

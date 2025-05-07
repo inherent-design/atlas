@@ -137,11 +137,11 @@ Each document after processing is represented as:
 
 ```python
 {
-    "id": "docs/knowledge/framework.md#2",  # Unique ID (file path + chunk number)
+    "id": "knowledge/framework.md#2",  # Simplified ID (parent_dir/filename#chunk)
     "text": "# Entity Types\n\nThe Atlas knowledge graph...",  # Actual document content
     "metadata": {
-        "path": "docs/knowledge/framework.md",  # Relative file path
-        "source": "docs/knowledge/framework.md",  # Source identifier
+        "source": "docs/knowledge/framework.md",  # Full relative file path
+        "simple_id": "knowledge/framework.md",    # Simplified ID for readability
         "file_name": "framework.md",  # File name
         "section_title": "Entity Types",  # Section title
         "version": "3",  # Version (if detected)
@@ -249,6 +249,67 @@ Key aspects of the integration:
 2. **Collection-Based Organization**: Embeddings are organized in named collections
 3. **Error Handling**: Graceful fallback to in-memory storage if persistence fails
 4. **Embedding Generation**: Automatic generation of embeddings from text
+
+## Progress Indicators and Reporting
+
+The ingestion system provides comprehensive progress indicators to give visibility into the ingestion process:
+
+### File Processing Progress
+
+```
+Processing files:
+==================================================
+[########################################] 100% Complete!
+==================================================
+```
+
+During file processing, the system displays:
+- A visual progress bar showing percentage completion
+- Current file being processed with counter (e.g., "Processing: file.md (5/54)")
+- Clear completion indicators with 100% marker
+
+### Embedding Generation Progress
+
+```
+Embedding Generation:
+==================================================
+Total chunks to embed: 158
+Estimated tokens: ~63,200
+Estimated time: ~4.2 seconds
+--------------------------------------------------
+✓ Embedding completed in 4.12s
+✓ Database storage completed in 0.78s
+✓ Total processing time: 5.03s
+✓ Throughput: 31.4 chunks/second
+✓ Added 158 document chunks to Chroma DB
+==================================================
+```
+
+During embedding generation, the system reports:
+- Total chunks being embedded
+- Token count estimation
+- Estimated processing time
+- Real-time progress with a spinner animation
+- Detailed performance metrics after completion
+
+### Final Processing Summary
+
+```
+Final Processing Summary:
+==================================================
+✓ Files processed:       54
+✓ Chunks created:        158
+✓ New documents added:   158
+✓ Collection total size: 2039 documents
+✓ Duplicates detected:   3
+==================================================
+```
+
+The final summary provides:
+- Total files processed
+- Total chunks created and added
+- Current collection size
+- Duplicate detection statistics
 
 ## .gitignore Integration
 
@@ -394,6 +455,52 @@ for i, chunk in enumerate(chunks):
 # Store the chunks
 processor.generate_embeddings(chunks)
 ```
+
+### Using the Example Script
+
+Atlas includes an example script that demonstrates the enhanced document ingestion features:
+
+```python
+# Example from examples/ingest_example.py
+import argparse
+from atlas.knowledge.ingest import DocumentProcessor
+
+def main():
+    parser = argparse.ArgumentParser(description="Ingest documents with progress indicators")
+    parser.add_argument("-d", "--directory", type=str, default="./docs",
+                        help="Directory containing documents to ingest")
+    parser.add_argument("-c", "--collection", type=str, default="atlas_knowledge_base",
+                        help="Collection name for document storage")
+    parser.add_argument("--recursive", action="store_true", default=True,
+                        help="Process subdirectories recursively")
+    
+    args = parser.parse_args()
+    
+    # Create document processor
+    processor = DocumentProcessor(collection_name=args.collection)
+    
+    # Process the directory with progress indicators
+    processor.process_directory(args.directory, recursive=args.recursive)
+    
+    print("\nIngestion complete!")
+
+if __name__ == "__main__":
+    main()
+```
+
+Run this example with:
+
+```bash
+python -m examples.ingest_example -d ./docs
+```
+
+Additionally, you can verify the document ID format with the `verify_document_ids.py` example:
+
+```bash
+python -m examples.verify_document_ids
+```
+
+This will sample document IDs from your collection and verify they're using the simplified format.
 
 ## Best Practices
 
