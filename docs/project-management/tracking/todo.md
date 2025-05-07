@@ -3,54 +3,54 @@
 ## At a Glance
 
 **Completed:**
-- ✅ Core infrastructure and testing framework
-- ✅ Multi-provider model support with unified interfaces
-- ✅ Environment management with env.py module
-- ✅ Telemetry with OpenTelemetry integration
-- ✅ Knowledge system with hybrid retrieval and enhanced processing
+- ✅ Core infrastructure and provider implementations
+- ✅ Knowledge system with hybrid retrieval and settings interface
 - ✅ Documentation system with comprehensive coverage
-- ✅ Import system optimization and code structure cleanup
-- ✅ Enhanced document ID format for improved readability
-- ✅ Progress indicators for ingestion and embedding processes
-- ✅ Consistent retrieval settings interface with RetrievalSettings class
+- ✅ Environment management and telemetry integration
+- ✅ Import system optimization and progress indicators
 
 **Next Focus:**
-- 🔄 Caching System: Implement query caching for knowledge operations
-- 🔄 Workflow & Multi-Agent: Enhance message passing between agents
-- 🔄 Provider Optimization: Add connection pooling and health monitoring
+- 🔄 Workflow & Multi-Agent: Enhanced message passing and specialized agents
+- 🔄 Caching System: Performance optimization for knowledge operations
+- 🔄 Provider Optimization: Reliability and cost management
 
 **Current Blockers:**
 ✅ All critical blockers resolved!
 
 **MVP Completion Roadmap:**
 
-1. **Import System Optimization (High Priority)**
-   - ✅ Fix circular import warnings
-   - ✅ Standardize import patterns across codebase
-   - ✅ Consolidate duplicate implementations
-   - ✅ Improve module-level vs function-level imports
-   - [ ] Address core env/factory circular dependency
+1. **Workflow & Multi-Agent Orchestration (High Priority)**
+   - [ ] Implement structured message format with metadata support
+   - [ ] Create specialized worker agent base class with tool capabilities
+   - [ ] Develop agent protocol for standardized communication
+   - [ ] Add Model Context Protocol (MCP) integration capabilities
+   - [ ] Implement message routing and delivery system
+   - [ ] Create agent discovery and registration mechanisms
+   - [ ] Add context preservation between agent interactions
+   - [ ] Implement task delegation and result aggregation
+   - [ ] Create parallel processing for independent agent tasks
+   - [ ] Add monitoring and observability for multi-agent workflows
 
-2. **Caching System Implementation (High Priority)**
+2. **Caching System Implementation (Medium Priority)**
    - [ ] Implement in-memory cache for frequent queries
    - [ ] Add cache invalidation based on document changes
    - [ ] Create configurable cache parameters
    - [ ] Add telemetry for cache performance 
    - [ ] Implement LRU/TTL-based eviction strategies
 
-3. **Workflow & Multi-Agent Orchestration (Medium Priority)**
-   - [ ] Enhance message passing between agents
-   - [ ] Implement specialized worker capabilities
-   - [ ] Create coordination patterns for task workflows
-   - [ ] Add dynamic agent allocation
-   - [ ] Implement parallel processing optimization
-
-4. **Provider Optimization (Medium Priority)**
+3. **Provider Optimization (Medium Priority)**
    - [ ] Implement connection pooling
    - [ ] Add health monitoring and diagnostics
    - [ ] Create automated fallback mechanisms
    - [ ] Implement cost-optimized provider selection
    - [ ] Add request throttling and rate limiting
+
+4. **Import System Optimization (Low Priority)**
+   - ✅ Fix circular import warnings
+   - ✅ Standardize import patterns across codebase
+   - ✅ Consolidate duplicate implementations
+   - ✅ Improve module-level vs function-level imports
+   - [ ] Address core env/factory circular dependency
 
 ## MVP Implementation Strategy
 
@@ -207,10 +207,14 @@ These pathways represent specialized areas of functionality that can be accelera
 
 - [x] Build basic agent registry with registration mechanism
 - [x] Implement basic workflow routing through graph edges
-- [ ] Build more comprehensive agent registry with capability discovery
-- [ ] Create specialized worker agents for different tasks
+- [ ] Implement structured message format for cross-agent communication
+- [ ] Build tool-capable specialized worker agents
+- [ ] Create MCP (Model Context Protocol) integration layer
+- [ ] Add support for external tool registration
+- [ ] Implement agent capability advertising and discovery
+- [ ] Create agent state preservation and context management
 - [ ] Add dynamic agent allocation based on task requirements
-- [ ] Implement feedback mechanisms between agents
+- [ ] Implement feedback and observability mechanisms
 
 ### Provider Flexibility & Performance ⚡ [Accel]
 
@@ -277,17 +281,20 @@ class QueryCache:
 
 ### 2. Workflow & Multi-Agent Orchestration
 
-Enhancing communication and coordination between agents:
+Enhanced communication and coordination between specialized agents with tool capabilities:
 
 ```python
 class StructuredMessage:
     """Structured message format for agent communication."""
     
-    def __init__(self, content, metadata=None, task_id=None):
+    def __init__(self, content, metadata=None, task_id=None, tool_calls=None):
         self.content = content
         self.metadata = metadata or {}
         self.task_id = task_id or str(uuid.uuid4())
         self.timestamp = time.time()
+        self.tool_calls = tool_calls or []
+        self.source_agent = None
+        self.target_agent = None
     
     def to_dict(self):
         """Convert to dictionary for serialization."""
@@ -295,7 +302,35 @@ class StructuredMessage:
             "content": self.content,
             "metadata": self.metadata,
             "task_id": self.task_id,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
+            "tool_calls": self.tool_calls,
+            "source_agent": self.source_agent,
+            "target_agent": self.target_agent
+        }
+```
+
+```python
+class AgentToolkit:
+    """Registry for tools that agents can use."""
+    
+    def __init__(self):
+        self.tools = {}
+        self.permissions = {}
+    
+    def register_tool(self, name, function, description, schema):
+        """Register a tool function with its schema."""
+        self.tools[name] = {
+            "function": function,
+            "description": description,
+            "schema": schema
+        }
+    
+    def get_tool_descriptions(self, agent_id):
+        """Get tool descriptions available to an agent."""
+        return {
+            name: tool["description"] 
+            for name, tool in self.tools.items()
+            if self.has_permission(agent_id, name)
         }
 ```
 
