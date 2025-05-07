@@ -120,6 +120,7 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "Overview", link: "/guides/examples/" },
           { text: "Query", link: "/guides/examples/query_example" },
           { text: "Retrieval", link: "/guides/examples/retrieval_example" },
+          { text: "Hybrid Retrieval", link: "/guides/examples/hybrid_retrieval_example" },
           { text: "Streaming", link: "/guides/examples/streaming_example" },
           { text: "Multi-Agent", link: "/guides/examples/multi_agent_example" },
           { text: "Advanced", link: "/guides/examples/advanced_examples" },

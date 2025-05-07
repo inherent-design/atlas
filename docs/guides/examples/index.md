@@ -10,6 +10,7 @@ This directory contains documentation for the example applications that showcase
 
 - [Query Example](./query_example.md) - How to use the Atlas query client for knowledge-augmented responses
 - [Retrieval Example](./retrieval_example.md) - How to use document retrieval without requiring API calls
+- [Hybrid Retrieval Example](./hybrid_retrieval_example.md) - How to combine semantic and keyword search for better results
 - [Streaming Example](./streaming_example.md) - How to implement streaming responses for interactive UIs
 
 ## Advanced Examples
@@ -28,6 +29,9 @@ uv run python examples/query_example.py
 # Run the retrieval example
 uv run python examples/retrieval_example.py
 
+# Run the hybrid retrieval example
+uv run python examples/hybrid_retrieval_example.py
+
 # Run the streaming example
 uv run python examples/streaming_example.py
 ```
@@ -44,9 +48,10 @@ These examples demonstrate key Atlas capabilities:
 
 1. **Knowledge-augmented responses** - Using Atlas's document retrieval for contextual answers
 2. **Document retrieval** - Finding relevant documents in the knowledge base
-3. **Streaming responses** - Interactive generation for better UX
-4. **Error handling** - Robust handling of network issues and fallbacks
-5. **Mock responses** - Running examples without API keys for development
+3. **Hybrid search** - Combining semantic and keyword search for optimal results
+4. **Streaming responses** - Interactive generation for better UX
+5. **Error handling** - Robust handling of network issues and fallbacks
+6. **Mock responses** - Running examples without API keys for development
 
 ## Integration Patterns
 
