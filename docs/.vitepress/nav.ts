@@ -57,6 +57,10 @@ export const nav: DefaultTheme.NavItem[] = [
         text: "Models",
         link: "/components/models/",
       },
+      {
+        text: "Tools",
+        link: "/components/tools/",
+      },
     ],
   },
   {

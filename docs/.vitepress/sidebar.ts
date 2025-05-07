@@ -63,6 +63,8 @@ export const sidebar: DefaultTheme.Sidebar = [
         items: [
           { text: "Controller", link: "/components/agents/controller" },
           { text: "Workers", link: "/components/agents/workers" },
+          { text: "Messaging", link: "/components/agents/messaging" },
+          { text: "Specialized", link: "/components/agents/specialized" },
         ],
       },
       {
@@ -93,6 +95,16 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "OpenAI", link: "/components/models/openai" },
           { text: "Ollama", link: "/components/models/ollama" },
           { text: "Mock", link: "/components/models/mock" },
+        ],
+      },
+      {
+        text: "Tools",
+        collapsed: true,
+        items: [
+          { text: "Overview", link: "/components/tools/" },
+          { text: "Core Concepts", link: "/components/tools/core" },
+          _statusItem("Standard Tools", "/components/tools/standard", "planned"),
+          _statusItem("MCP Integration", "/components/tools/mcp", "planned"),
         ],
       },
     ],
