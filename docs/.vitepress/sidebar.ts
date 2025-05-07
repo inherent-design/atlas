@@ -135,6 +135,7 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "Hybrid Retrieval", link: "/guides/examples/hybrid_retrieval_example" },
           { text: "Streaming", link: "/guides/examples/streaming_example" },
           { text: "Multi-Agent", link: "/guides/examples/multi_agent_example" },
+          { text: "Tool Agent", link: "/guides/examples/tool_agent_example" },
           { text: "Advanced", link: "/guides/examples/advanced_examples" },
         ],
       },
@@ -173,6 +174,14 @@ export const sidebar: DefaultTheme.Sidebar = [
           {
             text: "Documentation Planning",
             link: "/project-management/planning/docs_planning",
+          },
+          {
+            text: "Architecture Planning",
+            link: "/project-management/planning/architecture_planning",
+          },
+          {
+            text: "CLI Planning",
+            link: "/project-management/planning/cli_planning",
           },
         ],
       },
@@ -215,7 +224,7 @@ export const sidebar: DefaultTheme.Sidebar = [
         ],
       },
       {
-        text: "Implementation Plan",
+        text: "Current Tasks",
         link: "/project-management/tracking/todo",
       },
     ],
