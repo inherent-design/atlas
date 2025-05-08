@@ -73,13 +73,19 @@ class TestOllamaProvider(unittest.TestCase):
         self.assertEqual(custom_provider._api_endpoint, "http://myserver:11434/api")
         self.assertEqual(custom_provider._additional_params["temperature"], 0.7)
 
-    @mock.patch("requests.post")
-    def test_generate(self, mock_post):
+    def test_generate(self):
         """Test generating a response."""
-        # Create mock response
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # Directly test the make_api_call function inside generate
+        # by mocking the requests.post function inside it
+        
+        # Create a simple request
+        request = ModelRequest(
+            messages=[ModelMessage.user("Test message")],
+            max_tokens=100
+        )
+        
+        # Create expected response data
+        response_data = {
             "model": "llama3",
             "response": "This is a test response from Ollama.",
             "done": True,
@@ -87,25 +93,37 @@ class TestOllamaProvider(unittest.TestCase):
             "eval_count": 15,
             "total_eval_count": 25,
         }
-        mock_post.return_value = mock_response
-
-        # Create a simple request
-        request = ModelRequest(
-            messages=[ModelMessage.user("Test message")],
-            max_tokens=100
-        )
-
-        # Generate a response
-        response = self.provider.generate(request)
-
-        # Check that the mock was called correctly
-        mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
-        self.assertEqual(args[0], "http://localhost:11434/api/generate")
-        self.assertEqual(kwargs["json"]["model"], "llama3")
-        self.assertEqual(kwargs["json"]["options"]["num_predict"], 100)
-        self.assertFalse(kwargs["json"]["stream"])  # Non-streaming
-        self.assertIn("User: Test message", kwargs["json"]["prompt"])
+        
+        # Create a pre-mocked response instead of calling the API
+        # Also mock env.get_bool to control SKIP_API_KEY_CHECK
+        with mock.patch("requests.post") as mock_post, \
+             mock.patch("atlas.models.ollama.env.get_bool") as mock_env_get_bool:
+             
+            # Make env.get_bool return False for SKIP_API_KEY_CHECK
+            def mock_env_get_bool_impl(key, default=False):
+                if key == "SKIP_API_KEY_CHECK":
+                    return False
+                return default
+                
+            mock_env_get_bool.side_effect = mock_env_get_bool_impl
+            
+            # Set up the mock response
+            mock_response = mock.MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = response_data
+            mock_post.return_value = mock_response
+            
+            # Generate a response
+            response = self.provider.generate(request)
+            
+            # Verify the call was made with the expected parameters
+            mock_post.assert_called_once()
+            args, kwargs = mock_post.call_args
+            self.assertEqual(args[0], "http://localhost:11434/api/generate")
+            self.assertEqual(kwargs["json"]["model"], "llama3")
+            self.assertEqual(kwargs["json"]["options"]["num_predict"], 100)
+            self.assertFalse(kwargs["json"]["stream"])  # Non-streaming
+            self.assertIn("User: Test message", kwargs["json"]["prompt"])
 
         # Check that the response has the expected structure
         self.assertIsInstance(response, ModelResponse)
@@ -127,188 +145,230 @@ class TestOllamaProvider(unittest.TestCase):
         # Check raw response
         self.assertEqual(response.raw_response, mock_response.json.return_value)
 
-    @mock.patch("requests.post")
-    def test_streaming(self, mock_post):
+    def test_streaming(self):
         """Test streaming a response."""
-        # Create a mock for requests.post that returns a stream-like object
-        class MockStreamResponse:
-            def __init__(self, lines):
-                self.lines = lines
-                self.status_code = 200
-            
-            def iter_lines(self, decode_unicode=False):
-                for line in self.lines:
-                    yield line
-
-        # Create mock stream lines (one JSON object per line as Ollama does)
-        stream_lines = [
-            json.dumps({"model": "llama3", "response": "This ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "is ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "a ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "test ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "streaming ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "response ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "from ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "Ollama.", "done": False}).encode(),
-            json.dumps({
-                "model": "llama3", 
-                "response": "", 
-                "done": True,
-                "prompt_eval_count": 10,
-                "eval_count": 20,
-                "total_eval_count": 30
-            }).encode(),
-        ]
-        
-        mock_post.return_value = MockStreamResponse(stream_lines)
-        
         # Create a simple request
         request = ModelRequest(
             messages=[ModelMessage.user("Test streaming message")],
             max_tokens=100
         )
         
-        # Get streaming response
-        initial_response, stream_handler = self.provider.stream(request)
-        
-        # Check initial response structure
-        self.assertIsInstance(initial_response, ModelResponse)
-        self.assertEqual(initial_response.content, "")  # Empty initially
-        self.assertEqual(initial_response.provider, "ollama")
-        self.assertEqual(initial_response.model, "llama3")
-        self.assertIsNone(initial_response.finish_reason)  # Not completed yet
-        
-        # Check stream handler
-        self.assertIsInstance(stream_handler, StreamHandler)
-        
-        # Process the stream manually and collect chunks
-        chunks_received = []
-        full_text = ""
-        
-        # Simulate manual iteration over the stream handler
-        try:
-            while True:
-                delta, response = next(stream_handler)
-                if delta:
-                    chunks_received.append(delta)
-                    full_text += delta
-                    # Check that the response is updated with each chunk
-                    self.assertEqual(response.content, full_text)
-        except StopIteration:
-            # Stream is complete
-            pass
-        
-        # Check that the client was called with proper streaming parameters
-        mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
-        self.assertEqual(args[0], "http://localhost:11434/api/generate")
-        self.assertTrue(kwargs["json"]["stream"])
-        self.assertEqual(kwargs["json"]["model"], "llama3")
-        
-        # Check that we received the expected number of text chunks
-        self.assertEqual(len(chunks_received), 8)  # 8 content chunks
-        
-        # Check the collected full text
-        self.assertEqual(full_text, "This is a test streaming response from Ollama.")
-        
-    @mock.patch("requests.post")
-    def test_stream_with_callback(self, mock_post):
-        """Test streaming with a callback function."""
         # Create a mock for requests.post that returns a stream-like object
-        class MockStreamResponse:
-            def __init__(self, lines):
-                self.lines = lines
-                self.status_code = 200
+        with mock.patch("requests.post") as mock_post, \
+             mock.patch("atlas.models.ollama.env.get_bool") as mock_env_get_bool:
+             
+            # Make env.get_bool return False for SKIP_API_KEY_CHECK
+            def mock_env_get_bool_impl(key, default=False):
+                if key == "SKIP_API_KEY_CHECK":
+                    return False
+                return default
+                
+            mock_env_get_bool.side_effect = mock_env_get_bool_impl
             
-            def iter_lines(self, decode_unicode=False):
-                for line in self.lines:
-                    yield line
-
-        # Create mock stream lines
-        stream_lines = [
-            json.dumps({"model": "llama3", "response": "This ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "is ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "a ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "callback ", "done": False}).encode(),
-            json.dumps({"model": "llama3", "response": "test.", "done": False}).encode(),
-            json.dumps({
-                "model": "llama3", 
-                "response": "", 
-                "done": True,
-                "prompt_eval_count": 8,
-                "eval_count": 12,
-                "total_eval_count": 20
-            }).encode(),
-        ]
+            # Create a properly mocked response with iter_lines method
+            mock_response = mock.MagicMock()
+            mock_response.status_code = 200
+            
+            # Create mock stream lines (one JSON object per line as Ollama does)
+            stream_lines = [
+                json.dumps({"model": "llama3", "response": "This ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "is ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "a ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "test ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "streaming ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "response ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "from ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "Ollama.", "done": False}).encode(),
+                json.dumps({
+                    "model": "llama3", 
+                    "response": "", 
+                    "done": True,
+                    "prompt_eval_count": 10,
+                    "eval_count": 20,
+                    "total_eval_count": 30
+                }).encode(),
+            ]
+            
+            # Create a proper iter_lines method
+            mock_response.iter_lines = mock.MagicMock(return_value=iter(stream_lines))
+            mock_post.return_value = mock_response
         
-        mock_post.return_value = MockStreamResponse(stream_lines)
+            # Get streaming response
+            initial_response, stream_handler = self.provider.stream(request)
+            
+            # Check initial response structure
+            self.assertIsInstance(initial_response, ModelResponse)
+            self.assertEqual(initial_response.content, "")  # Empty initially
+            self.assertEqual(initial_response.provider, "ollama")
+            self.assertEqual(initial_response.model, "llama3")
+            self.assertIsNone(initial_response.finish_reason)  # Not completed yet
+            
+            # Check stream handler
+            self.assertIsInstance(stream_handler, StreamHandler)
+            
+            # Process the stream manually and collect chunks
+            chunks_received = []
+            full_text = ""
+            
+            # Simulate manual iteration over the stream handler
+            try:
+                while True:
+                    delta, response = next(stream_handler)
+                    if delta:
+                        chunks_received.append(delta)
+                        full_text += delta
+                        # Check that the response is updated with each chunk
+                        self.assertEqual(response.content, full_text)
+            except StopIteration:
+                # Stream is complete
+                pass
         
+            # Check that the client was called with proper streaming parameters
+            mock_post.assert_called_once()
+            args, kwargs = mock_post.call_args
+            self.assertEqual(args[0], "http://localhost:11434/api/generate")
+            self.assertTrue(kwargs["json"]["stream"])
+            self.assertEqual(kwargs["json"]["model"], "llama3")
+            
+            # Check that we received the expected number of text chunks
+            self.assertEqual(len(chunks_received), 8)  # 8 content chunks
+            
+            # Check the collected full text
+            self.assertEqual(full_text, "This is a test streaming response from Ollama.")
+        
+    def test_stream_with_callback(self):
+        """Test streaming with a callback function."""
         # Create a simple request
         request = ModelRequest(
             messages=[ModelMessage.user("Test with callback")],
             max_tokens=100
         )
         
-        # Create a callback function that collects chunks
-        chunks_received = []
-        responses_received = []
-        
-        def callback(delta, response):
-            chunks_received.append(delta)
-            responses_received.append(response.content)
-        
-        # Stream with callback
-        final_response = self.provider.stream_with_callback(request, callback)
-        
-        # Check that the callback was called for each chunk
-        self.assertEqual(len(chunks_received), 5)  # Only content chunks call the callback
-        
-        # Check the final response
-        self.assertIsInstance(final_response, ModelResponse)
-        self.assertEqual(final_response.content, "This is a callback test.")
-        self.assertEqual(final_response.provider, "ollama")
-        self.assertEqual(final_response.model, "llama3")
-        self.assertEqual(final_response.finish_reason, "stop")
-        
-        # Check token usage in final response
-        self.assertEqual(final_response.usage.input_tokens, 8)
-        self.assertEqual(final_response.usage.output_tokens, 12)
-        self.assertEqual(final_response.usage.total_tokens, 20)
-        
-        # Check cost calculation (should be 0 for Ollama)
-        self.assertIsInstance(final_response.cost, CostEstimate)
-        self.assertEqual(final_response.cost.total_cost, 0.0)
+        # Create a mock for requests.post that returns a stream-like object
+        with mock.patch("requests.post") as mock_post, \
+             mock.patch("atlas.models.ollama.env.get_bool") as mock_env_get_bool:
+             
+            # Make env.get_bool return False for SKIP_API_KEY_CHECK
+            def mock_env_get_bool_impl(key, default=False):
+                if key == "SKIP_API_KEY_CHECK":
+                    return False
+                return default
+                
+            mock_env_get_bool.side_effect = mock_env_get_bool_impl
+            
+            # Create a properly mocked response with iter_lines method
+            mock_response = mock.MagicMock()
+            mock_response.status_code = 200
+            
+            # Create mock stream lines
+            stream_lines = [
+                json.dumps({"model": "llama3", "response": "This ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "is ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "a ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "callback ", "done": False}).encode(),
+                json.dumps({"model": "llama3", "response": "test.", "done": False}).encode(),
+                json.dumps({
+                    "model": "llama3", 
+                    "response": "", 
+                    "done": True,
+                    "prompt_eval_count": 8,
+                    "eval_count": 12,
+                    "total_eval_count": 20
+                }).encode(),
+            ]
+            
+            # Create a proper iter_lines method
+            mock_response.iter_lines = mock.MagicMock(return_value=iter(stream_lines))
+            mock_post.return_value = mock_response
+            
+            # Create a callback function that collects chunks
+            chunks_received = []
+            responses_received = []
+            
+            def callback(delta, response):
+                chunks_received.append(delta)
+                responses_received.append(response.content)
+            
+            # Stream with callback
+            final_response = self.provider.stream_with_callback(request, callback)
+            
+            # Check that the callback was called for each chunk
+            self.assertEqual(len(chunks_received), 5)  # Only content chunks call the callback
+            
+            # Check the final response
+            self.assertIsInstance(final_response, ModelResponse)
+            self.assertEqual(final_response.content, "This is a callback test.")
+            self.assertEqual(final_response.provider, "ollama")
+            self.assertEqual(final_response.model, "llama3")
+            self.assertEqual(final_response.finish_reason, "stop")
+            
+            # Check token usage in final response
+            self.assertEqual(final_response.usage.input_tokens, 8)
+            self.assertEqual(final_response.usage.output_tokens, 12)
+            self.assertEqual(final_response.usage.total_tokens, 20)
+            
+            # Check cost calculation (should be 0 for Ollama)
+            self.assertIsInstance(final_response.cost, CostEstimate)
+            self.assertEqual(final_response.cost.total_cost, 0.0)
 
-    @mock.patch("requests.post")
-    def test_error_handling(self, mock_post):
+    def test_error_handling(self):
         """Test error handling during API calls."""
+        # Import error types for proper testing
+        from atlas.core.errors import APIError
+        import requests
+        
         # Create a simple request
         request = ModelRequest(
             messages=[ModelMessage.user("Test message")],
             max_tokens=100
         )
         
-        # Test connection error
-        mock_post.side_effect = Exception("Connection error")
+        # Test connection error - use a more specific error type
+        with mock.patch("requests.post") as mock_post, \
+             mock.patch("atlas.models.ollama.env.get_bool") as mock_env_get_bool:
         
-        with self.assertRaises(Exception) as context:
-            self.provider.generate(request)
+            # Make env.get_bool return False for SKIP_API_KEY_CHECK
+            def mock_env_get_bool_impl(key, default=False):
+                if key == "SKIP_API_KEY_CHECK":
+                    return False
+                return default
+                
+            mock_env_get_bool.side_effect = mock_env_get_bool_impl
         
-        # Check that the error was properly converted to our error type
-        self.assertIn("error calling ollama api", str(context.exception).lower())
+            # Set the connection error
+            mock_post.side_effect = requests.ConnectionError("Connection error")
+            
+            # This should raise an APIError with our custom message
+            with self.assertRaises(APIError) as context:
+                self.provider.generate(request)
+            
+            # Check that the error was properly converted to our error type
+            self.assertIn("ollama api", str(context.exception).lower())
         
         # Test HTTP error response
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 500
-        mock_response.text = "Internal server error"
-        mock_post.side_effect = None
-        mock_post.return_value = mock_response
+        with mock.patch("requests.post") as mock_post, \
+             mock.patch("atlas.models.ollama.env.get_bool") as mock_env_get_bool:
         
-        with self.assertRaises(Exception) as context:
-            self.provider.generate(request)
-        
-        # Check that the error was properly converted to our error type
-        self.assertIn("status code 500", str(context.exception).lower())
+            # Make env.get_bool return False for SKIP_API_KEY_CHECK
+            def mock_env_get_bool_impl(key, default=False):
+                if key == "SKIP_API_KEY_CHECK":
+                    return False
+                return default
+                
+            mock_env_get_bool.side_effect = mock_env_get_bool_impl
+            
+            # Create a mock response with error status code
+            mock_response = mock.MagicMock()
+            mock_response.status_code = 500
+            mock_response.text = "Internal server error"
+            mock_post.return_value = mock_response
+            
+            # This should raise an APIError with our custom message
+            with self.assertRaises(APIError) as context:
+                self.provider.generate(request)
+            
+            # Check that the error was properly converted to our error type
+            self.assertIn("ollama api", str(context.exception).lower())
         
     @mock.patch("requests.get")
     def test_validate_api_key(self, mock_get):

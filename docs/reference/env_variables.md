@@ -55,7 +55,7 @@ ATLAS_DEFAULT_MODEL=claude-3-7-sonnet-20250219
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ATLAS_ENABLE_TELEMETRY` | Enable or disable telemetry | `true` |
-| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for telemetry | `true` |
+| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for telemetry | `false` |
 | `ATLAS_TELEMETRY_LOG_LEVEL` | Log level for telemetry | `INFO` |
 
 ### Database

@@ -51,7 +51,7 @@ Telemetry can be configured using these environment variables:
 | Variable                         | Description                                           | Default |
 | -------------------------------- | ----------------------------------------------------- | ------- |
 | `ATLAS_ENABLE_TELEMETRY`         | Enable or disable telemetry                           | `true`  |
-| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for development              | `true`  |
+| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Enable console exporting for development              | `false` |
 | `ATLAS_TELEMETRY_LOG_LEVEL`      | Log level for telemetry (DEBUG, INFO, WARNING, ERROR) | `INFO`  |
 
 ### Programmatic Configuration
@@ -144,15 +144,17 @@ class MyAgent(TracedClass):
 
 ### Predefined Metrics
 
-The telemetry module includes predefined metrics for common operations:
+The telemetry module includes predefined metrics for common operations, which are lazily initialized when accessed:
 
-| Metric                        | Type      | Description                       |
-| ----------------------------- | --------- | --------------------------------- |
-| `atlas.api.requests`          | Counter   | Count of API requests made        |
-| `atlas.api.tokens`            | Counter   | Count of API tokens used          |
-| `atlas.api.cost`              | Counter   | Cost of API usage in USD          |
-| `atlas.retrieval.duration`    | Histogram | Time taken for document retrieval |
-| `atlas.agent.processing_time` | Histogram | Agent request processing time     |
+| Metric                        | Type      | Description                       | Accessor Function               |
+| ----------------------------- | --------- | --------------------------------- | ------------------------------- |
+| `atlas.api.requests`          | Counter   | Count of API requests made        | `get_api_request_counter()`     |
+| `atlas.api.tokens`            | Counter   | Count of API tokens used          | `get_api_token_counter()`       |
+| `atlas.api.cost`              | Counter   | Cost of API usage in USD          | `get_api_cost_counter()`        |
+| `atlas.retrieval.duration`    | Histogram | Time taken for document retrieval | `get_document_retrieval_histogram()` |
+| `atlas.agent.processing_time` | Histogram | Agent request processing time     | `get_agent_processing_histogram()` |
+
+These metrics are lazily initialized when first accessed, preventing initialization errors when telemetry is disabled.
 
 ## Integration with Model Providers
 
@@ -172,25 +174,29 @@ with self._get_tracer().start_as_current_span(
     attributes={"model": self.model_name}
 ) as span:
     # Record API call
-    if api_request_counter:
-        api_request_counter.add(1, {"provider": "anthropic", "model": self.model_name})
+    request_counter = get_api_request_counter()
+    if request_counter:
+        request_counter.add(1, {"provider": "anthropic", "model": self.model_name})
 
     # Call API and get response
     response = self.client.messages.create(...)
 
     # Record token usage and cost
-    if api_token_counter and api_cost_counter:
+    token_counter = get_api_token_counter()
+    cost_counter = get_api_cost_counter()
+    
+    if token_counter and cost_counter:
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
 
-        api_token_counter.add(input_tokens, {"type": "input", "provider": "anthropic"})
-        api_token_counter.add(output_tokens, {"type": "output", "provider": "anthropic"})
+        token_counter.add(input_tokens, {"type": "input", "provider": "anthropic"})
+        token_counter.add(output_tokens, {"type": "output", "provider": "anthropic"})
 
         input_cost = input_tokens * self.get_input_token_cost()
         output_cost = output_tokens * self.get_output_token_cost()
         total_cost = input_cost + output_cost
 
-        api_cost_counter.add(total_cost, {"provider": "anthropic", "model": self.model_name})
+        cost_counter.add(total_cost, {"provider": "anthropic", "model": self.model_name})
 
         # Log costs to span
         span.set_attribute("cost.total", total_cost)
@@ -253,12 +259,14 @@ This will print spans and metrics to the console as they are recorded:
 
 The telemetry system is designed to have minimal impact on performance:
 
-1. **Lazy Initialization**: Components are created only when needed
-2. **Batched Export**: Spans and metrics are exported in batches
-3. **Sampling**: Configurable sampling rates to reduce volume
-4. **Graceful Fallbacks**: Safe disabled mode when dependencies aren't available
+1. **Lazy Initialization**: Components and metrics are created only when needed
+2. **Lazy Metrics Access**: All predefined metrics use accessor functions that initialize metrics only on first use
+3. **Batched Export**: Spans and metrics are exported in batches
+4. **Sampling**: Configurable sampling rates to reduce volume
+5. **Graceful Fallbacks**: Safe disabled mode when dependencies aren't available
+6. **Error Handling**: Critical error handling prevents telemetry issues from impacting application code
 
-When `ATLAS_ENABLE_TELEMETRY` is set to `false`, the performance overhead is negligible.
+When `ATLAS_ENABLE_TELEMETRY` is set to `false`, the performance overhead is negligible, and no resources are allocated for telemetry.
 
 ## Example Usage
 
@@ -289,20 +297,21 @@ from atlas.core.telemetry import (
     initialize_telemetry,
     traced,
     create_counter,
-    create_histogram
+    create_histogram,
+    get_api_request_counter
 )
 
 # Initialize with custom settings
 initialize_telemetry(
     service_name="my-atlas-app",
     service_version="1.0.0",
-    enable_console_exporter=True,
+    enable_console_exporter=True,  # Default is now false
     enable_otlp_exporter=True,
     otlp_endpoint="http://localhost:4317",
     sampling_ratio=0.5  # Only trace 50% of operations
 )
 
-# Create custom metrics
+# Create custom metrics (these are lazily initialized)
 app_requests = create_counter(
     name="app.requests",
     description="Application requests",
@@ -315,11 +324,18 @@ request_duration = create_histogram(
     unit="ms"
 )
 
+# Use built-in metrics via accessor functions
+api_request_counter = get_api_request_counter()
+
 # Define traced function
 @traced(name="process_query", attributes={"app": "my-atlas-app"})
 def process_user_query(query: str) -> str:
-    # Record request
+    # Record request using custom metric
     app_requests.add(1, {"query_type": "user"})
+    
+    # Also record using built-in counter
+    if api_request_counter:
+        api_request_counter.add(1, {"source": "user_query"})
 
     # Create client and get response
     client = create_query_client()
@@ -400,16 +416,33 @@ async def process_batch(items):
    ```
 
 2. **Failed to Initialize Telemetry**:
+   ```
+   ERROR:atlas.core.telemetry:Failed to initialize telemetry: 'NoneType' object is not iterable
+   ```
 
-   Solution: Check for detailed error messages in the logs and verify configuration parameters.
+   Solution: This is typically related to metric reader initialization. The code has been fixed to handle empty readers lists properly. Update to the latest version or check for proper initialization.
 
-3. **Telemetry Disabled by Environment**:
+3. **TracerProvider Overriding Error**:
+   ```
+   ERROR:atlas.core.telemetry:Failed to initialize telemetry: Overriding of current TracerProvider is not allowed
+   ```
+
+   Solution: This happens when multiple test cases initialize telemetry. The code now gracefully handles this case. If you still see this error, ensure you're using the latest version.
+
+4. **Telemetry Disabled by Environment**:
 
    Solution: Set `ATLAS_ENABLE_TELEMETRY=true` or use `force_enable=True` in the initialization.
 
-4. **OTLP Connection Issues**:
+5. **OTLP Connection Issues**:
 
    Solution: Verify the endpoint URL, network connectivity, and collector configuration.
+
+6. **Metrics Initialization Error**:
+   ```
+   ERROR: AttributeError: 'NoneType' object has no attribute 'add'
+   ```
+
+   Solution: Use the provided accessor functions like `get_api_request_counter()` and check if the result is None before using it.
 
 ### Debugging Telemetry
 

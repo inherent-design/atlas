@@ -47,12 +47,17 @@ export const sidebar: DefaultTheme.Sidebar = [
     collapsed: true,
     items: [
       {
+        text: "Overview",
+        link: "/architecture/components",
+      },
+      {
         text: "Core",
         collapsed: true,
         items: [
           { text: "Configuration", link: "/components/core/config" },
           { text: "Environment", link: "/components/core/env" },
           { text: "Error Handling", link: "/components/core/errors" },
+          { text: "Logging", link: "/components/core/logging" },
           { text: "Prompts", link: "/components/core/prompts" },
           { text: "Telemetry", link: "/components/core/telemetry" },
         ],
@@ -68,6 +73,32 @@ export const sidebar: DefaultTheme.Sidebar = [
         ],
       },
       {
+        text: "Knowledge & Models",
+        collapsed: true,
+        items: [
+          { 
+            text: "Knowledge",
+            collapsed: true,
+            items: [
+              { text: "Overview", link: "/components/knowledge/" },
+              { text: "Ingestion", link: "/components/knowledge/ingestion" },
+              { text: "Retrieval", link: "/components/knowledge/retrieval" },
+            ],
+          },
+          { 
+            text: "Models",
+            collapsed: true,
+            items: [
+              { text: "Overview", link: "/components/models/" },
+              { text: "Anthropic", link: "/components/models/anthropic" },
+              { text: "OpenAI", link: "/components/models/openai" },
+              { text: "Ollama", link: "/components/models/ollama" },
+              { text: "Mock", link: "/components/models/mock" },
+            ],
+          },
+        ],
+      },
+      {
         text: "Graph",
         collapsed: true,
         items: [
@@ -75,26 +106,6 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "Nodes", link: "/components/graph/nodes" },
           { text: "Edges", link: "/components/graph/edges" },
           { text: "State", link: "/components/graph/state" },
-        ],
-      },
-      {
-        text: "Knowledge",
-        collapsed: true,
-        items: [
-          { text: "Overview", link: "/components/knowledge/" },
-          { text: "Ingestion", link: "/components/knowledge/ingestion" },
-          { text: "Retrieval", link: "/components/knowledge/retrieval" },
-        ],
-      },
-      {
-        text: "Models",
-        collapsed: true,
-        items: [
-          { text: "Overview", link: "/components/models/" },
-          { text: "Anthropic", link: "/components/models/anthropic" },
-          { text: "OpenAI", link: "/components/models/openai" },
-          { text: "Ollama", link: "/components/models/ollama" },
-          { text: "Mock", link: "/components/models/mock" },
         ],
       },
       {
@@ -123,8 +134,14 @@ export const sidebar: DefaultTheme.Sidebar = [
     text: "Guides",
     collapsed: false,
     items: [
-      { text: "Testing", link: "/guides/testing" },
-      { text: "Type Checking", link: "/guides/type_checking" },
+      {
+        text: "Development",
+        collapsed: false,
+        items: [
+          { text: "Testing", link: "/guides/testing" },
+          { text: "Type Checking", link: "/guides/type_checking" },
+        ],
+      },
       {
         text: "Examples",
         collapsed: true,
@@ -160,28 +177,44 @@ export const sidebar: DefaultTheme.Sidebar = [
         collapsed: true,
         items: [
           {
-            text: "MVP Strategy",
-            link: "/project-management/roadmap/mvp_strategy",
+            text: "Product",
+            collapsed: true,
+            items: [
+              {
+                text: "MVP Strategy",
+                link: "/project-management/roadmap/mvp_strategy",
+              },
+              {
+                text: "MVP Completion Strategy",
+                link: "/project-management/planning/mvp_completion_strategy",
+              },
+              {
+                text: "Open Source Strategy",
+                link: "/project-management/planning/open_source_strategy",
+              },
+            ],
           },
           {
-            text: "MVP Completion Strategy",
-            link: "/project-management/planning/mvp_completion_strategy",
-          },
-          {
-            text: "Open Source Strategy",
-            link: "/project-management/planning/open_source_strategy",
-          },
-          {
-            text: "Documentation Planning",
-            link: "/project-management/planning/docs_planning",
-          },
-          {
-            text: "Architecture Planning",
-            link: "/project-management/planning/architecture_planning",
-          },
-          {
-            text: "CLI Planning",
-            link: "/project-management/planning/cli_planning",
+            text: "Technical",
+            collapsed: true,
+            items: [
+              {
+                text: "Architecture Planning",
+                link: "/project-management/planning/architecture_planning",
+              },
+              {
+                text: "CLI Planning",
+                link: "/project-management/planning/cli_planning",
+              },
+              {
+                text: "Test Suite Planning",
+                link: "/project-management/planning/test_suite_planning",
+              },
+              {
+                text: "Documentation Planning",
+                link: "/project-management/planning/docs_planning",
+              },
+            ],
           },
         ],
       },

@@ -239,6 +239,60 @@ def run_unit_tests(module_name=None):
     return result.wasSuccessful()
 
 
+def run_real_api_tests():
+    """Run real API tests that make actual provider API calls.
+    
+    These tests are controlled by environment variables:
+    - RUN_API_TESTS=true: Enables real API tests
+    - RUN_EXPENSIVE_TESTS=true: Enables expensive API tests (GPT-4, Claude Opus, etc.)
+    
+    Returns:
+        True if all tests passed, False otherwise.
+    """
+    print("=== Running Real Provider API Tests ===")
+    print("NOTE: These tests make actual API calls and may incur costs.")
+    
+    # Check environment variable
+    if not os.environ.get("RUN_API_TESTS"):
+        print("ERROR: RUN_API_TESTS environment variable is not set.")
+        print("Please set it before running real API tests.")
+        print("Example: export RUN_API_TESTS=true python -m atlas.scripts.testing.run_tests -t real_api")
+        return False
+    
+    # Import the real API test module
+    try:
+        from atlas.tests.real_api_tests import (
+            TestOpenAIRealAPI,
+            TestOllamaRealAPI,
+            TestAnthropicRealAPI,
+        )
+    except ImportError as e:
+        print(f"Error importing real_api_tests module: {e}")
+        return False
+    
+    # Create a test suite
+    suite = unittest.TestSuite()
+    loader = unittest.TestLoader()
+    
+    # Add test cases
+    suite.addTest(loader.loadTestsFromTestCase(TestOpenAIRealAPI))
+    suite.addTest(loader.loadTestsFromTestCase(TestOllamaRealAPI))
+    suite.addTest(loader.loadTestsFromTestCase(TestAnthropicRealAPI))
+    
+    # Run the tests
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    
+    # Print summary
+    print(
+        f"\n=== {result.testsRun - len(result.errors) - len(result.failures)}/{result.testsRun} real API tests passed! ==="
+    )
+    if result.skipped:
+        print(f"Note: {len(result.skipped)} tests were skipped.")
+    
+    return result.wasSuccessful()
+
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Run Atlas tests")
@@ -247,7 +301,7 @@ def parse_args():
     parser.add_argument(
         "-t",
         "--test-type",
-        choices=["unit", "mock", "minimal", "api", "all"],
+        choices=["unit", "mock", "minimal", "api", "real_api", "all"],
         default="mock",
         help="Type of tests to run (default: mock)",
     )
@@ -303,6 +357,11 @@ def main():
     if args.test_type in ["api", "all"]:
         api_success = run_api_tests(args.api_test, args.system_prompt, args.query)
         success = success and api_success
+        print("\n")
+        
+    if args.test_type in ["real_api", "all"]:
+        real_api_success = run_real_api_tests()
+        success = success and real_api_success
         print("\n")
 
     # Return appropriate exit code

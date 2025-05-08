@@ -9,17 +9,20 @@ This file tracks immediate tasks for active development. For comprehensive plann
 | **Architecture Planning** | System architecture, file structure, and implementation strategies | [architecture_planning.md](../planning/architecture_planning.md) |
 | **Documentation Planning** | Documentation system organization and content requirements | [docs_planning.md](../planning/docs_planning.md) |
 | **CLI Planning** | CLI architecture, logging system, and command structure | [cli_planning.md](../planning/cli_planning.md) |
+| **Test Suite Planning** | Test structure, organization, and implementation strategy | [test_suite_planning.md](../planning/test_suite_planning.md) |
 
 For long-term roadmap and MVP strategy, see [mvp_strategy.md](../roadmap/mvp_strategy.md).
 
 ## High Priority Tasks
 
-### 💯 Mock Provider Implementation (Complete)
-- [x] Create comprehensive mock provider implementation for testing without API access
-- [x] Implement error simulation capabilities
-- [x] Add streaming support with customizable delay
-- [x] Ensure proper token usage tracking and cost calculation
-- [x] Create thorough tests for the mock provider
+### 🧪 Test Suite Refactoring
+*See detailed analysis in [test_suite_planning.md](../planning/test_suite_planning.md)*
+- [ ] Implement new test directory structure (unit, mock, integration, api)
+- [ ] Update test runner CLI to use explicit flags instead of environment variables
+- [ ] Create standardized test patterns with helper classes and decorators
+- [ ] Migrate existing tests to new structure
+- [ ] Implement proper API test cost controls and confirmation system
+- [ ] Add comprehensive integration tests for component interactions
 
 ### 🔌 Provider Implementation Completion
 *See detailed plans in [architecture_planning.md](../planning/architecture_planning.md#provider-flexibility--performance-accel)*
@@ -31,7 +34,10 @@ For long-term roadmap and MVP strategy, see [mvp_strategy.md](../roadmap/mvp_str
 
 ### 💻 CLI Improvements 
 *See detailed implementation guidance in [cli_planning.md](../planning/cli_planning.md)*
-- [ ] Implement centralized logging system with structlog
+- [x] Implement centralized logging system with structlog
+- [x] Configure third-party library log suppression (ChromaDB, OpenTelemetry)
+- [x] Fix telemetry initialization issues and empty reader errors
+- [x] Implement lazy initialization for metrics to prevent errors when telemetry is disabled
 - [ ] Add verbosity controls and log formatting options
 - [ ] Create consistent command structure with subcommands
 - [ ] Improve error reporting with contextual information
@@ -75,8 +81,15 @@ For long-term roadmap and MVP strategy, see [mvp_strategy.md](../roadmap/mvp_str
 - ✅ Create mock provider for API-free testing
 - ✅ Add token usage tracking and cost calculation
 
+### 🔧 System Reliability
+- ✅ Fix telemetry initialization issues and empty reader errors
+- ✅ Implement lazy initialization for metrics to prevent errors when telemetry is disabled
+- ✅ Fix provider error tests to align with error class implementation
+- ✅ Update documentation to match new logging and telemetry behavior
+
 ### 📝 Documentation & Planning
 - ✅ Update documentation with latest implementation details
+- ✅ Ensure consistency between environment variables and their documentation
 - ✅ Reorganize project planning into focused documents
 - ✅ Create CLI planning document
 - ✅ Set up initial tools structure and documentation

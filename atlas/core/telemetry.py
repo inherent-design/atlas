@@ -72,7 +72,7 @@ def _parse_bool_env(var_name: str, default: bool = True) -> bool:
 
 # Check if telemetry is enabled through environment variables
 TELEMETRY_ENABLED = _parse_bool_env("ATLAS_ENABLE_TELEMETRY", True)
-CONSOLE_EXPORT_ENABLED = _parse_bool_env("ATLAS_TELEMETRY_CONSOLE_EXPORT", True)
+CONSOLE_EXPORT_ENABLED = _parse_bool_env("ATLAS_TELEMETRY_CONSOLE_EXPORT", False)
 
 # Set log level from environment (default to INFO)
 log_level_name = os.environ.get("ATLAS_TELEMETRY_LOG_LEVEL", "INFO").upper()
@@ -189,8 +189,11 @@ def initialize_telemetry(
                     "OTLP exporters not available. Install 'opentelemetry-exporter-otlp' package."
                 )
 
-        # Set the global tracer provider
-        trace.set_tracer_provider(_tracer_provider)
+        try:
+            # Set the global tracer provider - may fail if one is already set
+            trace.set_tracer_provider(_tracer_provider)
+        except Exception as e:
+            logger.debug(f"Could not set tracer provider: {e}. Continuing with existing provider.")
 
         # Get a tracer for Atlas
         _atlas_tracer = trace.get_tracer(service_name, service_version)
@@ -204,12 +207,17 @@ def initialize_telemetry(
             readers.append(console_metric_reader)
 
         # Create meter provider with configured readers
-        _meter_provider = MeterProvider(
-            resource=resource, metric_readers=readers if readers else None
-        )
+        if readers:
+            _meter_provider = MeterProvider(resource=resource, metric_readers=readers)
+        else:
+            # When no readers are configured, create a basic meter provider without readers
+            _meter_provider = MeterProvider(resource=resource)
 
-        # Set the global meter provider
-        metrics.set_meter_provider(_meter_provider)
+        try:
+            # Set the global meter provider - may fail if one is already set
+            metrics.set_meter_provider(_meter_provider)
+        except Exception as e:
+            logger.debug(f"Could not set meter provider: {e}. Continuing with existing provider.")
 
         # Get a meter for Atlas
         _atlas_meter = metrics.get_meter(service_name, service_version)
@@ -528,30 +536,66 @@ class TracedClass:
             setattr(cls, name, traced()(method))
 
 
-# Create metrics for common operations
-api_request_counter = create_counter(
-    name="atlas.api.requests", description="Count of API requests made", unit="1"
-)
+# Define metrics but initialize them lazily
+_api_request_counter = None
+_api_token_counter = None
+_api_cost_counter = None
+_document_retrieval_histogram = None
+_agent_processing_histogram = None
 
-api_token_counter = create_counter(
-    name="atlas.api.tokens", description="Count of API tokens used", unit="1"
-)
 
-api_cost_counter = create_counter(
-    name="atlas.api.cost", description="Cost of API usage", unit="usd"
-)
+def get_api_request_counter():
+    """Get the API request counter metric, initializing it if needed."""
+    global _api_request_counter
+    if _api_request_counter is None:
+        _api_request_counter = create_counter(
+            name="atlas.api.requests", description="Count of API requests made", unit="1"
+        )
+    return _api_request_counter
 
-document_retrieval_histogram = create_histogram(
-    name="atlas.retrieval.duration",
-    description="Time taken for document retrieval",
-    unit="ms",
-)
 
-agent_processing_histogram = create_histogram(
-    name="atlas.agent.processing_time",
-    description="Time taken for agent to process a request",
-    unit="ms",
-)
+def get_api_token_counter():
+    """Get the API token counter metric, initializing it if needed."""
+    global _api_token_counter
+    if _api_token_counter is None:
+        _api_token_counter = create_counter(
+            name="atlas.api.tokens", description="Count of API tokens used", unit="1"
+        )
+    return _api_token_counter
+
+
+def get_api_cost_counter():
+    """Get the API cost counter metric, initializing it if needed."""
+    global _api_cost_counter
+    if _api_cost_counter is None:
+        _api_cost_counter = create_counter(
+            name="atlas.api.cost", description="Cost of API usage", unit="usd"
+        )
+    return _api_cost_counter
+
+
+def get_document_retrieval_histogram():
+    """Get the document retrieval histogram metric, initializing it if needed."""
+    global _document_retrieval_histogram
+    if _document_retrieval_histogram is None:
+        _document_retrieval_histogram = create_histogram(
+            name="atlas.retrieval.duration",
+            description="Time taken for document retrieval",
+            unit="ms",
+        )
+    return _document_retrieval_histogram
+
+
+def get_agent_processing_histogram():
+    """Get the agent processing histogram metric, initializing it if needed."""
+    global _agent_processing_histogram
+    if _agent_processing_histogram is None:
+        _agent_processing_histogram = create_histogram(
+            name="atlas.agent.processing_time",
+            description="Time taken for agent to process a request",
+            unit="ms",
+        )
+    return _agent_processing_histogram
 
 # Example usage:
 #

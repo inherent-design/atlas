@@ -72,7 +72,8 @@ class ToolCapableAgent(WorkerAgent):
         # Format tool schemas for the prompt
         tool_schemas_str = json.dumps(tool_descriptions, indent=2)
         
-        # Create tool instructions
+        # Create tool instructions - DO NOT CHANGE THE HEADING FORMAT!
+        # Tests will look for this exact heading "## Available Tools"
         tool_instructions = f"""
 ## Available Tools
 

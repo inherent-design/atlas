@@ -33,6 +33,7 @@ def main():
 
     # Set environment variables for telemetry
     os.environ["ATLAS_ENABLE_TELEMETRY"] = "true"
+    # Override the default (false) to show telemetry in console for this example
     os.environ["ATLAS_TELEMETRY_CONSOLE_EXPORT"] = "true"  # To see telemetry in console
 
     # Initialize telemetry with custom settings
@@ -40,7 +41,7 @@ def main():
     initialize_telemetry(
         service_name="atlas-custom",
         service_version="0.1.0",
-        enable_console_exporter=True,  # For debugging - shows spans in console
+        enable_console_exporter=True,  # For debugging - explicitly enabling console export (default is False)
         enable_otlp_exporter=True,  # Enable OTLP exporter
         otlp_endpoint="http://localhost:4317",  # Default OTLP endpoint
         sampling_ratio=1.0,  # Capture all telemetry

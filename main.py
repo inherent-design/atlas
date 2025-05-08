@@ -20,6 +20,17 @@ load_dotenv()
 # Ensure atlas package is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Configure logging early
+from atlas.core import logging
+logger = logging.get_logger(__name__)
+
+# Set up logging with appropriate settings
+logging.configure_logging(
+    level=os.environ.get("ATLAS_LOG_LEVEL", "INFO"),
+    enable_rich=True,
+    quiet_loggers=["chromadb", "uvicorn", "httpx", "opentelemetry"]
+)
+
 from atlas.agents.base import AtlasAgent
 # Import DocumentProcessor at module level to standardize imports
 from atlas.knowledge.ingest import DocumentProcessor
@@ -126,16 +137,16 @@ def check_environment(provider="anthropic"):
     if provider == "anthropic":
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
-            print("ERROR: ANTHROPIC_API_KEY environment variable is not set.")
-            print("Please set it before running Atlas with Anthropic provider.")
-            print("Example: export ANTHROPIC_API_KEY=your_api_key_here")
+            logger.error("ANTHROPIC_API_KEY environment variable is not set.")
+            logger.error("Please set it before running Atlas with Anthropic provider.")
+            logger.error("Example: export ANTHROPIC_API_KEY=your_api_key_here")
             return False
     elif provider == "openai":
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
-            print("ERROR: OPENAI_API_KEY environment variable is not set.")
-            print("Please set it before running Atlas with OpenAI provider.")
-            print("Example: export OPENAI_API_KEY=your_api_key_here")
+            logger.error("OPENAI_API_KEY environment variable is not set.")
+            logger.error("Please set it before running Atlas with OpenAI provider.")
+            logger.error("Example: export OPENAI_API_KEY=your_api_key_here")
             return False
     elif provider == "ollama":
         # No API key required for Ollama, but we should check if it's running
@@ -144,19 +155,19 @@ def check_environment(provider="anthropic"):
 
             response = requests.get("http://localhost:11434/api/version", timeout=1)
             if response.status_code != 200:
-                print(
-                    "WARNING: Ollama server doesn't appear to be running at http://localhost:11434"
+                logger.warning(
+                    "Ollama server doesn't appear to be running at http://localhost:11434"
                 )
-                print("Please start Ollama before running Atlas with Ollama provider.")
-                print("Example: ollama serve")
-                print("Continuing anyway, but expect connection errors...")
+                logger.warning("Please start Ollama before running Atlas with Ollama provider.")
+                logger.warning("Example: ollama serve")
+                logger.warning("Continuing anyway, but expect connection errors...")
         except (requests.RequestException, ImportError) as e:
-            print(
-                f"WARNING: Could not connect to Ollama server at http://localhost:11434 - {str(e)}"
+            logger.warning(
+                f"Could not connect to Ollama server at http://localhost:11434 - {str(e)}"
             )
-            print("Please make sure Ollama is installed and running.")
-            print("Example: ollama serve")
-            print("Continuing anyway, but expect connection errors...")
+            logger.warning("Please make sure Ollama is installed and running.")
+            logger.warning("Example: ollama serve")
+            logger.warning("Continuing anyway, but expect connection errors...")
 
     return True
 
@@ -183,22 +194,22 @@ def ingest_documents(args):
             "./src-markdown/quantum",
         ]
 
-        print("No directory specified. Using default directories:")
+        logger.info("No directory specified. Using default directories:")
         for dir_path in default_dirs:
-            print(f"  - {dir_path}")
+            logger.info(f"  - {dir_path}")
 
-        print(f"Using ChromaDB at: {db_path}")
+        logger.info(f"Using ChromaDB at: {db_path}")
         processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
 
         for dir_path in default_dirs:
             if os.path.exists(dir_path):
-                print(f"\nIngesting documents from {dir_path}")
+                logger.info(f"Ingesting documents from {dir_path}")
                 processor.process_directory(dir_path)
             else:
-                print(f"Directory not found: {dir_path}")
+                logger.warning(f"Directory not found: {dir_path}")
     else:
-        print(f"Ingesting documents from {args.directory}")
-        print(f"Using ChromaDB at: {db_path}")
+        logger.info(f"Ingesting documents from {args.directory}")
+        logger.info(f"Using ChromaDB at: {db_path}")
 
         processor = DocumentProcessor(collection_name=args.collection, db_path=db_path)
 
@@ -209,8 +220,8 @@ def ingest_documents(args):
 
 def run_cli_mode(args):
     """Run Atlas in interactive CLI mode."""
-    print("\nAtlas CLI Mode")
-    print("-------------")
+    logger.info("\nAtlas CLI Mode")
+    logger.info("-------------")
 
     # Import config and agent
     from atlas.core.config import AtlasConfig
@@ -229,7 +240,7 @@ def run_cli_mode(args):
         provider_params["base_url"] = args.base_url
 
     # Initialize agent
-    print(f"Using {args.provider} provider with model: {args.model}")
+    logger.info(f"Using {args.provider} provider with model: {args.model}")
     agent = AtlasAgent(
         system_prompt_file=args.system_prompt,
         collection_name=args.collection,
@@ -239,8 +250,8 @@ def run_cli_mode(args):
         **provider_params,
     )
 
-    print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
-    print("---------------------------------------------------")
+    logger.info("Atlas is ready. Type 'exit' or 'quit' to end the session.")
+    logger.info("---------------------------------------------------")
 
     while True:
         # Get user input

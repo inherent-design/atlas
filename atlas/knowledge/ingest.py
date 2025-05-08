@@ -10,7 +10,7 @@ import re
 import glob
 import sys
 import time
-import logging
+from atlas.core import logging
 import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable, Union, Set
@@ -27,7 +27,7 @@ from anthropic import Anthropic
 from atlas.core import env
 from atlas.knowledge.embedding import EmbeddingStrategy, EmbeddingStrategyFactory
 
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
 
 
 @dataclass
@@ -898,7 +898,6 @@ class DocumentProcessor:
                 self.db_path = str(db_path_obj.absolute())
 
         logger.info(f"ChromaDB persistence directory: {self.db_path}")
-        print(f"ChromaDB persistence directory: {self.db_path}")
         
         # Initialize ChromaDB
         self._initialize_chroma_db()
@@ -929,43 +928,42 @@ class DocumentProcessor:
         try:
             # List contents of DB directory
             if os.path.exists(self.db_path):
-                print("Current contents of DB directory:")
+                logger.debug("Current contents of DB directory:")
                 for item in os.listdir(self.db_path):
                     item_path = os.path.join(self.db_path, item)
                     if os.path.isdir(item_path):
-                        print(f"  - {item}/ (directory)")
+                        logger.debug(f"  - {item}/ (directory)")
                     else:
                         size = os.path.getsize(item_path) / 1024  # Size in KB
-                        print(f"  - {item} ({size:.2f} KB)")
+                        logger.debug(f"  - {item} ({size:.2f} KB)")
             
             # Initialize ChromaDB client
             self.chroma_client = chromadb.PersistentClient(path=self.db_path)
-            print(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
+            logger.info(f"ChromaDB client initialized successfully with persistence at: {self.db_path}")
             
             # List collections
             all_collections = self.chroma_client.list_collections()
-            print(f"Available collections: {[c.name for c in all_collections]}")
+            logger.info(f"Available collections: {[c.name for c in all_collections]}")
             
             # Get or create collection
             self.collection = self.chroma_client.get_or_create_collection(
                 name=self.collection_name
             )
-            print(f"Collection '{self.collection_name}' accessed successfully")
+            logger.info(f"Collection '{self.collection_name}' accessed successfully")
             
             # Get initial document count
             self.initial_doc_count = self.collection.count()
-            print(f"Collection initially contains {self.initial_doc_count} documents")
+            logger.info(f"Collection initially contains {self.initial_doc_count} documents")
             
             if self.initial_doc_count == 0:
-                print("NOTE: Collection is empty. Documents will be ingested from scratch.")
+                logger.info("NOTE: Collection is empty. Documents will be ingested from scratch.")
             
         except Exception as e:
             error_msg = f"Error initializing ChromaDB: {str(e)}"
-            print(error_msg)
             logger.error(error_msg)
             
             # Fallback to in-memory if persistence fails
-            print("Falling back to in-memory ChromaDB")
+            logger.warning("Falling back to in-memory ChromaDB")
             self.chroma_client = chromadb.Client()
             self.collection = self.chroma_client.get_or_create_collection(
                 name=self.collection_name
@@ -1015,9 +1013,9 @@ class DocumentProcessor:
                         # Skip comments and empty lines
                         if line and not line.startswith("#"):
                             gitignore_patterns.append(line)
-                print(f"Loaded {len(gitignore_patterns) - len(default_patterns)} patterns from .gitignore")
+                logger.debug(f"Loaded {len(gitignore_patterns) - len(default_patterns)} patterns from .gitignore")
             except Exception as e:
-                print(f"Error loading .gitignore: {str(e)}")
+                logger.warning(f"Error loading .gitignore: {str(e)}")
         
         # Create PathSpec with gitignore patterns
         return pathspec.PathSpec.from_lines("gitwildmatch", gitignore_patterns)
@@ -1051,7 +1049,7 @@ class DocumentProcessor:
         filtered_files = [f for f in all_md_files if not self.is_ignored(f)]
         
         if len(all_md_files) != len(filtered_files):
-            print(f"Excluded {len(all_md_files) - len(filtered_files)} files due to gitignore patterns")
+            logger.info(f"Excluded {len(all_md_files) - len(filtered_files)} files due to gitignore patterns")
         
         return filtered_files
     
@@ -1159,7 +1157,7 @@ class DocumentProcessor:
             logger.info(f"Skipping unchanged file: {file_path}")
             return []
         
-        # Log processing but don't print to avoid interfering with progress bar
+        # Log processing at the info level
         logger.info(f"Processing file: {file_path}")
         
         # Check file size and warn if it's very large
@@ -1209,17 +1207,13 @@ class DocumentProcessor:
         texts = [chunk.text for chunk in chunks]
         metadatas = [chunk.metadata for chunk in chunks]
         
-        print(f"\nEmbedding Generation:")
-        print("=" * 50)
-        print(f"Total chunks to embed: {chunk_count}")
+        logger.info(f"Embedding Generation - Total chunks to embed: {chunk_count}")
         
         # Calculate batch sizes for embedding
         estimated_token_count = sum(len(text.split()) * 1.3 for text in texts)  # Rough estimate
         estimated_embedding_time = estimated_token_count / 15000  # Rough estimate of tokens per second
         
-        print(f"Estimated tokens: ~{int(estimated_token_count):,}")
-        print(f"Estimated time: ~{estimated_embedding_time:.1f} seconds")
-        print("-" * 50)
+        logger.info(f"Estimated tokens: ~{int(estimated_token_count):,}, estimated time: ~{estimated_embedding_time:.1f} seconds")
         
         # Progress tracking variables
         import threading
@@ -1230,40 +1224,35 @@ class DocumentProcessor:
         start_time = time.time()
         progress_active = True
         
-        # Define a progress reporter thread
+        # Create a progress reporter thread that logs progress
         def show_progress():
             step = 0
             phases = ["Preparing", "Embedding", "Storing in database"]
             phase_index = 0
-            
-            # Spinner animation characters
-            spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+            last_log_time = time.time()
             
             while progress_active:
-                # Update spinner and phase
-                spinner_char = spinner[step % len(spinner)]
-                current_phase = phases[min(phase_index, len(phases)-1)]
+                # Update phase based on elapsed time
                 elapsed = time.time() - start_time
                 
-                # Progress message with elapsed time
-                msg = f"\r{spinner_char} {current_phase} {chunk_count} chunks... "
-                msg += f"[{elapsed:.1f}s elapsed]"
-                
-                # Add estimates
+                # Update phase based on time estimates
                 if phase_index == 0 and elapsed > 2.0:
                     phase_index = 1  # Move to embedding phase after 2 seconds
+                    logger.info(f"Phase: Embedding {chunk_count} chunks...")
                 elif phase_index == 1 and elapsed > estimated_embedding_time * 0.7:
                     phase_index = 2  # Move to storing phase
+                    logger.info(f"Phase: Storing {chunk_count} chunks in database...")
                 
-                # Pad with spaces to overwrite previous line
-                msg += " " * 50
+                # Log progress every 5 seconds
+                current_time = time.time()
+                if current_time - last_log_time > 5.0:
+                    current_phase = phases[min(phase_index, len(phases)-1)]
+                    logger.debug(f"{current_phase}: {elapsed:.1f}s elapsed")
+                    last_log_time = current_time
                 
-                sys.stdout.write(msg)
-                sys.stdout.flush()
-                
-                # Increment spinner step
+                # Sleep to avoid consuming too much CPU
                 step += 1
-                time.sleep(0.1)
+                time.sleep(0.5)
         
         # Start progress thread
         progress_thread = threading.Thread(target=show_progress)
@@ -1305,34 +1294,23 @@ class DocumentProcessor:
             progress_active = False
             progress_thread.join(timeout=1.0)
             
-            # Clear progress line
-            sys.stdout.write("\r" + " " * 100 + "\r")
-            sys.stdout.flush()
-            
             # Log completion
             logger.info(f"Added {chunk_count} document chunks to Chroma DB")
             
-            # Show performance stats
-            print(f"✓ Embedding completed in {embedding_duration:.2f}s")
-            print(f"✓ Database storage completed in {db_duration:.2f}s")
-            print(f"✓ Total processing time: {total_duration:.2f}s")
-            print(f"✓ Throughput: {chunk_count/total_duration:.1f} chunks/second")
-            print(f"✓ Added {chunk_count} document chunks to Chroma DB")
-            print("=" * 50)
+            # Log performance stats
+            logger.info(f"Embedding completed in {embedding_duration:.2f}s")
+            logger.info(f"Database storage completed in {db_duration:.2f}s")
+            logger.info(f"Total processing time: {total_duration:.2f}s")
+            logger.info(f"Throughput: {chunk_count/total_duration:.1f} chunks/second")
             
         except Exception as e:
             # Stop progress reporting
             progress_active = False
             progress_thread.join(timeout=1.0)
             
-            # Clear progress line
-            sys.stdout.write("\r" + " " * 100 + "\r")
-            sys.stdout.flush()
-            
             # Log error
             logger.error(f"Error adding documents to ChromaDB: {e}")
-            print(f"✗ Error: {str(e)}")
-            print(f"✗ Failed to add documents to ChromaDB after {time.time() - start_time:.2f}s")
+            logger.error(f"Failed to add documents to ChromaDB after {time.time() - start_time:.2f}s")
     
     def process_directory(self, directory: str, recursive: bool = True) -> int:
         """Process all files in a directory and its subdirectories.
@@ -1348,75 +1326,55 @@ class DocumentProcessor:
         files = self.get_all_markdown_files(directory) if recursive else glob.glob(f"{directory}/*.md")
         total_files = len(files)
         logger.info(f"Found {total_files} markdown files to process in {directory}")
-        print(f"Found {total_files} markdown files to process in {directory}")
         
         if total_files == 0:
-            print("No files to process.")
+            logger.info("No files to process.")
             return 0
             
-        # Process each file with progress indicator
+        # Process each file and collect chunks
         all_chunks = []
-        print("\nProcessing files:")
-        print("="*50)
-        progress_bar_width = 40
+        logger.info(f"Processing {total_files} files...")
         
         for i, file_path in enumerate(files):
-            # Calculate and display progress
-            progress = (i / total_files)
-            bar_length = int(progress * progress_bar_width)
-            percent = int(progress * 100)
+            # Log progress periodically
+            if i % 10 == 0 or i == total_files - 1:
+                progress = (i / total_files) * 100
+                logger.info(f"Progress: {progress:.0f}% - Processing file {i+1}/{total_files}")
             
-            # Create progress bar
-            progress_bar = f"[{'#' * bar_length}{' ' * (progress_bar_width - bar_length)}] {percent}% "
-            
-            # Show file being processed
+            # For each file, log at debug level
             file_name = os.path.basename(file_path)
-            status_text = f"{progress_bar} Processing: {file_name} ({i+1}/{total_files})"
-            # Pad with spaces to overwrite any leftover text from previous lines
-            padding = ' ' * 50  # Add enough spaces to clear previous line
-            print(f"{status_text}{padding}", end='\r')
+            logger.debug(f"Processing: {file_name} ({i+1}/{total_files})")
             
             # Process the file
             chunks = self.process_file(file_path)
             all_chunks.extend(chunks)
         
-        # Complete the progress bar with proper padding
-        padding = ' ' * 100  # More padding to ensure line is clear
-        print(f"[{'#' * progress_bar_width}] 100% Complete!{padding}")
-        print("="*50)
+        logger.info("File processing complete!")
         
         # Generate embeddings for all chunks
         if all_chunks:
-            print("\nStarting embedding process...")
+            logger.info("Starting embedding process...")
             self.generate_embeddings(all_chunks)
         else:
-            print("\nNo new content to process.")
+            logger.info("No new content to process.")
         
         # Report stats
         try:
             final_doc_count = self.collection.count()
             new_docs = final_doc_count - self.initial_doc_count
             
-            print("\nFinal Processing Summary:")
-            print("=" * 50)
+            logger.info("Final Processing Summary:")
             logger.info(f"Successfully processed {total_files} files into {len(all_chunks)} chunks")
             logger.info(f"Added {new_docs} new documents to collection (now contains {final_doc_count} total)")
-            print(f"✓ Files processed:       {total_files}")
-            print(f"✓ Chunks created:        {len(all_chunks)}")
-            print(f"✓ New documents added:   {new_docs}")
-            print(f"✓ Collection total size: {final_doc_count} documents")
             
             if self.enable_deduplication and self.duplicate_detector:
                 dupes_found = len(all_chunks) - self.duplicate_detector.get_unique_chunk_count()
                 if dupes_found > 0:
                     logger.info(f"Detected {dupes_found} duplicate chunks")
-                    print(f"✓ Duplicates detected:   {dupes_found}")
-            print("=" * 50)
             
             return new_docs
         except Exception as e:
             logger.error(f"Error getting final collection stats: {e}")
-            print(f"\nError getting final collection stats: {e}")
             return 0
     
     def delete_directory_documents(self, directory: str) -> int:
@@ -1446,7 +1404,7 @@ class DocumentProcessor:
             
             if documents_to_delete:
                 logger.info(f"Deleting {len(documents_to_delete)} documents from {rel_directory}")
-                print(f"Deleting {len(documents_to_delete)} documents from {rel_directory}")
+                logger.info(f"Deleting {len(documents_to_delete)} documents from {rel_directory}")
                 
                 # Delete in batches to avoid any potential limitations
                 batch_size = 1000
@@ -1459,7 +1417,7 @@ class DocumentProcessor:
                 deleted_count = count_before - count_after
                 
                 logger.info(f"Deleted {deleted_count} documents. Collection now contains {count_after} documents.")
-                print(f"Deleted {deleted_count} documents. Collection now contains {count_after} documents.")
+                logger.info(f"Deleted {deleted_count} documents. Collection now contains {count_after} documents.")
                 return deleted_count
             
             logger.info(f"No documents found from directory {rel_directory}")
@@ -1467,7 +1425,7 @@ class DocumentProcessor:
         
         except Exception as e:
             logger.error(f"Error deleting documents from {rel_directory}: {e}")
-            print(f"Error deleting documents from {rel_directory}: {e}")
+            logger.error(f"Error deleting documents from {rel_directory}: {e}")
             return 0
     
     def watch_directory(
@@ -1549,7 +1507,6 @@ class DocumentProcessor:
         self.watchers[directory] = observer
         
         logger.info(f"Started watching directory: {directory}")
-        print(f"Started watching directory: {directory}")
     
     def stop_watching(self, directory: Optional[str] = None) -> None:
         """Stop watching a directory or all directories.
@@ -1565,7 +1522,6 @@ class DocumentProcessor:
                 observer.join()
                 del self.watchers[directory]
                 logger.info(f"Stopped watching directory: {directory}")
-                print(f"Stopped watching directory: {directory}")
             else:
                 logger.warning(f"Not watching directory: {directory}")
         else:
@@ -1575,7 +1531,7 @@ class DocumentProcessor:
                 observer.join()
                 logger.info(f"Stopped watching directory: {dir_path}")
             self.watchers.clear()
-            print(f"Stopped watching all directories")
+            logger.info("Stopped watching all directories")
     
     def get_watcher_status(self) -> Dict[str, bool]:
         """Get the status of all directory watchers.
@@ -1673,13 +1629,13 @@ def main():
         
         # Keep process running
         try:
-            print("Press Ctrl+C to stop watching...")
+            logger.info("Press Ctrl+C to stop watching...")
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("Stopping watchers...")
+            logger.info("Stopping watchers...")
             processor.stop_watching()
-            print("Done")
+            logger.info("Done")
     else:
         # One-time processing
         processor = DocumentProcessor(
