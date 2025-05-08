@@ -13,28 +13,57 @@ Atlas follows a robust testing philosophy that includes:
 
 ## Testing Directory Structure
 
-The Atlas testing infrastructure is organized across several directories:
+The Atlas testing infrastructure is organized into a structured directory hierarchy for better separation of concerns:
 
 ```
 atlas/
 ├── tests/                        # Core test modules
 │   ├── __init__.py
-│   ├── helpers.py                # Test helpers and utilities
-│   ├── test_api.py               # API integration tests (requires API key)
-│   ├── test_env.py               # Environment variable tests
-│   ├── test_minimal.py           # Minimal functionality tests
-│   ├── test_mock.py              # Mock tests (no API key required)
-│   └── test_models.py            # Model provider tests
+│   ├── unit/                     # Unit tests for specific components
+│   │   ├── core/                 # Tests for core features
+│   │   ├── models/               # Tests for model abstractions
+│   │   ├── knowledge/            # Tests for knowledge features
+│   │   ├── agents/               # Tests for agent features
+│   │   └── tools/                # Tests for tool features
+│   ├── mock/                     # Tests that use mocked providers/APIs
+│   │   ├── providers/            # Mocked provider tests
+│   │   ├── agents/               # Agent tests with mocked providers
+│   │   └── workflows/            # Workflow tests with mocked components
+│   ├── integration/              # Tests connecting multiple components
+│   │   ├── agent_tool/           # Agent + Tool integration tests
+│   │   ├── knowledge_agent/      # Knowledge + Agent integration tests
+│   │   └── workflow/             # Full workflow integration tests
+│   ├── api/                      # Real API tests (may incur costs)
+│   │   ├── openai/               # OpenAI-specific API tests
+│   │   ├── anthropic/            # Anthropic-specific API tests
+│   │   └── ollama/               # Ollama-specific API tests
+│   ├── fixtures/                 # Test fixtures and data
+│   │   ├── documents/            # Test documents
+│   │   ├── responses/            # Sample API responses
+│   │   └── tools/                # Test tool implementations
+│   └── helpers/                  # Test helper functions and utilities
+│       ├── __init__.py
+│       ├── decorators.py         # Test decorators
+│       ├── base_classes.py       # Base test classes
+│       ├── mocks.py              # Common mocks
+│       └── utils.py              # Test utilities
 ├── scripts/
 │   └── testing/                  # Test runner scripts
 │       ├── __init__.py
-│       └── run_tests.py          # Unified test runner
+│       ├── run_tests.py          # CLI-based test runner
+│       └── run_tests.py.old      # Legacy test runner (deprecated)
 └── examples/                     # Example usage (not formal tests)
     ├── query_example.py
     ├── retrieval_example.py
     ├── streaming_example.py
     └── telemetry_example.py
 ```
+
+This hierarchical structure provides:
+1. Better organization of tests by type and component
+2. Clear separation between mock tests, integration tests, and API tests
+3. Improved discoverability and maintainability
+4. Support for both backwards compatibility and new test patterns
 
 ## Test Types
 
@@ -131,41 +160,69 @@ Integration tests verify that different components work together correctly.
 
 ## Running Tests
 
-### Using the Unified Test Runner
+### Using the CLI-based Test Runner
 
-The recommended way to run tests is using the `run_tests.py` script:
+The recommended way to run tests is using the `run_tests.py` script, which uses explicit CLI flags instead of environment variables:
 
 ```bash
-# Run all mock tests (no API key required)
-uv run python atlas/scripts/testing/run_tests.py --test-type mock
+# Run all unit tests
+uv run python -m atlas.scripts.testing.run_tests unit
 
 # Run unit tests for a specific module
-uv run python atlas/scripts/testing/run_tests.py --test-type unit --module models
+uv run python -m atlas.scripts.testing.run_tests unit --module core
 
-# Run minimal tests (basic functionality verification)
-uv run python atlas/scripts/testing/run_tests.py --test-type minimal
+# Run mock tests
+uv run python -m atlas.scripts.testing.run_tests mock
 
-# Run API tests for the base agent (requires API key)
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base
+# Run integration tests
+uv run python -m atlas.scripts.testing.run_tests integration
 
-# Run API tests with a custom query
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base --query "Your query here"
+# Run real API tests with confirmation
+uv run python -m atlas.scripts.testing.run_tests api --confirm
 
-# Run all tests (both mock and real tests)
-uv run python atlas/scripts/testing/run_tests.py --test-type all
+# Run API tests for a specific provider
+uv run python -m atlas.scripts.testing.run_tests api --provider openai --confirm
+
+# Run expensive tests (GPT-4, Claude Opus, etc.)
+uv run python -m atlas.scripts.testing.run_tests api --expensive --confirm
+
+# Run multiple test types at once
+uv run python -m atlas.scripts.testing.run_tests unit mock integration
+
+# Run all tests (will prompt for confirmation before running API tests)
+uv run python -m atlas.scripts.testing.run_tests all
 ```
 
 ### Test Runner Options
 
-The test runner accepts the following options:
+The new test runner accepts the following options:
 
 ```
--h, --help        Show help message and exit
--t, --test-type   Type of tests to run: unit, mock, minimal, api, or all (default: mock)
--m, --module      Module to test for unit tests (e.g., 'models', 'env')
---api-test        API test to run: base, controller, coordinator, workflows, or all (default: base)
--s, --system-prompt  Path to system prompt file for API tests
--q, --query       Query to test with for API tests
+positional arguments:
+  test_types            Types of tests to run: unit, mock, integration, api, all
+
+options:
+  -h, --help            Show help message and exit
+  -m, --module MODULE   Module to filter tests by (e.g., 'core', 'models')
+  -p, --provider {openai,anthropic,ollama}
+                        Provider to filter API tests by
+  --confirm             Skip confirmation prompt for API tests
+  --expensive           Run expensive API tests (GPT-4, Claude Opus, etc.)
+  --cost-limit COST_LIMIT
+                        Maximum cost limit for API tests (default: 0.1)
+  --enforce-cost-limit  Enforce cost limit by failing tests that exceed it
+```
+
+### Legacy Test Runner (Deprecated)
+
+The legacy test runner is still available as `run_tests.py.old` for backwards compatibility:
+
+```bash
+# Run all mock tests (no API key required)
+uv run python atlas/scripts/testing/run_tests.py.old --test-type mock
+
+# Run unit tests for a specific module
+uv run python atlas/scripts/testing/run_tests.py.old --test-type unit --module models
 ```
 
 ### Using unittest Directly
@@ -182,68 +239,131 @@ uv python -m unittest discover -s atlas/tests
 
 ## Writing Tests
 
-### Unit Test Template
+Atlas provides standardized test helpers and base classes to make writing tests easier and more consistent. These are available in the `atlas.tests.helpers` module.
+
+### Using Test Decorators
 
 ```python
-import unittest
-from unittest import mock
-
-from atlas.module import Component
+from atlas.tests.helpers import unit_test, mock_test, api_test, integration_test
 
 class TestComponent(unittest.TestCase):
     """Test cases for Component."""
 
-    def setUp(self):
-        """Set up test environment."""
-        # Initialize test data and resources
-        self.component = Component()
-
-    def tearDown(self):
-        """Clean up after tests."""
-        # Clean up any resources or test state
-        pass
-
-    def test_functionality(self):
-        """Test specific functionality."""
-        # Arrange
-        input_data = "test input"
-        expected_output = "expected result"
-
-        # Act
-        actual_output = self.component.process(input_data)
-
-        # Assert
-        self.assertEqual(expected_output, actual_output)
+    @unit_test
+    def test_component_initialization(self):
+        """Test component initialization."""
+        component = Component()
+        self.assertIsNotNone(component)
+    
+    @mock_test
+    def test_with_mocked_dependency(self):
+        """Test with a mocked dependency."""
+        with mock.patch("atlas.module.Dependency") as mock_dep:
+            mock_dep.return_value.method.return_value = "mock result"
+            component = Component()
+            result = component.process("test input")
+            self.assertEqual("expected result", result)
+    
+    @api_test
+    def test_with_real_api(self):
+        """Test with real API calls."""
+        component = Component(api_key="real-api-key")
+        result = component.process("test input")
+        self.assertIsNotNone(result)
+    
+    @integration_test
+    def test_component_integration(self):
+        """Test integration with other components."""
+        component_a = ComponentA()
+        component_b = ComponentB()
+        result = component_a.process_with(component_b, "test input")
+        self.assertIsNotNone(result)
 ```
 
-### Mock Test Template
+### Using Base Test Classes
 
 ```python
-import unittest
-from unittest import mock
+from atlas.tests.helpers import (
+    TestWithTokenTracking, ProviderTestBase, 
+    OpenAIProviderTestBase, IntegrationTestBase
+)
 
-from atlas.module import Component
+class TestOpenAIProvider(OpenAIProviderTestBase):
+    """Test OpenAI provider implementation."""
+    
+    provider_class = OpenAIProvider
+    provider_name = "openai"
+    default_model = "gpt-3.5-turbo"
+    
+    @mock_test
+    def test_generate_mocked(self):
+        """Test generate method with mocked API."""
+        # The base class provides self.provider and mock helpers
+        request = self._create_request("Test message")
+        
+        with mock.patch("atlas.models.openai.OpenAI") as mock_openai:
+            mock_openai.return_value.chat.completions.create.return_value = mock_completion
+            response = self.provider.generate(request)
+            
+            self.assertIsNotNone(response)
+            self.assertEqual(response.provider, self.provider_name)
+    
+    @api_test
+    def test_generate_api(self):
+        """Test generate method with real API."""
+        # This test will only run if RUN_API_TESTS=true and RUN_OPENAI_TESTS=true
+        request = self._create_request("Write a single word response", 5)
+        response = self.provider.generate(request)
+        
+        # Track token usage for cost reporting
+        self.track_usage(response)
+        
+        self.assertIsNotNone(response.content)
+        self.assertLessEqual(response.usage.total_tokens, 20)
+```
 
-class TestComponentWithMocks(unittest.TestCase):
-    """Test cases for Component using mocks."""
+### Integration Test Template
 
-    @mock.patch("atlas.module.Dependency")
-    def test_functionality_with_mock(self, mock_dependency):
-        """Test functionality with mocked dependency."""
-        # Set up mock behavior
-        mock_instance = mock.MagicMock()
-        mock_instance.method.return_value = "mock result"
-        mock_dependency.return_value = mock_instance
+```python
+from atlas.tests.helpers import integration_test, IntegrationTestBase
 
-        # Create component with mocked dependency
-        component = Component()
-
-        # Act
-        result = component.process("test input")
-
-        # Assert
-        self.assertEqual("expected result", result)
-        mock_instance.method.assert_called_once_with("test input")
+class TestAgentToolIntegration(IntegrationTestBase):
+    """Integration tests for Agent + Tool interactions."""
+    
+    def setUp(self):
+        """Set up the test with components for integration testing."""
+        super().setUp()
+        
+        # Create the components to test together
+        self.agent = ToolCapableAgent()
+        self.tool = CalculatorTool()
+        
+        # Register tools with the agent
+        self.agent.register_tool(self.tool)
+    
+    @integration_test
+    def test_agent_uses_tool(self):
+        """Test that the agent correctly uses the tool."""
+        # Configure response with tool calls
+        response_content = """
+        Let me calculate that.
+        
+        <tool_calls>
+        <tool_call name="calculator">
+        {"operation": "add", "a": 5, "b": 10}
+        </tool_call>
+        </tool_calls>
+        """
+        
+        # Set up the test scenario
+        self.mock_provider.generate.return_value = create_mock_response(response_content)
+        
+        # Process a request that should trigger tool usage
+        request = ModelRequest(messages=[ModelMessage.user("What is 5 + 10?")])
+        response = self.agent.process(request)
+        
+        # Verify the tool was used correctly
+        self.assertIn("15", response.content)
 ```
 
 ## Testing Examples

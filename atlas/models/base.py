@@ -23,17 +23,49 @@ class ModelRole(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
     FUNCTION = "function"
+    TOOL = "tool"  # Add Tool role for message factory method tests
 
 
 @dataclass
 class MessageContent:
     """Content of a message in the conversation."""
 
-    text: str
+    type: str
+    """The type of the content."""
+
+    text: Optional[str] = None
     """The text content of the message."""
 
-    mime_type: str = "text/plain"
-    """The MIME type of the content."""
+    image_url: Optional[Dict[str, Any]] = None
+    """The image URL and details for image content."""
+
+    @classmethod
+    def text(cls, text: str) -> "MessageContent":
+        """Create a text content.
+        
+        Args:
+            text: The text content.
+            
+        Returns:
+            A MessageContent instance with text type.
+        """
+        return cls(type="text", text=text)
+        
+    @classmethod
+    def image_url(cls, url: str, detail: str = "auto") -> "MessageContent":
+        """Create an image URL content.
+        
+        Args:
+            url: The URL of the image.
+            detail: The detail level for the image (auto, high, low).
+            
+        Returns:
+            A MessageContent instance with image_url type.
+        """
+        return cls(
+            type="image_url",
+            image_url={"url": url, "detail": detail}
+        )
 
 
 @dataclass
@@ -107,6 +139,19 @@ class ModelMessage:
             A ModelMessage with the function role.
         """
         return cls(role=ModelRole.FUNCTION, content=content, name=name)
+        
+    @classmethod
+    def tool(cls, content: str, name: str) -> "ModelMessage":
+        """Create a tool message.
+        
+        Args:
+            content: The text content of the message.
+            name: Name of the tool.
+            
+        Returns:
+            A ModelMessage with the tool role.
+        """
+        return cls(role=ModelRole.TOOL, content=content, name=name)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the message to a dictionary.
@@ -120,21 +165,61 @@ class ModelMessage:
         if isinstance(self.content, str):
             result["content"] = self.content
         elif isinstance(self.content, MessageContent):
-            result["content"] = self.content.text
+            # Handle individual message content
+            if self.content.type == "text":
+                result["content"] = self.content.text
+            else:
+                # For non-text content (like images), include the full content structure
+                content_dict = {"type": self.content.type}
+                if self.content.text:
+                    content_dict["text"] = self.content.text
+                if self.content.image_url:
+                    content_dict["image_url"] = self.content.image_url
+                result["content"] = content_dict
         elif isinstance(self.content, list):
-            # For multi-modal content, this would need to be adapted per provider
-            if len(self.content) == 1:
+            # For multi-modal content, convert each item to a dict
+            if len(self.content) == 1 and self.content[0].type == "text":
+                # Simplify to just text for single text content
                 result["content"] = self.content[0].text
             else:
-                # Explicitly type the list to avoid type inconsistency
-                content_texts: List[str] = [c.text for c in self.content]
-                result["content"] = content_texts
+                # Create a list of content items
+                content_list = []
+                for item in self.content:
+                    item_dict = {"type": item.type}
+                    if item.text:
+                        item_dict["text"] = item.text
+                    if item.image_url:
+                        item_dict["image_url"] = item.image_url
+                    content_list.append(item_dict)
+                result["content"] = content_list
 
         # Add name if provided
         if self.name:
             result["name"] = self.name
 
         return result
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ModelMessage":
+        """Create a ModelMessage from a dictionary.
+        
+        Args:
+            data: Dictionary representation of a message.
+            
+        Returns:
+            A ModelMessage instance.
+        """
+        role_str = data.get("role", "")
+        try:
+            role = ModelRole(role_str)
+        except ValueError:
+            # If role is not a valid ModelRole, default to USER
+            role = ModelRole.USER
+            
+        content = data.get("content", "")
+        name = data.get("name")
+        
+        return cls(role=role, content=content, name=name)
 
 
 @dataclass

@@ -167,7 +167,7 @@ uv run python -m atlas.tests.test_minimal
 uv run python -m atlas.tests.test_mock
 
 # Run the unified test runner
-uv run python atlas/scripts/testing/run_tests.py --test-type mock
+uv run python -m atlas.scripts.testing.run_tests mock
 ```
 
 ## Troubleshooting

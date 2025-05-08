@@ -234,16 +234,16 @@ A more comprehensive ChromaDB viewer is planned (see docs/CHROMADB_VIEWER.md).
 
 ```bash
 # Run all tests
-uv run python atlas/scripts/testing/run_tests.py
+uv run python -m atlas.scripts.testing.run_tests all
 
 # Run only mock tests (no API key required)
-uv run python atlas/scripts/testing/run_tests.py --test-type mock
+uv run python -m atlas.scripts.testing.run_tests mock
 
 # Run unit tests for a specific module
-uv run python atlas/scripts/testing/run_tests.py --test-type unit --module models
+uv run python -m atlas.scripts.testing.run_tests unit --module models
 
-# Run minimal tests (basic functionality verification)
-uv run python atlas/scripts/testing/run_tests.py --test-type minimal
+# Run integration tests
+uv run python -m atlas.scripts.testing.run_tests integration
 ```
 
 ### Can I test Atlas without API keys?

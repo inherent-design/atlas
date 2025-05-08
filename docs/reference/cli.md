@@ -135,23 +135,25 @@ Atlas includes several testing utilities for verifying functionality.
 The unified test runner is available at `atlas/scripts/testing/run_tests.py`:
 
 ```bash
-uv run python atlas/scripts/testing/run_tests.py [options]
+uv run python -m atlas.scripts.testing.run_tests [test_types] [options]
 ```
 
 #### Options
 
 ```
--h, --help            Show help message and exit
--t {unit,mock,minimal,api,all}, --test-type {unit,mock,minimal,api,all}
-                      Type of tests to run (default: mock)
--m MODULE, --module MODULE
-                      Module to test (e.g., 'models', 'env')
---api-test {base,controller,coordinator,workflows,all}
-                      API test to run (default: base)
--s SYSTEM_PROMPT, --system-prompt SYSTEM_PROMPT
-                      Path to system prompt file for API tests
--q QUERY, --query QUERY
-                      Query to test with for API tests
+positional arguments:
+  test_types            Types of tests to run: unit, mock, integration, api, all
+
+options:
+  -h, --help            Show help message and exit
+  -m, --module MODULE   Module to filter tests by (e.g., 'core', 'models')
+  -p, --provider {openai,anthropic,ollama}
+                        Provider to filter API tests by
+  --confirm             Skip confirmation prompt for API tests
+  --expensive           Run expensive API tests (GPT-4, Claude Opus, etc.)
+  --cost-limit COST_LIMIT
+                        Maximum cost limit for API tests (default: 0.1)
+  --enforce-cost-limit  Enforce cost limit by failing tests that exceed it
 ```
 
 #### Test Types
@@ -168,16 +170,19 @@ uv run python atlas/scripts/testing/run_tests.py [options]
 
 ```bash
 # Run mock tests (no API key required)
-uv run python atlas/scripts/testing/run_tests.py --test-type mock
+uv run python -m atlas.scripts.testing.run_tests mock
 
 # Run unit tests for a specific module
-uv run python atlas/scripts/testing/run_tests.py --test-type unit --module models
+uv run python -m atlas.scripts.testing.run_tests unit --module models
 
-# Run API tests for the base agent
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base
+# Run API tests for a specific provider
+uv run python -m atlas.scripts.testing.run_tests api --provider openai --confirm
 
-# Run API tests with a custom query
-uv run python atlas/scripts/testing/run_tests.py --test-type api --api-test base --query "Your query here"
+# Run multiple test types at once
+uv run python -m atlas.scripts.testing.run_tests unit mock integration
+
+# Run all tests (will prompt for confirmation before running API tests)
+uv run python -m atlas.scripts.testing.run_tests all
 ```
 
 ## Debug Tools

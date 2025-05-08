@@ -182,16 +182,16 @@ Use the unified test runner:
 
 ```bash
 # Run the preferred mock tests (no API key required)
-uv run python run_tests.py
+uv run python -m atlas.scripts.testing.run_tests mock
 
-# Run minimal tests only
-uv run python run_tests.py -t minimal
+# Run unit tests for a specific module
+uv run python -m atlas.scripts.testing.run_tests unit --module core
 
-# Run specific API test (requires API key)
-uv run python run_tests.py -t api --api-test base
+# Run API tests for a specific provider (requires API key)
+uv run python -m atlas.scripts.testing.run_tests api --provider openai --confirm
 
-# Run API test with custom query (requires API key)
-uv run python run_tests.py -t api --api-test base -q "Your query here"
+# Run multiple test types at once
+uv run python -m atlas.scripts.testing.run_tests unit mock integration
 
 # Check available model providers and their models
 uv run python check_models.py --provider all

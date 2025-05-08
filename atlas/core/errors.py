@@ -198,6 +198,35 @@ class APIError(AtlasError):
             details=details,
             cause=cause,
         )
+        
+    @classmethod
+    def from_exception(
+        cls,
+        exception: Exception,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        retry_possible: bool = False,
+    ) -> 'APIError':
+        """Create an APIError from an existing exception.
+        
+        Args:
+            exception: The exception to convert.
+            message: The error message.
+            details: Optional detailed information about the error.
+            severity: Severity level of the error.
+            retry_possible: Whether the operation can be retried.
+            
+        Returns:
+            A new APIError instance.
+        """
+        return cls(
+            message=message,
+            details=details,
+            cause=exception,
+            severity=severity,
+            retry_possible=retry_possible,
+        )
 
 
 class ValidationError(AtlasError):
@@ -327,11 +356,27 @@ def safe_execute(
     Returns:
         The result of the function or the default value if an exception occurs.
     """
+    # Extract error constructor kwargs from kwargs (any keys that don't match function parameters)
+    import inspect
+    
+    func_signature = inspect.signature(func)
+    func_params = set(func_signature.parameters.keys())
+    
+    # Separate kwargs into function kwargs and error kwargs
+    error_kwargs = {}
+    function_kwargs = {}
+    
+    for key, value in kwargs.items():
+        if key in func_params:
+            function_kwargs[key] = value
+        else:
+            error_kwargs[key] = value
+    
     try:
-        return func(*args, **kwargs)
+        return func(*args, **function_kwargs)
     except Exception as e:
         # Create and log the error
-        error = error_cls(message=error_msg, cause=e)
+        error = error_cls(message=error_msg, cause=e, **error_kwargs)
 
         if log_error:
             error.log()
