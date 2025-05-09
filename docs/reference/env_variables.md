@@ -40,9 +40,10 @@ ATLAS_DEFAULT_MODEL=claude-3-7-sonnet-20250219
 |----------|-------------|---------|
 | `ATLAS_ENV_PATH` | Path to .env file | `.env` in current directory |
 | `ATLAS_LOG_LEVEL` | Logging level | `INFO` |
-| `SKIP_API_KEY_CHECK` | Skip API key validation | `false` |
+| `ATLAS_DB_PATH` | Path to ChromaDB database | `~/atlas_chroma_db` |
+| `ATLAS_DEV_MODE` | Enable development mode | `false` |
 
-### API Keys
+### API Keys (Infrastructure Configuration)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -74,13 +75,15 @@ ATLAS_DEFAULT_MODEL=claude-3-7-sonnet-20250219
 | `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | `2000` |
 | `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default |
 
-### Development and Testing
+### Development Settings
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ATLAS_DEV_MODE` | Enable development mode | `false` |
 | `ATLAS_MOCK_API` | Use mock API responses | `false` |
 | `TOKENIZERS_PARALLELISM` | Control tokenizer parallelism | `false` |
+
+Note: The `SKIP_API_KEY_CHECK` environment variable has been removed. API key validation is now controlled through CLI arguments when needed.
 
 ## Using Environment Variables
 

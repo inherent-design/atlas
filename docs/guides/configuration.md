@@ -6,12 +6,18 @@ This guide provides comprehensive information about configuring and customizing 
 
 Atlas provides a flexible configuration system that allows you to customize its behavior through:
 
-1. **Environment Variables**: For system-wide configuration
-2. **Configuration Objects**: For programmatic configuration
-3. **.env Files**: For project-specific configuration
-4. **Command-Line Arguments**: For one-time configuration changes
+1. **Environment Variables**: For application-level infrastructure configuration (API keys, logging, database paths)
+2. **Command-Line Arguments**: For business logic configuration (provider selection, model parameters)
+3. **Configuration Objects**: For programmatic configuration
+4. **.env Files**: For storing environment variables in project files
 
-These approaches can be combined in various ways to achieve the exact configuration you need for your use case.
+These approaches follow a clear separation of concerns:
+
+- **Environment Variables**: Infrastructure configuration that rarely changes
+- **Command-Line Arguments**: Business logic configuration that varies between executions
+- **Configuration Objects**: Programmatic interface for configuration combination
+
+This separation ensures a clean architecture where infrastructure settings are managed separately from business logic settings.
 
 ## Environment Variables
 
@@ -53,8 +59,9 @@ Atlas uses environment variables as the primary configuration mechanism. These c
 | -------------------- | ----------------------- | ------- | --------------- |
 | `ATLAS_DEV_MODE`     | Enable development mode | `false` | `true`          |
 | `ATLAS_MOCK_API`     | Use mock API responses  | `false` | `true`          |
-| `SKIP_API_KEY_CHECK` | Skip API key validation | `false` | `true`          |
 | `ATLAS_ENV_PATH`     | Path to .env file       | `.env`  | `/path/to/.env` |
+
+Note: API key validation is now controlled through command-line arguments and provider requirements, not through environment variables.
 
 ## Using .env Files
 

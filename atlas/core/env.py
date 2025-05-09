@@ -5,16 +5,29 @@ This module provides a centralized way to load and access environment
 variables, with support for .env files, type conversion, validation,
 and default values.
 
+Environment variables are used for application-level configuration such as
+infrastructure settings, logging, telemetry, and API credentials. They should
+not be used for business logic configuration, which should be handled through
+command-line arguments or configuration objects.
+
 Environment variables:
+    # Application Configuration
     ATLAS_ENV_PATH: Path to .env file (default: .env in current directory)
     ATLAS_LOG_LEVEL: Logging level (default: INFO)
+    ATLAS_DB_PATH: Path to ChromaDB database (default: ~/atlas_chroma_db)
+    
+    # Telemetry Configuration
     ATLAS_ENABLE_TELEMETRY: Enable telemetry (default: true)
     ATLAS_TELEMETRY_CONSOLE_EXPORT: Enable console telemetry export (default: true)
     ATLAS_TELEMETRY_LOG_LEVEL: Telemetry log level (default: INFO)
+    
+    # API Credentials
     ANTHROPIC_API_KEY: API key for Anthropic
     OPENAI_API_KEY: API key for OpenAI
     OPENAI_ORGANIZATION: Organization ID for OpenAI (optional)
-    SKIP_API_KEY_CHECK: Skip API key validation (default: false)
+    
+    # Development Settings
+    ATLAS_DEV_MODE: Enable development mode (default: false)
 """
 
 import os
@@ -419,11 +432,6 @@ def validate_api_keys(
         - error: Error message if validation failed
         - key_present: Whether the key is present (but might be invalid)
     """
-    # Temporarily set SKIP_API_KEY_CHECK if requested
-    if skip_validation:
-        original_skip = get_bool("SKIP_API_KEY_CHECK", False)
-        set_env_var("SKIP_API_KEY_CHECK", "true")
-
     try:
         # If no providers specified, check all known providers
         if providers is None:
@@ -486,6 +494,16 @@ def validate_api_keys(
                 }
                 continue
 
+            # If skipping validation, just return that the key is present
+            if skip_validation:
+                results[provider_name] = {
+                    "valid": True,  # Assume valid without checking
+                    "provider": provider_name,
+                    "key_present": True,
+                    "error": None,
+                }
+                continue
+
             # Create provider and validate the key
             try:
                 provider = create_provider(provider_name=provider_name)
@@ -500,10 +518,21 @@ def validate_api_keys(
 
         return results
 
-    finally:
-        # Restore original SKIP_API_KEY_CHECK value if we changed it
-        if skip_validation:
-            set_env_var("SKIP_API_KEY_CHECK", "true" if original_skip else "false")
+    except Exception as e:
+        logger.error(f"Error validating API keys: {e}")
+        # Return basic validation results based on key presence
+        if providers is None:
+            providers = list(PROVIDER_API_KEYS.keys())
+        
+        return {
+            provider: {
+                "valid": has_api_key(provider) if provider != "ollama" else True,
+                "provider": provider,
+                "key_present": has_api_key(provider) if provider != "ollama" else True,
+                "error": str(e) if not has_api_key(provider) and provider != "ollama" else None,
+            }
+            for provider in providers
+        }
 
 
 def validate_required_vars(names: List[str]) -> List[str]:

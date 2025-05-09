@@ -204,50 +204,38 @@ def parse_args():
     return parser.parse_args()
 
 
-def check_environment(provider="anthropic"):
-    """Check for required environment variables based on provider.
+def validate_provider_api_key(provider_name="anthropic"):
+    """Validate that the API key for the given provider is available.
 
     Args:
-        provider: The model provider to use (anthropic, openai, ollama)
+        provider_name: The model provider to validate (anthropic, openai, ollama)
 
     Returns:
-        Boolean indicating if the required environment variables are set.
+        Boolean indicating if the provider can be used (API key available or not needed).
     """
-    if provider == "anthropic":
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            logger.error("ANTHROPIC_API_KEY environment variable is not set.")
-            logger.error("Please set it before running Atlas with Anthropic provider.")
-            logger.error("Example: export ANTHROPIC_API_KEY=your_api_key_here")
-            return False
-    elif provider == "openai":
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            logger.error("OPENAI_API_KEY environment variable is not set.")
-            logger.error("Please set it before running Atlas with OpenAI provider.")
-            logger.error("Example: export OPENAI_API_KEY=your_api_key_here")
-            return False
-    elif provider == "ollama":
-        # No API key required for Ollama, but we should check if it's running
-        try:
-            import requests
-
-            response = requests.get("http://localhost:11434/api/version", timeout=1)
-            if response.status_code != 200:
-                logger.warning(
-                    "Ollama server doesn't appear to be running at http://localhost:11434"
-                )
-                logger.warning("Please start Ollama before running Atlas with Ollama provider.")
-                logger.warning("Example: ollama serve")
-                logger.warning("Continuing anyway, but expect connection errors...")
-        except (requests.RequestException, ImportError) as e:
+    # Import environment utilities 
+    from atlas.core import env
+    
+    # Check if the provider is available
+    provider_status = env.validate_provider_requirements([provider_name])
+    
+    if not provider_status.get(provider_name, False):
+        if provider_name == "ollama":
             logger.warning(
-                f"Could not connect to Ollama server at http://localhost:11434 - {str(e)}"
+                "Ollama server doesn't appear to be running at http://localhost:11434"
             )
-            logger.warning("Please make sure Ollama is installed and running.")
+            logger.warning("Please start Ollama before running Atlas with Ollama provider.")
             logger.warning("Example: ollama serve")
             logger.warning("Continuing anyway, but expect connection errors...")
-
+            return True  # Still allow Ollama even if server is not running
+        else:
+            # API key is required but not available
+            env_var_name = f"{provider_name.upper()}_API_KEY"
+            logger.error(f"{env_var_name} environment variable is not set.")
+            logger.error(f"Please set it before running Atlas with {provider_name} provider.")
+            logger.error(f"Example: export {env_var_name}=your_api_key_here")
+            return False
+    
     return True
 
 
@@ -717,25 +705,28 @@ def main():
 
     # Check if user wants to list available models
     if hasattr(args, 'models') and args.models:
-        # Check environment first for the API key
-        if not check_environment(args.provider):
+        # Validate API key availability
+        if not validate_provider_api_key(args.provider):
             sys.exit(1)
             
         success = list_available_models(args.provider)
         sys.exit(0 if success else 1)
 
-    # For ingest mode, we only need to check the API key if using Anthropic embeddings
-    if args.mode == "ingest" and hasattr(args, 'embedding') and args.embedding == "anthropic":
-        if args.provider != "anthropic":
-            logger.warning("Setting provider to 'anthropic' since Anthropic embeddings were requested")
-            args.provider = "anthropic"
-        
-        if not check_environment("anthropic"):
-            logger.error("Anthropic API key is required for Anthropic embeddings")
+    # Handle different operation modes
+    if args.mode == "ingest":
+        # For ingest mode, validate API key only if using Anthropic embeddings
+        if hasattr(args, 'embedding') and args.embedding == "anthropic":
+            if args.provider != "anthropic":
+                logger.warning("Setting provider to 'anthropic' since Anthropic embeddings were requested")
+                args.provider = "anthropic"
+            
+            if not validate_provider_api_key("anthropic"):
+                logger.error("Anthropic API key is required for Anthropic embeddings")
+                sys.exit(1)
+    else:
+        # For other modes, validate API key for the selected provider
+        if not validate_provider_api_key(args.provider):
             sys.exit(1)
-    # For other modes, check environment based on selected provider
-    elif args.mode != "ingest" and not check_environment(args.provider):
-        sys.exit(1)
 
     # Run the appropriate mode
     success = True
