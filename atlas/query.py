@@ -104,17 +104,28 @@ class AtlasQuery:
         response = self.agent.process_message(query_text)
 
         # Format the response with context
+        formatted_docs = []
+        for doc in documents[:3]:  # Include top 3 documents
+            if hasattr(doc, 'to_dict'):
+                # It's a RetrievalResult object
+                doc_dict = doc.to_dict()
+                formatted_docs.append({
+                    "content": doc_dict["content"],
+                    "source": doc_dict["metadata"].get("source", "Unknown"),
+                    "relevance_score": doc_dict["relevance_score"],
+                })
+            else:
+                # It's a dictionary
+                formatted_docs.append({
+                    "content": doc["content"],
+                    "source": doc["metadata"].get("source", "Unknown"),
+                    "relevance_score": doc["relevance_score"],
+                })
+                
         return {
             "response": response,
             "context": {
-                "documents": [
-                    {
-                        "content": doc["content"],
-                        "source": doc["metadata"].get("source", "Unknown"),
-                        "relevance_score": doc["relevance_score"],
-                    }
-                    for doc in documents[:3]  # Include top 3 documents
-                ],
+                "documents": formatted_docs,
                 "query": query_text,
             },
         }
@@ -170,14 +181,20 @@ class AtlasQuery:
         documents = self.knowledge_base.retrieve(query_text)
 
         # Format and return documents
-        return [
-            {
-                "content": doc["content"],
-                "metadata": doc["metadata"],
-                "relevance_score": doc["relevance_score"],
-            }
-            for doc in documents
-        ]
+        result = []
+        for doc in documents:
+            # Handle both dictionary-like and RetrievalResult objects
+            if hasattr(doc, 'to_dict'):
+                # It's a RetrievalResult object
+                result.append(doc.to_dict())
+            else:
+                # It's already a dictionary
+                result.append({
+                    "content": doc["content"],
+                    "metadata": doc["metadata"],
+                    "relevance_score": doc["relevance_score"],
+                })
+        return result
 
 
 # Convenience factory function

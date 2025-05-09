@@ -46,22 +46,19 @@ def demonstrate_client_streaming(use_mock: bool = False) -> None:
     """Demonstrate streaming using the Atlas query client.
     
     Args:
-        use_mock: If True, use mock mode without API key.
+        use_mock: If True, use mock provider without API key.
     """
     print("\n" + "="*50)
     print("DEMO 1: Streaming using Atlas Query Client")
     print("="*50)
-
-    # Set environment for testing if needed
-    if use_mock:
-        os.environ["SKIP_API_KEY_CHECK"] = "true"
     
-    # Create a client
-    client = create_query_client()
+    # Create a client with the appropriate provider
+    provider_name = "mock" if use_mock else "anthropic"
+    client = create_query_client(provider_name=provider_name)
 
     # Use a simple query
     query = "What is the trimodal methodology in Atlas?"
-    print(f"Query: {query}")
+    print(f"Query: {query} (using {provider_name} provider)")
 
     try:
         print("\nStreaming Response:")
@@ -92,8 +89,12 @@ def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str]
     Args:
         provider_name: The name of the provider to use ("anthropic", "openai", "ollama", or "mock").
         model_name: Optional model name to use.
-        use_mock: If True, use mock mode without API key.
+        use_mock: If True, override provider_name with "mock".
     """
+    # Override provider if use_mock is True
+    if use_mock:
+        provider_name = "mock"
+        
     print("\n" + "="*50)
     print(f"DEMO 2: Direct Streaming with {provider_name.capitalize()} Provider")
     print("="*50)
@@ -121,10 +122,6 @@ def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str]
     
     # Get configuration for the selected provider
     config = provider_configs.get(provider_name, {})
-    
-    # Set environment for testing if needed
-    if use_mock:
-        os.environ["SKIP_API_KEY_CHECK"] = "true"
     
     # Create the provider
     try:
@@ -184,7 +181,7 @@ def main():
     parser.add_argument("--model", "-m", type=str, default=None,
                        help="The model to use (default: provider-specific)")
     parser.add_argument("--mock", action="store_true",
-                       help="Use mock mode without API key")
+                       help="Override provider selection and use mock provider (no API key required)")
     
     args = parser.parse_args()
     

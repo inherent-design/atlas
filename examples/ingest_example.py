@@ -32,14 +32,37 @@ def main():
                         help="Collection name for document storage")
     parser.add_argument("--recursive", action="store_true", default=True,
                         help="Process subdirectories recursively")
+    parser.add_argument("--embedding", type=str, choices=["default", "anthropic", "hybrid"],
+                        default="default", help="Embedding strategy to use")
+    parser.add_argument("--no-dedup", action="store_true",
+                        help="Disable content deduplication")
+    parser.add_argument("--db-path", type=str,
+                        help="Path to ChromaDB database directory")
     
     args = parser.parse_args()
     
     print(f"Starting document ingestion from: {args.directory}")
     print(f"Using collection: {args.collection}")
     
-    # Create document processor
-    processor = DocumentProcessor(collection_name=args.collection)
+    # Set up embedding strategy and get API key if needed
+    anthropic_api_key = None
+    if args.embedding == "anthropic":
+        # If we're using Anthropic for embeddings, get the API key
+        from atlas.core import env
+        anthropic_api_key = env.get_api_key("anthropic")
+        if not anthropic_api_key:
+            print("Error: Anthropic API key required for Anthropic embeddings")
+            print("Please set the ANTHROPIC_API_KEY environment variable")
+            return
+    
+    # Create document processor with specified options
+    processor = DocumentProcessor(
+        collection_name=args.collection,
+        db_path=args.db_path,
+        enable_deduplication=not args.no_dedup,
+        embedding_strategy=args.embedding,
+        anthropic_api_key=anthropic_api_key,
+    )
     
     # Process the directory
     processor.process_directory(args.directory, recursive=args.recursive)

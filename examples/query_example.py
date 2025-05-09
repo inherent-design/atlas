@@ -35,13 +35,19 @@ def print_streaming(delta: str, full_text: str) -> None:
 
 def main():
     """Run the example."""
-    # Use mock responses for testing
-    os.environ["SKIP_API_KEY_CHECK"] = "true"
+    # Parse command line arguments for provider
+    import argparse
+    parser = argparse.ArgumentParser(description="Atlas Query Client Example")
+    parser.add_argument("--provider", type=str, default="mock", 
+                        choices=["mock", "anthropic", "openai", "ollama"],
+                        help="Model provider to use (default: mock)")
+    parser.add_argument("--model", type=str, help="Specific model to use")
+    args = parser.parse_args()
 
-    # Create a query client
-    print("Initializing Atlas query client...")
+    # Create a query client with the specified provider
+    print(f"Initializing Atlas query client with {args.provider} provider...")
     try:
-        client = create_query_client()
+        client = create_query_client(provider_name=args.provider, model_name=args.model)
     except Exception as e:
         print(f"Error initializing query client: {e}")
         return
@@ -59,7 +65,8 @@ def main():
         print(response)
     except Exception as e:
         print(f"Error processing query: {e}")
-        print("This error might occur if you don't have a valid API key")
+        print("This error might occur if you're using a provider without a valid API key")
+        print("Try running with '--provider mock' for API-free testing")
         print("However, we can still demonstrate document retrieval functionality")
 
     # Example 2: Query with context - focus on document retrieval
@@ -72,9 +79,21 @@ def main():
 
     print("Documents Retrieved:")
     for i, doc in enumerate(documents[:3]):  # Show top 3
-        print(f"Document {i+1}: {doc['metadata'].get('source', 'Unknown')}")
-        print(f"Relevance: {doc['relevance_score']:.4f}")
-        print(f"Excerpt: {doc['content'][:150]}...\n")
+        # Handle both dictionary and RetrievalResult formats
+        if hasattr(doc, 'metadata'):
+            # It's a RetrievalResult object
+            source = doc.metadata.get('source', 'Unknown')
+            relevance = doc.relevance_score
+            content = doc.content
+        else:
+            # It's a dictionary
+            source = doc['metadata'].get('source', 'Unknown')
+            relevance = doc['relevance_score']
+            content = doc['content']
+            
+        print(f"Document {i+1}: {source}")
+        print(f"Relevance: {relevance:.4f}")
+        print(f"Excerpt: {content[:150]}...\n")
 
     # Example 3: Streaming response
     print("\n### Example 3: Streaming Response ###")
@@ -87,6 +106,8 @@ def main():
         print("\n")
     except Exception as e:
         print(f"Error processing streaming query: {e}")
+        print("This error might occur if you're using a provider without a valid API key")
+        print("Try running with '--provider mock' for API-free testing")
 
         # Fallback to document retrieval
         print("\nFalling back to document retrieval:")
@@ -94,9 +115,21 @@ def main():
 
         print("Documents Retrieved:")
         for i, doc in enumerate(documents[:3]):  # Show top 3
-            print(f"Document {i+1}: {doc['metadata'].get('source', 'Unknown')}")
-            print(f"Relevance: {doc['relevance_score']:.4f}")
-            print(f"Excerpt: {doc['content'][:150]}...\n")
+            # Handle both dictionary and RetrievalResult formats
+            if hasattr(doc, 'metadata'):
+                # It's a RetrievalResult object
+                source = doc.metadata.get('source', 'Unknown')
+                relevance = doc.relevance_score
+                content = doc.content
+            else:
+                # It's a dictionary
+                source = doc['metadata'].get('source', 'Unknown')
+                relevance = doc['relevance_score']
+                content = doc['content']
+                
+            print(f"Document {i+1}: {source}")
+            print(f"Relevance: {relevance:.4f}")
+            print(f"Excerpt: {content[:150]}...\n")
 
     # Example 4: Retrieve only with a different query
     print("\n### Example 4: Final Knowledge Retrieval Example ###")
@@ -107,9 +140,21 @@ def main():
     print(f"Found {len(documents)} relevant documents:")
 
     for i, doc in enumerate(documents[:3]):  # Show top 3
-        print(f"\nDocument {i+1}: {doc['metadata'].get('source', 'Unknown')}")
-        print(f"Relevance: {doc['relevance_score']:.4f}")
-        print(f"Excerpt: {doc['content'][:150]}...")
+        # Handle both dictionary and RetrievalResult formats
+        if hasattr(doc, 'metadata'):
+            # It's a RetrievalResult object
+            source = doc.metadata.get('source', 'Unknown')
+            relevance = doc.relevance_score
+            content = doc.content
+        else:
+            # It's a dictionary
+            source = doc['metadata'].get('source', 'Unknown')
+            relevance = doc['relevance_score']
+            content = doc['content']
+            
+        print(f"\nDocument {i+1}: {source}")
+        print(f"Relevance: {relevance:.4f}")
+        print(f"Excerpt: {content[:150]}...")
 
     # Example 5: Stream with context
     print("\n### Example 5: Stream with Context ###")
@@ -127,6 +172,8 @@ def main():
         print("\n")
     except Exception as e:
         print(f"Error processing streaming query with context: {e}")
+        print("This error might occur if you're using a provider without a valid API key")
+        print("Try running with '--provider mock' for API-free testing")
 
     print("\n--- End of Examples ---\n")
 
