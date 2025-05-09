@@ -69,33 +69,33 @@ Atlas is an open source framework that empowers organizations to build sophistic
 
 ### vs. LangChain/LlamaIndex
 
-| Atlas | LangChain/LlamaIndex |
-|-------|----------------------|
-| Knowledge-first design with advanced document processing | Basic document handling with more general focus |
-| Sophisticated multi-agent orchestration | Limited multi-agent capabilities |
-| Enterprise-grade reliability features | More developer-focused than enterprise-ready |
+| Atlas                                                    | LangChain/LlamaIndex                                      |
+| -------------------------------------------------------- | --------------------------------------------------------- |
+| Knowledge-first design with advanced document processing | Basic document handling with more general focus           |
+| Sophisticated multi-agent orchestration                  | Limited multi-agent capabilities                          |
+| Enterprise-grade reliability features                    | More developer-focused than enterprise-ready              |
 | Unified provider interface with performance optimization | Provider integrations with varying implementation quality |
-| Comprehensive cost tracking and optimization | Basic cost tracking features |
+| Comprehensive cost tracking and optimization             | Basic cost tracking features                              |
 
 ### vs. Proprietary Solutions (Claude, GPT)
 
-| Atlas | Proprietary Solutions |
-|-------|----------------------|
-| Provider independence | Single-provider lock-in |
-| Full control over knowledge and implementation | Black-box approach |
-| Customizable to specific workflows | Limited workflow customization |
-| On-premises deployment option | Cloud-only deployments |
-| Open source core with transparent operation | Closed source with limited transparency |
+| Atlas                                          | Proprietary Solutions                   |
+| ---------------------------------------------- | --------------------------------------- |
+| Provider independence                          | Single-provider lock-in                 |
+| Full control over knowledge and implementation | Black-box approach                      |
+| Customizable to specific workflows             | Limited workflow customization          |
+| On-premises deployment option                  | Cloud-only deployments                  |
+| Open source core with transparent operation    | Closed source with limited transparency |
 
 ### vs. Simple RAG Solutions
 
-| Atlas | Simple RAG Solutions |
-|-------|----------------------|
-| Multi-stage retrieval with reranking | Basic single-pass retrieval |
-| Advanced document processing with semantic boundaries | Simple fixed-size chunking |
-| Multi-agent workflows | Single-agent architecture |
-| Sophisticated metadata management | Limited or no metadata capabilities |
-| Enterprise features and monitoring | Limited production capabilities |
+| Atlas                                                 | Simple RAG Solutions                |
+| ----------------------------------------------------- | ----------------------------------- |
+| Multi-stage retrieval with reranking                  | Basic single-pass retrieval         |
+| Advanced document processing with semantic boundaries | Simple fixed-size chunking          |
+| Multi-agent workflows                                 | Single-agent architecture           |
+| Sophisticated metadata management                     | Limited or no metadata capabilities |
+| Enterprise features and monitoring                    | Limited production capabilities     |
 
 ## Use Cases
 
@@ -158,7 +158,7 @@ pip install atlas-framework
 
 # Initialize with your preferred provider
 from atlas import create_query_client
-from atlas.models.factory import create_provider
+from atlas.providers.factory import create_provider
 
 # Create a provider with your API key
 provider = create_provider("anthropic", api_key="your_api_key")

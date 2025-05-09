@@ -31,10 +31,10 @@ os.environ["SKIP_API_KEY_CHECK"] = "true"
 def main():
     """Run a multi-agent workflow example."""
     print("Initializing Atlas multi-agent workflow...")
-    
+
     # Create a configuration
     config = AtlasConfig()
-    
+
     # Create a controller agent
     controller = ControllerAgent(
         config=config,
@@ -42,32 +42,32 @@ def main():
         system_prompt_file=None,  # Use default system prompt
         provider_name="anthropic"
     )
-    
+
     # Define a complex task
     task = """
     Analyze the following aspects of Atlas's Knowledge Graph structure:
     1. Core entity types
     2. Relationship patterns
     3. How it integrates with the Trimodal methodology
-    
+
     Provide a comprehensive analysis with specific examples.
     """
-    
+
     print(f"\nTask: {task}\n")
     print("Processing with multi-agent workflow...")
-    
+
     # Process the task using multi-agent workflow
     try:
         response = controller.process_task(task)
         print("\nFinal Response:\n")
         print(response)
-        
+
         # Access worker contributions (in a real example)
         # print("\nWorker Contributions:")
         # for worker_type, contribution in controller.get_worker_contributions().items():
         #     print(f"\n{worker_type.capitalize()} contribution:")
         #     print(contribution[:300] + "..." if len(contribution) > 300 else contribution)
-        
+
     except Exception as e:
         print(f"Error in multi-agent workflow: {e}")
 
@@ -94,7 +94,7 @@ from pydantic import BaseModel, Field
 
 from langgraph.graph import StateGraph, END
 from atlas.core.config import AtlasConfig
-from atlas.models.factory import get_model_provider
+from atlas.providers.factory import get_model_provider
 from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.graph.state import AgentState
 
@@ -115,10 +115,10 @@ def retrieve_documents(state: CustomState) -> CustomState:
     """Retrieve relevant documents for the query."""
     # Create knowledge base
     kb = KnowledgeBase()
-    
+
     # Get documents
     documents = kb.retrieve(state.query)
-    
+
     # Update state
     state.context = [
         {
@@ -128,58 +128,58 @@ def retrieve_documents(state: CustomState) -> CustomState:
         }
         for doc in documents[:5]  # Top 5 documents
     ]
-    
+
     return state
 
 def analyze_context(state: CustomState) -> CustomState:
     """Analyze the context documents."""
     # Create a model provider for analysis
     provider = get_model_provider("anthropic")
-    
+
     # Create prompt for analysis
     docs_text = "\n\n".join([
         f"Document {i+1} (Source: {doc['source']}):\n{doc['content']}"
         for i, doc in enumerate(state.context)
     ])
-    
+
     prompt = f"""
     Based on these documents, analyze the key information relevant to: {state.query}
-    
+
     Documents:
     {docs_text}
-    
+
     Provide a concise analysis highlighting the most important points for answering the query.
     """
-    
+
     # Get analysis
     analysis = provider.generate(prompt)
-    
+
     # Update state
     state.intermediate_analysis = analysis
-    
+
     return state
 
 def generate_response(state: CustomState) -> CustomState:
     """Generate the final response."""
     # Create a model provider for response generation
     provider = get_model_provider("anthropic")
-    
+
     # Create prompt for final response
     prompt = f"""
     Query: {state.query}
-    
+
     Context analysis:
     {state.intermediate_analysis}
-    
+
     Based on this analysis, provide a comprehensive answer to the original query.
     """
-    
+
     # Generate response
     response = provider.generate(prompt)
-    
+
     # Update state
     state.final_response = response
-    
+
     return state
 
 def decide_next_step(state: CustomState) -> str:
@@ -196,43 +196,43 @@ def decide_next_step(state: CustomState) -> str:
 def main():
     """Run a custom workflow example."""
     print("Initializing custom LangGraph workflow...")
-    
+
     # Build the workflow graph
     workflow = StateGraph(CustomState)
-    
+
     # Add nodes
     workflow.add_node("retrieve_documents", retrieve_documents)
     workflow.add_node("analyze_context", analyze_context)
     workflow.add_node("generate_response", generate_response)
-    
+
     # Add conditional edges
     workflow.add_conditional_edges("", decide_next_step)
     workflow.add_conditional_edges("retrieve_documents", decide_next_step)
     workflow.add_conditional_edges("analyze_context", decide_next_step)
     workflow.add_conditional_edges("generate_response", decide_next_step)
-    
+
     # Compile the graph
     app = workflow.compile()
-    
+
     # Run the workflow
     try:
         query = "How do knowledge graphs integrate with the trimodal methodology in Atlas?"
         print(f"Query: {query}\n")
-        
+
         # Initialize state
         initial_state = CustomState(query=query)
-        
+
         # Run the workflow
         for state in app.stream(initial_state):
             step = list(state.keys())[0] if state else "Starting"
             print(f"Step: {step}")
-        
+
         # Get final state
         final_state = app.get_state()
-        
+
         print("\nFinal Response:\n")
         print(final_state.final_response)
-        
+
     except Exception as e:
         print(f"Error in custom workflow: {e}")
 
@@ -297,41 +297,41 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
-            
+
             if message["type"] == "query":
                 query = message["query"]
-                
+
                 # Notify client that processing has started
                 await websocket.send_text(json.dumps({
                     "type": "start",
                     "query": query
                 }))
-                
+
                 try:
                     # Process query with streaming
                     from functools import partial
                     callback = partial(streaming_callback, websocket=websocket)
-                    
+
                     # Run in try/except to handle errors
                     try:
                         response = client.query_streaming(query, callback)
-                        
+
                         # Send completion message
                         await websocket.send_text(json.dumps({
                             "type": "complete",
                             "response": response
                         }))
-                        
+
                     except Exception as e:
                         # Send error message
                         await websocket.send_text(json.dumps({
                             "type": "error",
                             "message": str(e)
                         }))
-                        
+
                         # Fall back to document retrieval
                         documents = client.retrieve_only(query)
-                        
+
                         # Send documents
                         await websocket.send_text(json.dumps({
                             "type": "documents",
@@ -344,14 +344,14 @@ async def websocket_endpoint(websocket: WebSocket):
                                 for doc in documents[:5]  # Top 5 documents
                             ]
                         }))
-                        
+
                 except Exception as e:
                     logging.error(f"Error processing query: {e}")
                     await websocket.send_text(json.dumps({
                         "type": "error",
                         "message": f"Error processing query: {str(e)}"
                     }))
-            
+
     except WebSocketDisconnect:
         active_connections.remove(websocket)
     except Exception as e:
@@ -390,7 +390,7 @@ async def query_endpoint(request: Dict[str, Any]):
     """Process a query and return a response."""
     query = request.get("query", "")
     with_context = request.get("with_context", False)
-    
+
     try:
         if with_context:
             result = client.query_with_context(query)
@@ -476,7 +476,7 @@ def cli(ctx, provider, model, db_path, collection, verbose):
     # Set up logging based on verbosity
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     # Create config
     ctx.obj = {
         "provider": provider,
@@ -498,31 +498,31 @@ def query(ctx, query, stream, context, format):
     try:
         with Progress() as progress:
             task = progress.add_task("[green]Initializing Atlas...", total=1)
-            
+
             client = create_query_client(
                 provider_name=ctx.obj["provider"],
                 model_name=ctx.obj["model"],
                 db_path=ctx.obj["db_path"],
                 collection_name=ctx.obj["collection"]
             )
-            
+
             progress.update(task, advance=1)
-        
+
         console.print(f"\n[bold blue]Query:[/bold blue] {query}\n")
-        
+
         if context:
             # Get response with context
             with Progress() as progress:
                 task = progress.add_task("[green]Processing query with context...", total=1)
                 result = client.query_with_context(query)
                 progress.update(task, advance=1)
-            
+
             # Format and display response
             if format == "json":
                 console.print(json.dumps(result, indent=2))
             elif format == "markdown":
                 console.print(Markdown(result["response"]))
-                
+
                 console.print("\n[bold blue]Context Documents:[/bold blue]")
                 for i, doc in enumerate(result["context"]["documents"]):
                     console.print(Panel(
@@ -539,24 +539,24 @@ def query(ctx, query, stream, context, format):
                     console.print(f"Document {i+1}: {doc['source']}")
                     console.print(f"Relevance: {doc['relevance_score']:.4f}")
                     console.print(f"Excerpt: {doc['content'][:300]}...")
-        
+
         elif stream:
             # Stream the response
             console.print("[bold green]Response:[/bold green]")
-            
+
             def print_stream(delta, full_text):
                 console.print(delta, end="")
-            
+
             client.query_streaming(query, print_stream)
             console.print("\n")
-        
+
         else:
             # Get standard response
             with Progress() as progress:
                 task = progress.add_task("[green]Processing query...", total=1)
                 response = client.query(query)
                 progress.update(task, advance=1)
-            
+
             # Format and display response
             if format == "json":
                 console.print(json.dumps({"response": response}, indent=2))
@@ -564,7 +564,7 @@ def query(ctx, query, stream, context, format):
                 console.print(Markdown(response))
             else:
                 console.print(response)
-    
+
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
         if ctx.obj["verbose"]:
@@ -583,29 +583,29 @@ def retrieve(ctx, query, limit, format):
     try:
         with Progress() as progress:
             task = progress.add_task("[green]Initializing Atlas...", total=1)
-            
+
             client = create_query_client(
                 provider_name=ctx.obj["provider"],
                 model_name=ctx.obj["model"],
                 db_path=ctx.obj["db_path"],
                 collection_name=ctx.obj["collection"]
             )
-            
+
             progress.update(task, advance=1)
-        
+
         console.print(f"\n[bold blue]Query:[/bold blue] {query}\n")
-        
+
         # Retrieve documents
         with Progress() as progress:
             task = progress.add_task("[green]Retrieving documents...", total=1)
             documents = client.retrieve_only(query)
             progress.update(task, advance=1)
-        
+
         # Limit to requested number
         documents = documents[:limit]
-        
+
         console.print(f"[bold green]Found {len(documents)} relevant documents:[/bold green]\n")
-        
+
         # Format and display documents
         if format == "json":
             console.print(json.dumps({
@@ -633,7 +633,7 @@ def retrieve(ctx, query, limit, format):
                 console.print(f"Relevance: {doc['relevance_score']:.4f}")
                 console.print(f"Content: {doc['content'][:300]}...")
                 console.print("")
-    
+
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
         if ctx.obj["verbose"]:
@@ -647,23 +647,23 @@ def retrieve(ctx, query, limit, format):
 def check(ctx, provider):
     """Check the status of Atlas components and providers."""
     console.print("[bold blue]Atlas Component Check[/bold blue]\n")
-    
+
     # Check knowledge base
     try:
         from atlas.knowledge.retrieval import KnowledgeBase
-        
+
         console.print("[bold]Checking Knowledge Base...[/bold]")
         db_path = ctx.obj["db_path"]
         collection = ctx.obj["collection"]
-        
+
         kb = KnowledgeBase(
             db_path=db_path,
             collection_name=collection
         )
-        
+
         # Get collection info
         collection_info = kb.get_collection_info()
-        
+
         console.print(Panel(
             f"[bold]DB Path:[/bold] {kb.db_path}\n" +
             f"[bold]Collection:[/bold] {kb.collection_name}\n" +
@@ -677,29 +677,29 @@ def check(ctx, provider):
             title="Knowledge Base",
             border_style="red"
         ))
-    
+
     # Check providers
     console.print("\n[bold]Checking Model Providers...[/bold]")
-    
+
     providers_to_check = []
     if provider == "all":
         providers_to_check = ["anthropic", "openai", "ollama"]
     else:
         providers_to_check = [provider]
-    
+
     for prov in providers_to_check:
         try:
-            from atlas.models.factory import get_model_provider
-            
+            from atlas.providers.factory import get_model_provider
+
             # Skip API key check for demo
             os.environ["SKIP_API_KEY_CHECK"] = "true"
-            
+
             # Try to initialize the provider
             model_provider = get_model_provider(prov)
-            
+
             # Get available models
             available_models = model_provider.get_available_models()
-            
+
             console.print(Panel(
                 f"[bold]Status:[/bold] Available\n" +
                 f"[bold]Default Model:[/bold] {model_provider.model_name}\n" +
@@ -738,7 +738,7 @@ import json
 
 from atlas.agents.base import BaseAgent
 from atlas.core.config import AtlasConfig
-from atlas.models.factory import get_model_provider
+from atlas.providers.factory import get_model_provider
 from atlas.knowledge.retrieval import KnowledgeBase
 
 # Configure logging
@@ -746,7 +746,7 @@ logging.basicConfig(level=logging.INFO)
 
 class SpecializedAnalysisAgent(BaseAgent):
     """Custom agent specialized for in-depth document analysis."""
-    
+
     def __init__(
         self,
         system_prompt_file: Optional[str] = None,
@@ -757,7 +757,7 @@ class SpecializedAnalysisAgent(BaseAgent):
         analysis_depth: str = "standard"  # Can be "standard", "deep", or "comprehensive"
     ):
         """Initialize the specialized analysis agent.
-        
+
         Args:
             system_prompt_file: Path to the system prompt file
             collection_name: Name of the collection in the knowledge base
@@ -774,16 +774,16 @@ class SpecializedAnalysisAgent(BaseAgent):
             provider_name=provider_name,
             model_name=model_name
         )
-        
+
         # Set analysis depth
         self.analysis_depth = analysis_depth
-        
+
         # Create knowledge base
         self.knowledge_base = KnowledgeBase(
             collection_name=self.collection_name,
             db_path=self.config.db_path
         )
-        
+
         # Set up additional settings based on analysis depth
         if analysis_depth == "deep":
             self.document_count = 10
@@ -794,24 +794,24 @@ class SpecializedAnalysisAgent(BaseAgent):
         else:  # standard
             self.document_count = 5
             self.max_tokens = 1000
-        
+
         logging.info(f"Initialized specialized analysis agent with {analysis_depth} depth")
-    
+
     def process_message(self, message: str) -> str:
         """Process a user message and return a response.
-        
+
         Args:
             message: The user message to process
-            
+
         Returns:
             The agent's response
         """
         # Retrieve documents
         documents = self.knowledge_base.retrieve(message)
-        
+
         # Limit to document count
         documents = documents[:self.document_count]
-        
+
         # Extract content and metadata
         docs_with_metadata = []
         for doc in documents:
@@ -820,7 +820,7 @@ class SpecializedAnalysisAgent(BaseAgent):
                 "source": doc["metadata"].get("source", "Unknown"),
                 "relevance": doc["relevance_score"]
             })
-        
+
         # Generate a prompt based on analysis depth
         if self.analysis_depth == "deep":
             analysis_instructions = """
@@ -849,45 +849,45 @@ class SpecializedAnalysisAgent(BaseAgent):
             2. Key concepts related to the query
             3. A synthesized response that integrates the information
             """
-        
+
         # Create the prompt
         prompt = f"""
         Query: {message}
-        
+
         Analysis Type: {self.analysis_depth.upper()}
-        
+
         {analysis_instructions}
-        
+
         Documents:
         {json.dumps(docs_with_metadata, indent=2)}
-        
+
         Please provide your {self.analysis_depth} analysis based on these documents.
         """
-        
+
         # Generate the response
         response = self.provider.generate(
-            prompt, 
+            prompt,
             max_tokens=self.max_tokens
         )
-        
+
         return response
-    
+
     def process_message_streaming(
         self, message: str, callback: Callable[[str, str], None]
     ) -> str:
         """Process a message with streaming response.
-        
+
         Args:
             message: The user message to process
             callback: Function to call with each chunk of the response
-            
+
         Returns:
             The complete response
         """
         # Retrieve documents (same as non-streaming)
         documents = self.knowledge_base.retrieve(message)
         documents = documents[:self.document_count]
-        
+
         docs_with_metadata = []
         for doc in documents:
             docs_with_metadata.append({
@@ -895,7 +895,7 @@ class SpecializedAnalysisAgent(BaseAgent):
                 "source": doc["metadata"].get("source", "Unknown"),
                 "relevance": doc["relevance_score"]
             })
-        
+
         # Generate the same prompt as non-streaming
         if self.analysis_depth == "deep":
             analysis_instructions = """
@@ -924,20 +924,20 @@ class SpecializedAnalysisAgent(BaseAgent):
             2. Key concepts related to the query
             3. A synthesized response that integrates the information
             """
-        
+
         prompt = f"""
         Query: {message}
-        
+
         Analysis Type: {self.analysis_depth.upper()}
-        
+
         {analysis_instructions}
-        
+
         Documents:
         {json.dumps(docs_with_metadata, indent=2)}
-        
+
         Please provide your {self.analysis_depth} analysis based on these documents.
         """
-        
+
         # Use the provider's streaming method
         return self.provider.generate_streaming(
             prompt,
@@ -949,42 +949,42 @@ class SpecializedAnalysisAgent(BaseAgent):
 def register_custom_agent():
     """Register the custom agent with the agent registry."""
     from atlas.agents.registry import AgentRegistry
-    
+
     # Register the agent class
     AgentRegistry.register(
         "specialized_analysis",
         SpecializedAnalysisAgent,
         description="Specialized agent for in-depth document analysis with configurable depth"
     )
-    
+
     logging.info("Registered specialized analysis agent with registry")
 
 # Example usage
 def main():
     """Demonstrate the custom agent."""
     import os
-    
+
     # Enable test mode for example purposes
     os.environ["SKIP_API_KEY_CHECK"] = "true"
-    
+
     # Register the custom agent
     register_custom_agent()
-    
+
     # Create a configuration
     config = AtlasConfig()
-    
+
     # Create the custom agent
     agent = SpecializedAnalysisAgent(
         config=config,
         provider_name="anthropic",
         analysis_depth="deep"
     )
-    
+
     # Process a message
     query = "How does Atlas's knowledge graph structure support the trimodal methodology?"
     print(f"Query: {query}")
     print("\nGenerating deep analysis...")
-    
+
     response = agent.process_message(query)
     print("\nAnalysis:\n")
     print(response)

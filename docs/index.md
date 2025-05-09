@@ -74,8 +74,9 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 #### Developer Guides
 - **[Getting Started](./guides/getting_started.md)**: Quick start for new developers
 - **[Configuration](./guides/configuration.md)**: Configuring Atlas for your needs
-- **[Testing](./guides/testing.md)**: Testing strategies and tools
+- **[Testing](./guides/testing.md)** 🚧: Testing strategies and tools (planned architecture)
 - **[Type Checking](./guides/type_checking.md)**: Type safety and validation
+- **[Examples](./guides/examples/)**: Practical demonstrations of Atlas functionality
 
 #### Project Management
 - **[MVP Strategy](./project-management/roadmap/mvp_strategy.md)**: Implementation approach for MVP

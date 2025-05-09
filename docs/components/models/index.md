@@ -187,8 +187,8 @@ def discover_providers() -> Dict[str, List[str]]:
 Here's how to use the Model Provider System directly:
 
 ```python
-from atlas.models.factory import create_provider
-from atlas.models.base import ModelRequest, ModelMessage
+from atlas.providers.factory import create_provider
+from atlas.providers.base import ModelRequest, ModelMessage
 
 # Create a provider instance
 provider = create_provider(

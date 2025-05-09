@@ -4,7 +4,7 @@ This document details the Anthropic provider implementation in Atlas, which inte
 
 ## Overview
 
-The `AnthropicProvider` class in `atlas.models.anthropic` implements the `ModelProvider` interface to provide access to Anthropic's Claude models. This provider enables Atlas to use state-of-the-art Claude models for knowledge-augmented generation.
+The `AnthropicProvider` class in `atlas.providers.anthropic` implements the `ModelProvider` interface to provide access to Anthropic's Claude models. This provider enables Atlas to use state-of-the-art Claude models for knowledge-augmented generation.
 
 ```mermaid
 classDiagram
@@ -60,7 +60,7 @@ The provider supports the following Anthropic Claude models:
 The Anthropic provider can be initialized with various configuration options:
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
+from atlas.providers.anthropic import AnthropicProvider
 
 # Default initialization
 provider = AnthropicProvider()
@@ -86,8 +86,8 @@ uv add anthropic
 ### Generating Text
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.anthropic import AnthropicProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = AnthropicProvider()
@@ -115,8 +115,8 @@ print(f"Estimated cost: ${response.cost_estimate.total_cost:.6f}")
 ### Streaming Generation
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.anthropic import AnthropicProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = AnthropicProvider()
@@ -148,8 +148,8 @@ print("\nStreaming completed")
 You can easily switch between different Claude models based on performance needs and cost considerations:
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.anthropic import AnthropicProvider
+from atlas.providers.base import ModelRequest
 
 # For high-performance tasks
 opus_provider = AnthropicProvider(model_name="claude-3-opus-20240229")
@@ -179,8 +179,8 @@ print(f"Cost: ${response.cost_estimate.total_cost:.6f}")
 The provider includes built-in cost estimation based on current Anthropic pricing:
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
-from atlas.models.base import TokenUsage
+from atlas.providers.anthropic import AnthropicProvider
+from atlas.providers.base import TokenUsage
 
 # Create provider
 provider = AnthropicProvider(model_name="claude-3-opus-20240229")
@@ -206,7 +206,7 @@ Current pricing (as of 2025):
 The provider implements robust error handling using Atlas's error system:
 
 ```python
-from atlas.models.anthropic import AnthropicProvider
+from atlas.providers.anthropic import AnthropicProvider
 from atlas.core.errors import APIError, AuthenticationError
 
 try:
@@ -336,17 +336,17 @@ If you encounter issues with token usage tracking or cost estimation, check the 
    ```python
    # Track streaming token usage
    tokens_so_far = 0
-   
+
    def token_tracking_callback(delta, response):
        nonlocal tokens_so_far
        print(delta, end="", flush=True)
-       
+
        # Check if token info has been updated
        if hasattr(response, "usage") and response.usage:
            if tokens_so_far != response.usage.output_tokens:
                tokens_so_far = response.usage.output_tokens
                print(f"\n[Generated {tokens_so_far} tokens so far]", end="\r")
-   
+
    final_response = provider.stream_with_callback(request, token_tracking_callback)
    print(f"\nFinal tokens: {final_response.usage.total_tokens}")
    print(f"Final cost: ${final_response.cost.total_cost:.6f}")
@@ -359,13 +359,13 @@ If you encounter issues with token usage tracking or cost estimation, check the 
 
 ### Common Error Messages
 
-| Error | Cause | Solution |
-| ----- | ----- | -------- |
-| `AnthropicProvider requires the Anthropic SDK` | The 'anthropic' package is not installed | Run `uv add anthropic` to install |
-| `Anthropic API key not provided` | Missing API key | Set `ANTHROPIC_API_KEY` environment variable |
-| `Authentication error calling Anthropic API` | Invalid API key | Check key format and validity |
-| `Rate limit exceeded calling Anthropic API` | Too many requests | Implement exponential backoff or reduce request frequency |
-| `Failed to generate response from Anthropic API` | General API error | Check Anthropic service status and request parameters |
+| Error                                            | Cause                                    | Solution                                                  |
+| ------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------- |
+| `AnthropicProvider requires the Anthropic SDK`   | The 'anthropic' package is not installed | Run `uv add anthropic` to install                         |
+| `Anthropic API key not provided`                 | Missing API key                          | Set `ANTHROPIC_API_KEY` environment variable              |
+| `Authentication error calling Anthropic API`     | Invalid API key                          | Check key format and validity                             |
+| `Rate limit exceeded calling Anthropic API`      | Too many requests                        | Implement exponential backoff or reduce request frequency |
+| `Failed to generate response from Anthropic API` | General API error                        | Check Anthropic service status and request parameters     |
 
 ## Related Documentation
 

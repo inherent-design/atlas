@@ -26,7 +26,7 @@ The Mock Provider implements the same interfaces as other model providers in Atl
 ### Basic Usage
 
 ```python
-from atlas.models.factory import create_provider
+from atlas.providers.factory import create_provider
 
 # Create a mock provider
 provider = create_provider(
@@ -42,18 +42,18 @@ response = provider.generate(request)
 
 The Mock Provider supports several configuration options:
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `model_name` | str | Mock model to use (mock-basic, mock-standard, mock-advanced) | "mock-standard" |
-| `max_tokens` | int | Maximum tokens for generation | 2000 |
-| `delay_ms` | int | Simulated latency in milliseconds | 100 |
-| `simulate_errors` | bool | Whether to simulate API errors | False |
-| `error_type` | str | Type of error to simulate (api, authentication, validation) | "api" |
+| Parameter         | Type | Description                                                  | Default         |
+| ----------------- | ---- | ------------------------------------------------------------ | --------------- |
+| `model_name`      | str  | Mock model to use (mock-basic, mock-standard, mock-advanced) | "mock-standard" |
+| `max_tokens`      | int  | Maximum tokens for generation                                | 2000            |
+| `delay_ms`        | int  | Simulated latency in milliseconds                            | 100             |
+| `simulate_errors` | bool | Whether to simulate API errors                               | False           |
+| `error_type`      | str  | Type of error to simulate (api, authentication, validation)  | "api"           |
 
 Example with advanced configuration:
 
 ```python
-from atlas.models.factory import create_provider
+from atlas.providers.factory import create_provider
 
 # Create a mock provider with custom settings
 provider = create_provider(
@@ -70,7 +70,7 @@ provider = create_provider(
 The Mock Provider can simulate various error conditions, which is useful for testing error handling:
 
 ```python
-from atlas.models.factory import create_provider
+from atlas.providers.factory import create_provider
 
 # Create a provider that will throw authentication errors
 auth_error_provider = create_provider(
@@ -98,11 +98,11 @@ api_error_provider = create_provider(
 
 The Mock Provider offers three different mock models with varying characteristics:
 
-| Model | Description |
-|-------|-------------|
-| `mock-basic` | Simulates a basic model with low cost ($0.50/M input, $1.50/M output) |
+| Model           | Description                                                                    |
+| --------------- | ------------------------------------------------------------------------------ |
+| `mock-basic`    | Simulates a basic model with low cost ($0.50/M input, $1.50/M output)          |
 | `mock-standard` | Simulates a standard model with moderate cost ($3.00/M input, $15.00/M output) |
-| `mock-advanced` | Simulates an advanced model with high cost ($10.00/M input, $30.00/M output) |
+| `mock-advanced` | Simulates an advanced model with high cost ($10.00/M input, $30.00/M output)   |
 
 ## Implementation Details
 
@@ -137,8 +137,8 @@ The Mock Provider is particularly useful for:
 ## Example
 
 ```python
-from atlas.models.factory import create_provider
-from atlas.models.base import ModelRequest, Message, Role
+from atlas.providers.factory import create_provider
+from atlas.providers.base import ModelRequest, Message, Role
 
 # Create a mock provider
 provider = create_provider(

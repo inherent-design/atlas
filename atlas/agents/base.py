@@ -11,8 +11,8 @@ from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
 from atlas.core.telemetry import traced, TracedClass
 from atlas.knowledge.retrieval import KnowledgeBase
-from atlas.models.factory import create_provider, discover_providers
-from atlas.models.base import ModelRequest, ModelMessage
+from atlas.providers.factory import create_provider, discover_providers
+from atlas.providers.base import ModelRequest, ModelMessage
 
 logger = logging.getLogger(__name__)
 

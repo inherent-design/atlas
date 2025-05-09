@@ -29,7 +29,7 @@ import os
 import logging
 from atlas.agents.controller import ControllerAgent
 from atlas.core.config import AtlasConfig
-from atlas.models.factory import get_model_provider
+from atlas.providers.factory import get_model_provider
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,30 +37,30 @@ logging.basicConfig(level=logging.INFO)
 def main():
     """Run a multi-agent workflow example."""
     print("Initializing Atlas multi-agent workflow...")
-    
+
     # Create a configuration
     config = AtlasConfig()
-    
+
     # Create a controller agent with default worker types
     controller = ControllerAgent(
         config=config,
         provider_name="anthropic",
         model_name="claude-3-7-sonnet-20250219"
     )
-    
+
     # Define a task
     task = """
-    Provide a comprehensive analysis of Atlas's knowledge graph structure, 
-    including entity types, relationship patterns, and how it integrates 
+    Provide a comprehensive analysis of Atlas's knowledge graph structure,
+    including entity types, relationship patterns, and how it integrates
     with the trimodal methodology.
     """
-    
+
     print(f"Task: {task}")
     print("Processing with multi-agent workflow...")
-    
+
     # Process the task
     response = controller.process_task(task)
-    
+
     print("\nFinal Response:\n")
     print(response)
 
@@ -79,7 +79,7 @@ from typing import Dict, Any, List
 from atlas.agents.controller import ControllerAgent
 from atlas.agents.registry import AgentRegistry
 from atlas.core.config import AtlasConfig
-from atlas.models.factory import get_model_provider
+from atlas.providers.factory import get_model_provider
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -87,10 +87,10 @@ logging.basicConfig(level=logging.INFO)
 def main():
     """Run an advanced multi-agent workflow example."""
     print("Initializing Atlas advanced multi-agent workflow...")
-    
+
     # Create a configuration
     config = AtlasConfig()
-    
+
     # Define custom worker types
     worker_types = [
         "researcher",   # Finds relevant information
@@ -98,7 +98,7 @@ def main():
         "critic",       # Evaluates and challenges findings
         "synthesizer"   # Combines everything into a coherent whole
     ]
-    
+
     # Create controller with custom worker configuration
     controller = ControllerAgent(
         config=config,
@@ -117,32 +117,32 @@ def main():
             }
         }
     )
-    
+
     # Define a complex task
     task = """
     Analyze the relationship between Atlas's knowledge graph structure and the trimodal methodology:
-    
+
     1. How do the entity types in the knowledge graph support bottom-up implementation?
     2. What relationship patterns enable top-down design principles?
     3. How does the integration of both support holistic system integration?
     4. What are the specific advantages of this approach over traditional documentation?
     5. What are potential limitations or areas for improvement?
-    
+
     Provide a comprehensive analysis with specific examples and references.
     """
-    
+
     print(f"Task: {task}")
     print("Processing with advanced multi-agent workflow...")
-    
+
     # Process the task
     response = controller.process_task(task)
-    
+
     print("\nFinal Response:\n")
     print(response)
-    
+
     # Access worker contributions
     worker_contributions = controller.get_worker_contributions()
-    
+
     # Print contributions from each worker
     print("\nWorker Contributions:\n")
     for worker_type, contribution in worker_contributions.items():
@@ -251,7 +251,7 @@ class SpecializedAnalystWorker(WorkerAgent):
     def __init__(self, analysis_depth="standard", **kwargs):
         super().__init__(**kwargs)
         self.analysis_depth = analysis_depth
-    
+
     # Override process_task with specialized behavior
     def process_task(self, task):
         # Custom implementation
@@ -259,7 +259,7 @@ class SpecializedAnalystWorker(WorkerAgent):
 
 # Register the custom worker
 AgentRegistry.register(
-    "specialized_analyst", 
+    "specialized_analyst",
     SpecializedAnalystWorker,
     description="Specialized analyst worker with configurable depth"
 )
@@ -307,7 +307,7 @@ try:
     print(response)
 except Exception as e:
     print(f"Error in multi-agent workflow: {e}")
-    
+
     # Fall back to simpler processing if needed
     fallback_agent = AtlasAgent(config=config)
     fallback_response = fallback_agent.process_message(task)
@@ -337,7 +337,7 @@ from atlas.agents.controller import ControllerAgent
 from atlas.agents.worker import WorkerAgent
 from atlas.agents.registry import AgentRegistry
 from atlas.core.config import AtlasConfig
-from atlas.models.factory import get_model_provider
+from atlas.providers.factory import get_model_provider
 from atlas.core.errors import safe_execute
 
 # Configure logging
@@ -346,13 +346,13 @@ logging.basicConfig(level=logging.INFO)
 # Create a custom worker class
 class TimeTrackingWorker(WorkerAgent):
     """Worker that tracks execution time."""
-    
+
     def process_task(self, task: str) -> str:
         """Process a task and track execution time."""
         start_time = time.time()
         result = super().process_task(task)
         end_time = time.time()
-        
+
         # Add execution time to the result
         execution_time = end_time - start_time
         return f"{result}\n\nExecution time: {execution_time:.2f} seconds"
@@ -368,19 +368,19 @@ def main():
     """Run a comprehensive multi-agent workflow example."""
     # Enable test mode for example purposes
     os.environ["SKIP_API_KEY_CHECK"] = "true"
-    
+
     print("Initializing Atlas multi-agent workflow...")
-    
+
     # Create a configuration
     config = AtlasConfig()
-    
+
     # Define worker types with a mix of standard and custom workers
     worker_types = [
         "researcher",
         "time_tracking_worker",  # Our custom worker
         "writer"
     ]
-    
+
     # Custom parameters for workers
     worker_params = {
         "researcher": {
@@ -395,7 +395,7 @@ def main():
             "structure": "detailed"
         }
     }
-    
+
     # Create controller with custom settings
     controller = ControllerAgent(
         config=config,
@@ -405,41 +405,41 @@ def main():
         model_name="claude-3-7-sonnet-20250219",
         kwargs=worker_params
     )
-    
+
     # Define a complex task
     task = """
     Analyze the knowledge graph structure in Atlas and how it integrates with the trimodal methodology:
-    
+
     1. What are the core entity types in the knowledge graph?
     2. How do the relationship types support different perspectives?
     3. In what ways does the knowledge graph enable bottom-up implementation?
     4. How does the graph structure support top-down design?
     5. What role does the graph play in holistic system integration?
-    
+
     Provide specific examples and references where possible.
     """
-    
+
     print(f"Task: {task}")
     print("Processing with multi-agent workflow...")
-    
+
     # Track total execution time
     start_time = time.time()
-    
+
     # Process the task with error handling
     try:
         response = controller.process_task(task)
-        
+
         # Calculate total execution time
         total_time = time.time() - start_time
-        
+
         print(f"\nTask completed in {total_time:.2f} seconds\n")
         print("Final Response:\n")
         print(response)
-        
+
         # Get and display worker contributions
         print("\nWorker Contributions:\n")
         worker_contributions = controller.get_worker_contributions()
-        
+
         for worker_type, contribution in worker_contributions.items():
             print(f"=== {worker_type.upper()} ===")
             # Show a preview of each contribution
@@ -447,22 +447,22 @@ def main():
             print(preview)
             print(f"Length: {len(contribution)} characters")
             print("\n")
-        
+
         # Show task breakdown
         print("Task Breakdown:")
         for subtask in controller.get_subtasks():
             print(f"- {subtask}")
-        
+
     except Exception as e:
         print(f"Error in multi-agent workflow: {e}")
-        
+
         # Fall back to simpler processing
         print("Falling back to standard agent...")
         from atlas.agents.base import AtlasAgent
-        
+
         fallback_agent = AtlasAgent(config=config)
         fallback_response = fallback_agent.process_message(task)
-        
+
         print("Fallback Response:\n")
         print(fallback_response)
 
@@ -487,7 +487,7 @@ class MyApplication:
             worker_types=["researcher", "analyst", "writer"],
             parallel=True
         )
-    
+
     def process_user_query(self, query):
         # Process the query using the multi-agent workflow
         try:

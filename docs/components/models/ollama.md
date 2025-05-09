@@ -4,7 +4,7 @@ This document details the Ollama provider implementation in Atlas, which integra
 
 ## Overview
 
-The `OllamaProvider` class in `atlas.models.ollama` implements the `ModelProvider` interface to provide access to local language models running on Ollama. This provider enables Atlas to run inference on your own hardware, offering privacy and cost advantages over cloud-based models.
+The `OllamaProvider` class in `atlas.providers.ollama` implements the `ModelProvider` interface to provide access to local language models running on Ollama. This provider enables Atlas to run inference on your own hardware, offering privacy and cost advantages over cloud-based models.
 
 ```mermaid
 classDiagram
@@ -60,7 +60,7 @@ You can use any model that you've pulled into your Ollama installation.
 The Ollama provider can be initialized with various configuration options:
 
 ```python
-from atlas.models.ollama import OllamaProvider
+from atlas.providers.ollama import OllamaProvider
 
 # Default initialization
 provider = OllamaProvider()
@@ -86,8 +86,8 @@ uv add requests
 ### Generating Text
 
 ```python
-from atlas.models.ollama import OllamaProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.ollama import OllamaProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = OllamaProvider()
@@ -114,8 +114,8 @@ print(f"Output tokens (estimated): {response.token_usage.output_tokens}")
 ### Streaming Generation
 
 ```python
-from atlas.models.ollama import OllamaProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.ollama import OllamaProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = OllamaProvider()
@@ -147,7 +147,7 @@ print("\nStreaming completed")
 You can configure the provider to connect to a remote Ollama instance:
 
 ```python
-from atlas.models.ollama import OllamaProvider
+from atlas.providers.ollama import OllamaProvider
 
 # Connect to a remote Ollama instance
 provider = OllamaProvider(
@@ -160,7 +160,7 @@ provider = OllamaProvider(
 The provider supports Ollama-specific parameters:
 
 ```python
-from atlas.models.ollama import OllamaProvider
+from atlas.providers.ollama import OllamaProvider
 
 # Initialize with Ollama-specific parameters
 provider = OllamaProvider(
@@ -177,7 +177,7 @@ provider = OllamaProvider(
 The provider includes validation for the Ollama server connection:
 
 ```python
-from atlas.models.ollama import OllamaProvider
+from atlas.providers.ollama import OllamaProvider
 
 # Create provider
 provider = OllamaProvider()

@@ -10,6 +10,7 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - ✅ **Environment Configuration**: Centralized environment management, configuration precedence, validation logic
 - ✅ **Documentation System**: Complete VitePress-based documentation with comprehensive coverage of all components, workflows, and APIs
 - ✅ **Core Component Design**: Established architecture patterns, module structure, and interaction protocols
+- ✅ **Robust Provider Implementation**: Added retry mechanism with exponential backoff and circuit breaker pattern
 
 ### Current Focus
 
@@ -19,37 +20,44 @@ This file contains essential instructions and guidelines for Claude Code when wo
    - Implementing more sophisticated relevance scoring algorithms
    - Adding filtering capabilities to narrow search results
 
-2. **Provider Implementation Completion**:
-   - Completing streaming implementation for OpenAI and Ollama providers
-   - Adding comprehensive error handling and fallback mechanisms
-   - Implementing connection pooling and resource management
-   - Creating provider health monitoring
+2. **Provider Implementation Refinement**:
+   - Implementing connection timeout handling with configurable parameters
+   - Creating client-side rate limiting to prevent API blocks
+   - Implementing graceful fallback between providers
+   - Optimizing streaming implementations
 
-3. **Testing Infrastructure**:
-   - Developing mocked provider implementations for test isolation
-   - Creating comprehensive test suite for all components
-   - Implementing test coverage metrics and reporting
-   - Building scenario-based integration tests
+3. **Example-Driven Development**:
+   - Creating comprehensive example applications
+   - Developing functional demonstrations for key features
+   - Building example workflows for common use cases
+   - Enhancing example documentation with explanatory comments
 
 ### Next Steps (Immediate)
 
-1. Create comprehensive mock providers for API-free testing
-2. Complete OpenAI and Ollama provider implementations
-3. Enhance error handling with better fallback mechanisms
-4. Improve document chunking strategies for better retrieval
-5. Add metadata filtering capabilities to knowledge base retrieval
-6. Optimize provider resource usage with connection pooling
+1. **Core Architecture Rework**:
+   - Implement ProviderGroup class for graceful fallback and provider aggregation
+   - Streamline streaming interfaces across all providers
+   - Create clear separation of concerns between providers, agents, and orchestration
+   - Refine agent-toolkit interfacing for more complex workflows
+   - Update state management for multi-step orchestration patterns
+
+2. **Task Planning and Implementation**:
+   - Update project-management/tracking/todo.md with granular step-wise implementation plan
+   - Reorganize file structure as needed to support enhanced workflows
+   - Create detailed checklist of architecture tasks with clear dependencies
+   - Execute the architectural improvements systematically
+   - Document architectural decisions and their rationale
 
 ## Core Development Principles
 
-### 1. Clean Break Philosophy with Careful Testing
+### 1. Clean Break Philosophy with Example-Driven Validation
 
 **CRITICAL**: Prioritize a best-in-class, robust, and consistent API over backwards compatibility.
 
 - Don't hesitate to refactor or replace incorrect implementations, but document breaking changes thoroughly.
-- When testing functionality, never temporarily simplify production code - instead, create separate test files or modules.
+- When validating functionality, never temporarily simplify production code - instead, create dedicated example scripts.
 - Always maintain the full LangGraph integration and multi-agent architecture in the main codebase.
-- Use temporary test environments to isolate features for testing rather than removing complexity from production code.
+- Use examples to demonstrate features rather than removing complexity from production code.
 
 ### 2. Incremental Development with Quality Focus
 
@@ -58,12 +66,12 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Prefer clean, maintainable code over perfect backward compatibility.
 - Use composition over inheritance when possible to increase flexibility and testability.
 
-### 3. Testing Strategy
+### 3. Example-Driven Development Strategy
 
-- Create isolated test modules when testing specific components.
-- Implement unit tests alongside feature development.
-- When testing complex workflows, create test-specific wrapper modules rather than modifying production code.
-- Prefer mock tests that don't require API keys for faster and more reliable testing.
+- Create functional examples that demonstrate each component's capabilities.
+- Implement example scripts alongside feature development.
+- When demonstrating complex workflows, create self-contained examples with clear documentation.
+- Use MockProvider for examples that should run without API keys.
 
 ### 4. Error Handling
 
@@ -81,7 +89,7 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Create new subdirectories when introducing conceptually distinct components.
 - Organize utility scripts in the `scripts` module with appropriate subdirectories:
   - `scripts/debug/`: Utilities for debugging and inspecting the system
-  - `scripts/testing/`: Testing utilities and test runners
+  - `scripts/examples/`: Example runners and demonstration utilities
 
 ### Code Style
 
@@ -146,38 +154,63 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Implement version control for knowledge base updates.
 - Ensure proper indexing for efficient retrieval.
 
-## Testing and Debugging
+## Examples and Validation
 
-### Testing Directory Structure
+### Example Directory Structure
 
-Atlas differentiates between formal tests, usage examples, and testing utilities:
-
-- **`atlas/tests/`**: Contains all unit tests and integration tests
-  - Test files are named with a `test_` prefix (e.g., `test_models.py`)
-  - Each test file focuses on testing a specific module or component
-
-- **`atlas/scripts/testing/`**: Contains utility scripts for running tests
-  - `run_tests.py`: Unified test runner with various test types
-  - Other utilities for test setup and configuration
+Atlas uses functional examples to validate and demonstrate its capabilities:
 
 - **`examples/`**: Contains example scripts demonstrating Atlas functionality
-  - These are **not** formal tests but usage demonstrations
-  - Can be run with or without an API key (using `SKIP_API_KEY_CHECK=true`)
+  - Script files are organized by feature area (e.g., `query_example.py`, `retrieval_example.py`)
+  - Each example is self-contained and fully runnable
+  - All examples include detailed comments explaining the workflow
+  - Examples can run with or without API keys using the MockProvider
 
-### Test Implementation
+- **`atlas/scripts/debug/`**: Contains debug utilities for development
+  - `check_models.py`: Verify available models for providers
+  - `check_db.py`: Database connection and status verification
+  - Other utilities for inspecting system state during development
 
-- Create comprehensive unit tests for all components
-- Implement mock tests that don't require API keys
-- Use the agent registry for testing with different agent implementations
-- Create mocked provider implementations for testing without API calls
-- Document testing strategies and expected outcomes
+### Validation Strategy
 
-### Test Types
+Atlas follows an example-driven development approach:
 
-- **Unit Tests**: Test individual components in isolation
-- **Mock Tests**: Use mocked components to test without API dependencies
-- **Integration Tests**: Verify that different components work together
-- **API Tests**: Test real API interactions (requires API keys)
+- Each core feature is validated through functional examples
+- Examples serve as both documentation and validation
+- All key API endpoints have corresponding example implementations
+- Examples demonstrate both simple and complex use cases
+
+### MockProvider for Development
+
+Atlas provides comprehensive mocking utilities for development without API keys:
+
+- **MockProvider**: A fully functional provider implementation that doesn't require API keys
+- **Provider-specific mocks**: Specialized emulation for OpenAI, Anthropic, and Ollama behaviors
+- **Deterministic responses**: Consistent outputs for development and debugging
+
+Example of using MockProvider:
+```python
+# Create mock provider (no API key needed)
+provider = MockProvider(model_name="mock-standard")
+
+# Use it like any other provider
+response = provider.generate(request)
+```
+
+### Running Examples
+
+Examples can be run directly to validate functionality:
+
+```bash
+# Run a basic query example
+uv run python examples/query_example.py
+
+# Run retrieval example with mock provider
+uv run python examples/retrieval_example.py --provider mock
+
+# Run streaming example with OpenAI
+uv run python examples/streaming_example.py --provider openai
+```
 
 ## Implementation Notes for Claude Code
 
@@ -210,6 +243,21 @@ Atlas differentiates between formal tests, usage examples, and testing utilities
    - Keep both implementation and documentation in sync throughout development
    - Use documentation as a design tool to clarify requirements before implementation
    - Document any implementation decisions that deviate from original specifications
+
+5. When implementing examples:
+   - Create self-contained, runnable examples for each feature
+   - Add detailed comments explaining the workflow
+   - Use the MockProvider for examples that should run without API keys
+   - Demonstrate both simple use cases and complex patterns
+   - Ensure examples are educational and highlight best practices
+   - Make examples runnable in isolation with minimal dependencies
+
+6. When implementing provider features:
+   - Ensure consistent behavior across all providers
+   - Implement proper error handling with informative messages
+   - Add graceful degradation when API calls fail
+   - Verify streaming and non-streaming behavior works consistently
+   - Ensure token usage tracking works correctly across providers
 
 ## Advanced Feature Development Areas
 
@@ -267,7 +315,7 @@ The following areas represent the most important development directions for adva
 - Key dependencies: langgraph==0.4.1, chromadb>=1.0.7, anthropic>=0.50.0
 - Environment management: uv for virtual environments and dependencies
 - Documentation: VitePress for documentation site
-- Testing: pytest for tests, with custom test runner
+- Validation: Example-driven development with runnable demonstrations
 
 ### Important Commands
 
@@ -277,19 +325,76 @@ uv venv
 source .venv/bin/activate
 uv pip install -e .
 
-# Testing
-uv run python atlas/scripts/testing/run_tests.py --test-type mock
-uv run python atlas/scripts/testing/run_tests.py --test-type unit
+# Run Atlas CLI
+uv run python main.py cli
 
-# Run Atlas
-uv run python main.py -m cli
-uv run python main.py -m query -q "Your query here"
-uv run python main.py -m ingest -d /path/to/docs/
+# Get CLI help information
+uv run python main.py --help
+uv run python main.py query --help
+
+# Run Atlas with a specific query
+uv run python main.py query -q "Your query here" --provider openai
+
+# List available models for a provider
+uv run python main.py query --provider openai --models
+
+# Run Atlas with document ingestion
+uv run python main.py ingest -d /path/to/docs/
+
+# Run example scripts 
+uv run python examples/query_example.py
+uv run python examples/retrieval_example.py
+uv run python examples/streaming_example.py
+uv run python examples/tool_agent_example.py
+
+# Run debug utilities
+uv run python atlas/scripts/debug/check_models.py
+uv run python atlas/scripts/debug/check_db.py
 
 # Documentation
 cd docs
 pnpm dev    # Start dev server
 pnpm build  # Build documentation
+```
+
+### Using Atlas Without API Keys
+
+For development without API keys, use the MockProvider:
+
+```bash
+# Run Atlas with mock provider
+uv run python main.py cli --provider mock
+
+# Run examples with mock provider
+uv run python examples/query_example.py --provider mock
+uv run python examples/streaming_example.py --provider mock
+```
+
+### Using Different Providers
+
+Atlas supports multiple providers that can be specified for any operation:
+
+```bash
+# Run with OpenAI provider
+uv run python examples/query_example.py --provider openai
+
+# Run with Anthropic provider
+uv run python examples/query_example.py --provider anthropic
+
+# Run with Ollama provider (requires local Ollama server)
+uv run python examples/query_example.py --provider ollama
+```
+
+### Developing New Features
+
+When developing new features, create example scripts to validate functionality:
+
+```bash
+# Create a new example in examples/ directory
+uv run python examples/my_new_feature_example.py
+
+# Run example with debug logging
+ATLAS_LOG_LEVEL=DEBUG uv run python examples/my_new_feature_example.py
 ```
 
 ## Future Vision

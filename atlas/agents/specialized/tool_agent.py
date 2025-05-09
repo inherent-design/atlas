@@ -14,7 +14,7 @@ from atlas.core.telemetry import traced
 from atlas.agents.worker import WorkerAgent
 from atlas.agents.messaging.message import StructuredMessage
 from atlas.tools.base import AgentToolkit, Tool
-from atlas.models.base import ModelRequest, ModelMessage, ModelResponse
+from atlas.providers.base import ModelRequest, ModelMessage, ModelResponse
 
 
 logger = logging.getLogger(__name__)

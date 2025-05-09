@@ -105,16 +105,16 @@ class StreamingHandler:
         self.start_time = time.time()
         self.tokens = 0
         self.words = 0
-        
+
     def stream_callback(self, delta: str, full_text: str):
         # Update counters
         self.tokens += 1
         if delta.strip() and delta.strip() not in ",.;:!?":
             self.words += 1
-            
+
         # Print the delta
         print(delta, end="", flush=True)
-        
+
         # Optionally show progress stats every 20 tokens
         if self.tokens % 20 == 0:
             elapsed = time.time() - self.start_time
@@ -138,7 +138,7 @@ print(f"Retrieved {len(documents)} relevant documents")
 # Show the most relevant document
 if documents:
     print(f"Most relevant document: {documents[0]['metadata'].get('source', 'Unknown')}")
-    
+
 # Then stream the response
 print("\nStreaming Response:")
 result = client.query_streaming(query, print_streaming)
@@ -164,8 +164,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import atlas package
 from atlas import create_query_client
-from atlas.models.factory import create_provider
-from atlas.models.base import ModelRequest, ModelMessage
+from atlas.providers.factory import create_provider
+from atlas.providers.base import ModelRequest, ModelMessage
 
 def print_streaming(delta: str, full_text: str) -> None:
     """Print streaming output character by character.
@@ -181,7 +181,7 @@ def print_streaming(delta: str, full_text: str) -> None:
 
 def demonstrate_client_streaming(use_mock: bool = False) -> None:
     """Demonstrate streaming using the Atlas query client.
-    
+
     Args:
         use_mock: If True, use mock mode without API key.
     """
@@ -192,7 +192,7 @@ def demonstrate_client_streaming(use_mock: bool = False) -> None:
     # Set environment for testing if needed
     if use_mock:
         os.environ["SKIP_API_KEY_CHECK"] = "true"
-    
+
     # Create a client
     client = create_query_client()
 
@@ -205,13 +205,13 @@ def demonstrate_client_streaming(use_mock: bool = False) -> None:
         # Try streaming response
         result = client.query_streaming(query, print_streaming)
         print("\n\nStreaming completed with result length:", len(result))
-        
+
         # Display token usage and cost information
         if hasattr(client, "last_response") and client.last_response:
             if hasattr(client.last_response, "usage") and client.last_response.usage:
                 usage = client.last_response.usage
                 print(f"\nToken Usage: {usage.input_tokens} input, {usage.output_tokens} output tokens")
-            
+
             if hasattr(client.last_response, "cost") and client.last_response.cost:
                 print(f"Estimated Cost: {client.last_response.cost}")
     except Exception as e:
@@ -224,7 +224,7 @@ def demonstrate_client_streaming(use_mock: bool = False) -> None:
 
 def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str] = None, use_mock: bool = False) -> None:
     """Demonstrate streaming directly with a specific provider.
-    
+
     Args:
         provider_name: The name of the provider to use ("anthropic", "openai", "ollama", or "mock").
         model_name: Optional model name to use.
@@ -233,7 +233,7 @@ def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str]
     print("\n" + "="*50)
     print(f"DEMO 2: Direct Streaming with {provider_name.capitalize()} Provider")
     print("="*50)
-    
+
     # Provider-specific configurations
     provider_configs = {
         "anthropic": {
@@ -254,18 +254,18 @@ def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str]
             "delay_ms": 50,  # Faster output for demo purposes
         }
     }
-    
+
     # Get configuration for the selected provider
     config = provider_configs.get(provider_name, {})
-    
+
     # Set environment for testing if needed
     if use_mock:
         os.environ["SKIP_API_KEY_CHECK"] = "true"
-    
+
     # Create the provider
     try:
         provider = create_provider(
-            provider_name, 
+            provider_name,
             model_name=model_name or config.get("default_model"),
             max_tokens=config.get("max_tokens", 300),
             # Add any provider-specific parameters
@@ -274,31 +274,31 @@ def demonstrate_provider_streaming(provider_name: str, model_name: Optional[str]
     except Exception as e:
         print(f"Error creating provider {provider_name}: {e}")
         return
-    
+
     # Create a simple request
     request = ModelRequest(
         messages=[ModelMessage.user("What is the trimodal methodology in Atlas?")],
         max_tokens=config.get("max_tokens", 300),
     )
-    
+
     print(f"Using model: {provider.model_name}")
     print("Query: What is the trimodal methodology in Atlas?")
-    
+
     # Define a custom streaming callback
     def stream_callback(delta: str, response: Any) -> None:
         """Custom callback for streaming."""
         print_streaming(delta, response.content)
-        
+
         # Update progress info every few tokens
         if delta.endswith(".") or delta.endswith("?") or delta.endswith("!"):
             tokens_so_far = response.usage.output_tokens if hasattr(response.usage, "output_tokens") else "unknown"
             print(f"\n[Progress: {tokens_so_far} tokens generated so far...]", end="\r")
-    
+
     try:
         print("\nStreaming Response:")
         # Stream with callback
         final_response = provider.stream_with_callback(request, stream_callback)
-        
+
         # Print final statistics
         print("\n\nStreaming completed!")
         print(f"Model: {final_response.model}")
@@ -320,9 +320,9 @@ def main():
                        help="The model to use (default: provider-specific)")
     parser.add_argument("--mock", action="store_true",
                        help="Use mock mode without API key")
-    
+
     args = parser.parse_args()
-    
+
     if args.provider == "client":
         # Just demonstrate the Atlas client
         demonstrate_client_streaming(args.mock)
@@ -368,11 +368,11 @@ python examples/streaming_example.py --provider client
 
 ### Command-Line Arguments
 
-| Argument | Description | Default |
-| -------- | ----------- | ------- |
-| `--provider`, `-p` | The provider to use (anthropic, openai, ollama, mock, all, client) | mock |
-| `--model`, `-m` | Specific model to use (provider-dependent) | Provider default |
-| `--mock` | Run in mock mode without API key | False |
+| Argument           | Description                                                        | Default          |
+| ------------------ | ------------------------------------------------------------------ | ---------------- |
+| `--provider`, `-p` | The provider to use (anthropic, openai, ollama, mock, all, client) | mock             |
+| `--model`, `-m`    | Specific model to use (provider-dependent)                         | Provider default |
+| `--mock`           | Run in mock mode without API key                                   | False            |
 
 Using the command-line interface makes it easy to test streaming functionality with different providers and models without changing the code.
 
@@ -405,17 +405,17 @@ def index():
 @app.route('/stream', methods=['POST'])
 def stream():
     query = request.json.get('query', '')
-    
+
     def stream_generator():
         buffer = []
-        
+
         def callback(delta, full_text):
             buffer.append(delta)
             if len(buffer) >= 5 or '\n' in delta:
                 chunk = ''.join(buffer)
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
                 buffer.clear()
-        
+
         try:
             client.query_streaming(query, callback)
             if buffer:  # Send any remaining text
@@ -423,7 +423,7 @@ def stream():
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     return Response(stream_generator(), mimetype='text/event-stream')
 ```
 

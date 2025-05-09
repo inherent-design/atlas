@@ -25,8 +25,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import atlas package
 from atlas import create_query_client
-from atlas.models.factory import create_provider
-from atlas.models.base import ModelRequest, ModelMessage
+from atlas.providers.factory import create_provider
+from atlas.providers.base import ModelRequest, ModelMessage
 
 
 def print_streaming(delta: str, full_text: str) -> None:

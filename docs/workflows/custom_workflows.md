@@ -370,7 +370,7 @@ from langgraph.graph import StateGraph, END
 # Import Atlas components
 from atlas.core.config import AtlasConfig
 from atlas.knowledge.retrieval import KnowledgeBase
-from atlas.models.factory import create_provider
+from atlas.providers.factory import create_provider
 
 # Define state model
 class ResearchState(BaseModel):

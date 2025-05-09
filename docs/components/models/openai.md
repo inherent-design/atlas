@@ -4,7 +4,7 @@ This document details the OpenAI provider implementation in Atlas, which integra
 
 ## Overview
 
-The `OpenAIProvider` class in `atlas.models.openai` implements the `ModelProvider` interface to provide access to OpenAI's advanced language models. This provider enables Atlas to leverage GPT-4 and GPT-3.5 capabilities for knowledge-augmented generation.
+The `OpenAIProvider` class in `atlas.providers.openai` implements the `ModelProvider` interface to provide access to OpenAI's advanced language models. This provider enables Atlas to leverage GPT-4 and GPT-3.5 capabilities for knowledge-augmented generation.
 
 ```mermaid
 classDiagram
@@ -49,40 +49,40 @@ The provider supports the following OpenAI models:
 
 ### Latest Models (GPT-4.1 Series)
 
-| Model           | Description                   | Use Case                            |
-| --------------- | ----------------------------- | ----------------------------------- |
-| `gpt-4.1`       | Flagship GPT-4.1 (default)    | Complex reasoning and tasks         |
-| `gpt-4.1-mini`  | Smaller GPT-4.1 model         | Balance of cost and performance     |
-| `gpt-4.1-nano`  | Smallest GPT-4.1 model        | Fast, cost-effective processing     |
+| Model          | Description                | Use Case                        |
+| -------------- | -------------------------- | ------------------------------- |
+| `gpt-4.1`      | Flagship GPT-4.1 (default) | Complex reasoning and tasks     |
+| `gpt-4.1-mini` | Smaller GPT-4.1 model      | Balance of cost and performance |
+| `gpt-4.1-nano` | Smallest GPT-4.1 model     | Fast, cost-effective processing |
 
 ### Reasoning Models (o-Series)
 
-| Model           | Description                   | Use Case                            |
-| --------------- | ----------------------------- | ----------------------------------- |
-| `o3`            | Advanced reasoning model      | Math, coding, and vision tasks      |
-| `o4-mini`       | Cost-efficient reasoning      | Efficient multi-step reasoning      |
+| Model     | Description              | Use Case                       |
+| --------- | ------------------------ | ------------------------------ |
+| `o3`      | Advanced reasoning model | Math, coding, and vision tasks |
+| `o4-mini` | Cost-efficient reasoning | Efficient multi-step reasoning |
 
 ### GPT-4o Series
 
-| Model           | Description                   | Use Case                            |
-| --------------- | ----------------------------- | ----------------------------------- |
-| `gpt-4o`        | GPT-4 omni-capable model      | General-purpose tasks with vision   |
-| `gpt-4o-mini`   | Smaller GPT-4o model          | Cost-efficient multi-modal tasks    |
+| Model         | Description              | Use Case                          |
+| ------------- | ------------------------ | --------------------------------- |
+| `gpt-4o`      | GPT-4 omni-capable model | General-purpose tasks with vision |
+| `gpt-4o-mini` | Smaller GPT-4o model     | Cost-efficient multi-modal tasks  |
 
 ### Legacy Models
 
-| Model           | Description                   | Use Case                            |
-| --------------- | ----------------------------- | ----------------------------------- |
-| `gpt-4-turbo`   | GPT-4 Turbo model             | High-quality with better throughput |
-| `gpt-4`         | Original GPT-4 model          | Legacy support                      |
-| `gpt-3.5-turbo` | Efficient GPT-3.5 model       | Fast responses for simpler tasks    |
+| Model           | Description             | Use Case                            |
+| --------------- | ----------------------- | ----------------------------------- |
+| `gpt-4-turbo`   | GPT-4 Turbo model       | High-quality with better throughput |
+| `gpt-4`         | Original GPT-4 model    | Legacy support                      |
+| `gpt-3.5-turbo` | Efficient GPT-3.5 model | Fast responses for simpler tasks    |
 
 ## Initialization
 
 The OpenAI provider can be initialized with various configuration options:
 
 ```python
-from atlas.models.openai import OpenAIProvider
+from atlas.providers.openai import OpenAIProvider
 
 # Default initialization
 provider = OpenAIProvider()
@@ -109,8 +109,8 @@ uv add openai
 ### Generating Text
 
 ```python
-from atlas.models.openai import OpenAIProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.openai import OpenAIProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = OpenAIProvider()
@@ -138,8 +138,8 @@ print(f"Estimated cost: ${response.cost_estimate.total_cost:.6f}")
 ### Streaming Generation
 
 ```python
-from atlas.models.openai import OpenAIProvider
-from atlas.models.base import ModelRequest
+from atlas.providers.openai import OpenAIProvider
+from atlas.providers.base import ModelRequest
 
 # Create provider
 provider = OpenAIProvider()
@@ -171,8 +171,8 @@ print("\nStreaming completed")
 The provider includes built-in cost estimation based on current OpenAI pricing:
 
 ```python
-from atlas.models.openai import OpenAIProvider
-from atlas.models.base import TokenUsage
+from atlas.providers.openai import OpenAIProvider
+from atlas.providers.base import TokenUsage
 
 # Create provider
 provider = OpenAIProvider(model_name="gpt-4.1")
@@ -215,7 +215,7 @@ Current pricing (as of May 2025):
 The provider implements robust error handling using Atlas's error system:
 
 ```python
-from atlas.models.openai import OpenAIProvider
+from atlas.providers.openai import OpenAIProvider
 from atlas.core.errors import APIError, AuthenticationError
 
 try:
@@ -235,7 +235,7 @@ except APIError as e:
 The provider supports OpenAI organizations:
 
 ```python
-from atlas.models.openai import OpenAIProvider
+from atlas.providers.openai import OpenAIProvider
 
 # Initialize with organization ID
 provider = OpenAIProvider(
@@ -331,8 +331,8 @@ provider = OpenAIProvider(
 The OpenAI provider includes comprehensive token usage tracking and cost estimation:
 
 ```python
-from atlas.models.openai import OpenAIProvider
-from atlas.models.base import ModelRequest, ModelMessage
+from atlas.providers.openai import OpenAIProvider
+from atlas.providers.base import ModelRequest, ModelMessage
 
 # Create a provider and request
 provider = OpenAIProvider(model_name="gpt-4.1-mini")

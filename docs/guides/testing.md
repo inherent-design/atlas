@@ -1,6 +1,8 @@
-# Testing Guide
+# Testing Guide 🚧
 
-This guide provides a comprehensive overview of the testing approaches and practices for the Atlas framework.
+> **Current Development Status:** Atlas is currently focusing on example-driven development rather than comprehensive test-driven development. The testing infrastructure described in this document represents the planned testing architecture, but is not fully implemented at this time. We are prioritizing functional examples and usage demonstrations as the primary verification method while the codebase is actively evolving.
+
+This guide provides a comprehensive overview of the planned testing approaches and practices for the Atlas framework.
 
 ## Testing Philosophy
 
@@ -79,7 +81,7 @@ Mock tests use mocked components to enable testing without external dependencies
 
 **Example in `test_mock.py`**:
 ```python
-@mock.patch("atlas.models.anthropic.Anthropic")
+@mock.patch("atlas.providers.anthropic.Anthropic")
 def test_agent_process_message(self, mock_anthropic):
     # Set up mock response
     mock_client = mock.MagicMock()
@@ -254,7 +256,7 @@ class TestComponent(unittest.TestCase):
         """Test component initialization."""
         component = Component()
         self.assertIsNotNone(component)
-    
+
     @mock_test
     def test_with_mocked_dependency(self):
         """Test with a mocked dependency."""
@@ -263,14 +265,14 @@ class TestComponent(unittest.TestCase):
             component = Component()
             result = component.process("test input")
             self.assertEqual("expected result", result)
-    
+
     @api_test
     def test_with_real_api(self):
         """Test with real API calls."""
         component = Component(api_key="real-api-key")
         result = component.process("test input")
         self.assertIsNotNone(result)
-    
+
     @integration_test
     def test_component_integration(self):
         """Test integration with other components."""
@@ -284,40 +286,40 @@ class TestComponent(unittest.TestCase):
 
 ```python
 from atlas.tests.helpers import (
-    TestWithTokenTracking, ProviderTestBase, 
+    TestWithTokenTracking, ProviderTestBase,
     OpenAIProviderTestBase, IntegrationTestBase
 )
 
 class TestOpenAIProvider(OpenAIProviderTestBase):
     """Test OpenAI provider implementation."""
-    
+
     provider_class = OpenAIProvider
     provider_name = "openai"
     default_model = "gpt-3.5-turbo"
-    
+
     @mock_test
     def test_generate_mocked(self):
         """Test generate method with mocked API."""
         # The base class provides self.provider and mock helpers
         request = self._create_request("Test message")
-        
-        with mock.patch("atlas.models.openai.OpenAI") as mock_openai:
+
+        with mock.patch("atlas.providers.openai.OpenAI") as mock_openai:
             mock_openai.return_value.chat.completions.create.return_value = mock_completion
             response = self.provider.generate(request)
-            
+
             self.assertIsNotNone(response)
             self.assertEqual(response.provider, self.provider_name)
-    
+
     @api_test
     def test_generate_api(self):
         """Test generate method with real API."""
         # This test will only run if RUN_API_TESTS=true and RUN_OPENAI_TESTS=true
         request = self._create_request("Write a single word response", 5)
         response = self.provider.generate(request)
-        
+
         # Track token usage for cost reporting
         self.track_usage(response)
-        
+
         self.assertIsNotNone(response.content)
         self.assertLessEqual(response.usage.total_tokens, 20)
 ```
@@ -329,39 +331,39 @@ from atlas.tests.helpers import integration_test, IntegrationTestBase
 
 class TestAgentToolIntegration(IntegrationTestBase):
     """Integration tests for Agent + Tool interactions."""
-    
+
     def setUp(self):
         """Set up the test with components for integration testing."""
         super().setUp()
-        
+
         # Create the components to test together
         self.agent = ToolCapableAgent()
         self.tool = CalculatorTool()
-        
+
         # Register tools with the agent
         self.agent.register_tool(self.tool)
-    
+
     @integration_test
     def test_agent_uses_tool(self):
         """Test that the agent correctly uses the tool."""
         # Configure response with tool calls
         response_content = """
         Let me calculate that.
-        
+
         <tool_calls>
         <tool_call name="calculator">
         {"operation": "add", "a": 5, "b": 10}
         </tool_call>
         </tool_calls>
         """
-        
+
         # Set up the test scenario
         self.mock_provider.generate.return_value = create_mock_response(response_content)
-        
+
         # Process a request that should trigger tool usage
         request = ModelRequest(messages=[ModelMessage.user("What is 5 + 10?")])
         response = self.agent.process(request)
-        
+
         # Verify the tool was used correctly
         self.assertIn("15", response.content)
 ```

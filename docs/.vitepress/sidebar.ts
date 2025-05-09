@@ -138,7 +138,7 @@ export const sidebar: DefaultTheme.Sidebar = [
         text: "Development",
         collapsed: false,
         items: [
-          { text: "Testing", link: "/guides/testing" },
+          _statusItem("Testing", "/guides/testing", "progress"),
           { text: "Type Checking", link: "/guides/type_checking" },
         ],
       },
@@ -207,7 +207,7 @@ export const sidebar: DefaultTheme.Sidebar = [
                 link: "/project-management/planning/cli_planning",
               },
               {
-                text: "Test Suite Planning",
+                text: "🚧 Test Suite Planning",
                 link: "/project-management/planning/test_suite_planning",
               },
               {

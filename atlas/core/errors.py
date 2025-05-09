@@ -328,6 +328,43 @@ class ResourceError(AtlasError):
         )
 
 
+class RateLimitError(APIError):
+    """Error related to rate limiting in API calls."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.WARNING,
+        provider: Optional[str] = None,
+        retry_after: Optional[float] = None,
+    ):
+        """Initialize the error.
+
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that imposed the rate limit.
+            retry_after: Suggested time to wait before retrying (seconds).
+        """
+        details = details or {}
+        if provider:
+            details["provider"] = provider
+        if retry_after is not None:
+            details["retry_after"] = retry_after
+
+        super().__init__(
+            message=message,
+            severity=severity,
+            details=details,
+            cause=cause,
+            retry_possible=True,  # Rate limit errors are always retryable
+        )
+
+
 # Error handling utilities
 
 

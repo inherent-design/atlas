@@ -1,4 +1,6 @@
-# Atlas Test Suite Planning
+# Atlas Test Suite Planning 🚧
+
+> **Current Development Status:** Atlas is currently focusing on example-driven development rather than comprehensive test-driven development. The testing infrastructure described in this document represents the planned testing architecture and strategy, but is not the current implementation priority. We are maintaining this document as a reference for future test implementation while focusing on robust examples and functional demonstrations.
 
 This document outlines the comprehensive plan for restructuring, enhancing, and maintaining the Atlas test suite. It combines the test audit findings with our refactoring strategy.
 
@@ -172,7 +174,7 @@ atlas/tests/
 │
 ├── helpers/              # Test helper functions
 │   ├── __init__.py
-│   ├── decorators.py     # Test decorators 
+│   ├── decorators.py     # Test decorators
 │   ├── assertions.py     # Custom assertions
 │   └── mocks.py          # Common mocks
 │
@@ -237,20 +239,20 @@ Each provider has slightly different test patterns:
 def test_provider_basic_functionality(provider_class, model_name, **kwargs):
     """Run standard provider tests for any provider implementation."""
     provider = provider_class(model_name=model_name, **kwargs)
-    
+
     # Test API key validation
     assert provider.validate_api_key()
-    
+
     # Test basic request
     request = ModelRequest(
         messages=[ModelMessage.user("Test message")],
         max_tokens=10
     )
-    
+
     # Mock any API calls
     with mock_provider_api(provider_class):
         response = provider.generate(request)
-    
+
     # Standard assertions
     assert isinstance(response, ModelResponse)
     assert response.provider == provider.name
@@ -300,18 +302,18 @@ def expensive_test(f):
 ```python
 class TestWithTokenTracking(unittest.TestCase):
     """Base class for tests with token usage tracking."""
-    
+
     def setUp(self):
         self.total_tokens_used = 0
         self.estimated_cost = 0.0
-    
+
     def track_usage(self, response):
         """Track token usage from a response."""
         if hasattr(response, "usage") and response.usage:
             self.total_tokens_used += response.usage.total_tokens
             if hasattr(response, "cost") and response.cost:
                 self.estimated_cost += response.cost.total_cost
-    
+
     def tearDown(self):
         """Report token usage."""
         print(f"\nTest used {self.total_tokens_used} tokens at an estimated cost of ${self.estimated_cost:.6f}")
@@ -343,7 +345,7 @@ def test_openai_real_api(self):
         messages=[ModelMessage.user("Write a single word response: Hello")],
         max_tokens=5
     )
-    
+
     response = provider.generate(request)
     self.assertIsNotNone(response.content)
     self.assertLessEqual(response.usage.total_tokens, 20)
@@ -358,13 +360,13 @@ def test_ollama_real_api(self):
     """Integration test with real Ollama API."""
     if not self._is_ollama_running():
         self.skipTest("Ollama not running")
-    
+
     provider = OllamaProvider(model_name="llama2")
     request = ModelRequest(
         messages=[ModelMessage.user("Write a single word response: Hello")],
         max_tokens=5
     )
-    
+
     response = provider.generate(request)
     self.assertIsNotNone(response.content)
 ```
@@ -381,7 +383,7 @@ def test_anthropic_real_api(self):
         messages=[ModelMessage.user("Write a single word response: Hello")],
         max_tokens=5
     )
-    
+
     response = provider.generate(request)
     self.assertIsNotNone(response.content)
     self.assertLessEqual(response.usage.total_tokens, 20)
@@ -431,19 +433,179 @@ To minimize disruption, we'll use a phased approach:
 
 This will ensure that tests continue to run throughout the migration process.
 
-## 12. Next Steps
+## 12. Current Challenges and Implementation Steps
 
-1. Implement new test directory structure (unit, mock, integration, api)
-2. Update test runner CLI to use explicit flags instead of environment variables
-3. Create standardized test patterns with helper classes and decorators
-4. Migrate existing tests to new structure
-5. Implement proper API test cost controls and confirmation system
-6. Add comprehensive integration tests for component interactions
+### Completed Steps
+1. ✅ Implement new test directory structure (unit, mock, integration, api)
+2. ✅ Update test runner CLI to use explicit flags instead of environment variables
+3. ✅ Create standardized test patterns with helper classes and decorators
+4. ✅ Migrate existing tests to new structure
+5. ✅ Implement proper API test cost controls and confirmation system
+6. ✅ Add comprehensive integration tests for component interactions
 
-## 13. Conclusion
+### Current Challenges
+1. ~~**API Tests in Mock Mode**: The current test decorators don't properly skip API tests when running in mock mode, causing potential unwanted API calls~~ ✅
+2. **Provider Testing with Retry Mechanism**: The newly implemented robust retry mechanism requires specialized testing approaches
+   - Provider tests need to be updated to work with retry mechanism and circuit breaker
+   - Tests should verify exponential backoff behavior with deterministic failures
+   - Circuit breaker state transitions need explicit testing
+   - Test mocks should provide deterministic failure sequences for retry testing
+
+3. **Structured Mocking Strategy**: Implement a more consistent provider-specific mocking approach
+   - Create standardized mock libraries for each provider (initial implementation complete)
+   - Use these mock libraries across all provider tests for consistency
+   - Implement retry-aware mocking that can simulate transient failures
+   - Add helpers to simulate different error conditions (rate limits, timeouts, etc.)
+   - Mock objects don't properly replicate the actual API response structures
+3. **Test Runner Limitations**: The test runner needs improvements to better identify test types and prevent running API tests in mock mode
+4. **Missing Helper Libraries**: Need standardized, reliable mock implementations for each provider to ensure consistent testing
+
+### Implementation Steps
+1. ~~Update API test decorator to check current test context more robustly~~ ✅ Complete
+   - Added robust test context detection based on CLI arguments
+   - Implemented proper skipping of API tests when in mock mode
+   - Added unit tests for decorator behavior in `atlas/tests/unit/helpers/test_decorators.py`
+
+2. Create provider-specific mock libraries
+   - ~~Create `mock_openai.py` with standardized OpenAI mocking utilities~~ ✅ Started but needs fixing
+   - Fix `null` to `None` issue in sample response data
+   - Create `mock_anthropic.py` with standardized Anthropic mocking utilities
+   - Create `mock_ollama.py` with standardized Ollama mocking utilities
+   - Ensure all mock utilities return properly structured objects that match real API responses
+   - Add unit tests for mock utilities to verify their behavior
+
+3. Fix provider test files to properly mock all API calls
+   - Fix OpenAI provider tests to properly initialize mocked client in setUp
+   - Use consistent patching approach with addCleanup for proper teardown
+   - Implement proper error simulation for each provider type
+   - Ensure streaming tests don't hang or timeout
+   - Add proper assertions to verify mock interactions
+   - Standardize test patterns across all provider implementations
+
+4. Enhance test runner to better filter tests based on their type
+   - Update test discovery to recognize test type metadata from decorators
+   - Add ability to filter by multiple test types in a single run
+   - Improve reporting to show which tests are being skipped and why
+   - Add clear error messages when tests fail due to missing mocks
+
+5. Create comprehensive documentation of mocking approach
+   - Document standard patterns for mocking each provider
+   - Create examples of correct mock usage for common test scenarios
+   - Add documentation of common pitfalls and debugging approaches
+   - Update README with clear instructions for running tests with mocks
+
+## 13. Structured Mocking Strategy
+
+After evaluating the current status of the test suite, we've identified a need for a more structured approach to provider mocking. This section outlines the strategy for implementing reliable, consistent mocks across all provider tests.
+
+### 13.1 Provider-Specific Mock Libraries
+
+Each provider requires a dedicated mock library to handle its unique API structure:
+
+1. **OpenAI Mock Library** (`mock_openai.py`):
+   - Sample responses for different models (GPT-4, GPT-3.5-Turbo)
+   - Realistic error responses (auth errors, rate limits, content filtering)
+   - Streaming utilities that properly simulate chunks
+   - Helper methods for common testing scenarios
+
+2. **Anthropic Mock Library** (`mock_anthropic.py`):
+   - Sample responses for different Claude models
+   - Error simulation for Anthropic-specific error types
+   - Streaming utilities for content_block_delta format
+   - Realistic token usage and cost calculation
+
+3. **Ollama Mock Library** (`mock_ollama.py`):
+   - Sample responses for various Ollama models
+   - Mocking for Ollama's unique response format
+   - Request validation and error handling
+   - Simulated token counting (since Ollama doesn't provide this)
+
+### 13.2 Implementation Progress
+
+**Completed:**
+- ✅ Fixed API test decorator to properly skip tests in mock mode
+- ✅ Created initial mock_openai.py with standard mocking utilities
+- ✅ Fixed OpenAI provider test setUp method to properly mock client
+- ✅ Fixed 'null' to 'None' issue in mock_openai.py
+
+**In Progress:**
+- 🔄 Creating standardized mock_anthropic.py library
+- 🔄 Fixing streaming tests to avoid timeouts
+- 🔄 Updating provider tests to use new mock libraries
+
+**Pending:**
+- ⏱️ Create mock_ollama.py
+- ⏱️ Add unit tests for mock libraries
+- ⏱️ Fix Provider Errors tests
+- ⏱️ Update test documentation
+
+### 13.3 Recommended Testing Patterns
+
+For effective provider testing, all tests should follow these patterns:
+
+1. **Test Isolation**:
+   ```python
+   def setUp(self):
+       # Create patch with cleanup to ensure it's removed after tests
+       patcher = mock.patch('atlas.providers.openai.OpenAI')
+       self.mock_openai = patcher.start()
+       self.addCleanup(patcher.stop)
+
+       # Configure mock client
+       mock_client = mock.MagicMock()
+       self.mock_openai.return_value = mock_client
+
+       # Create provider with mocked dependencies
+       self.provider = self.provider_class(api_key="test-key")
+
+       # Ensure the provider uses our mock
+       self.provider._client = mock_client
+   ```
+
+2. **Standardized Mock Usage**:
+   ```python
+   @mock_test
+   def test_generate_mocked(self):
+       """Test generating a response with a mocked API."""
+       # Create a request
+       request = self._create_request("Test message")
+
+       # Use standardized mock from library
+       with mock_openai_completions():
+           # Generate response using mocked client
+           response = self.provider.generate(request)
+
+           # Verify response structure
+           self.assertIsInstance(response, ModelResponse)
+           self.assertEqual(response.provider, self.provider_name)
+   ```
+
+3. **Timeout Prevention in Streaming Tests**:
+   ```python
+   # Limit iterations to prevent infinite loops
+   try:
+       for _ in range(10):  # Maximum of 10 iterations
+           delta, response = next(stream_handler)
+           # Process chunk...
+   except StopIteration:
+       # Stream completed normally
+       pass
+   ```
+
+4. **Mock Verification**:
+   ```python
+   # Verify our mock was called with expected parameters
+   self.provider._client.chat.completions.create.assert_called_once()
+   call_kwargs = self.provider._client.chat.completions.create.call_args[1]
+   self.assertEqual(call_kwargs.get("model"), expected_model)
+   ```
+
+## 14. Conclusion
 
 This test suite restructuring will significantly improve the organization, clarity, and maintainability of the Atlas test suite. It will provide clearer separation of concerns, better discoverability, and more explicit control over test execution. By implementing standardized patterns and helper classes, we can make tests more resilient to implementation changes while maintaining comprehensive coverage of all system components.
 
 The addition of proper API test cost controls and confirmation mechanisms will enable safe testing with real APIs while keeping costs under control. This will ensure that Atlas works correctly with actual LLM APIs while preventing regressions during development.
+
+The new structured mocking approach with dedicated provider mock libraries will ensure consistent, reliable testing that doesn't make unwanted API calls while providing thorough coverage of the Atlas codebase.
 
 With these improvements, the Atlas test suite will provide reliable validation of system behavior across different providers and use cases, supporting the continued development and enhancement of the Atlas platform.

@@ -430,7 +430,7 @@ def validate_api_keys(
             providers = list(PROVIDER_API_KEYS.keys())
 
         # Import at function scope to avoid circular imports
-        from atlas.models.factory import create_provider
+        from atlas.providers.factory import create_provider
 
         results = {}
 
