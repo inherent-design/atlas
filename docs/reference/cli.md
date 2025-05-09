@@ -257,6 +257,44 @@ uv run python atlas/scripts/debug/check_models.py --query "What is Atlas?"
 uv run python atlas/scripts/debug/check_models.py --validate-only
 ```
 
+### Configuration Checker
+
+The configuration diagnostic utility is available at `atlas/scripts/debug/check_config.py`:
+
+```bash
+uv run python -m atlas.scripts.debug.check_config [options]
+```
+
+#### Options
+
+```
+-h, --help                  Show help message and exit
+-v, --verbose               Show more detailed information including all environment variables
+--provider {anthropic,openai,ollama,all}
+                           Check specific provider(s) (default: all)
+--env-file ENV_FILE         Path to custom .env file to load
+--validate-api-keys         Validate API keys by making test requests (requires internet)
+```
+
+#### Examples
+
+```bash
+# Basic usage - show configuration overview
+uv run python -m atlas.scripts.debug.check_config
+
+# Show detailed information including all environment variables
+uv run python -m atlas.scripts.debug.check_config --verbose
+
+# Check a specific provider
+uv run python -m atlas.scripts.debug.check_config --provider anthropic
+
+# Load from a custom .env file
+uv run python -m atlas.scripts.debug.check_config --env-file /path/to/.env
+
+# Validate API keys with actual API calls
+uv run python -m atlas.scripts.debug.check_config --validate-api-keys
+```
+
 ## Example Scripts
 
 Atlas includes example scripts demonstrating framework functionality:
@@ -268,11 +306,11 @@ Atlas includes example scripts demonstrating framework functionality:
 | `examples/retrieval_example.py` | Document retrieval without API calls |
 | `examples/telemetry_example.py` | Telemetry system demonstration       |
 
-These examples can be run with the `SKIP_API_KEY_CHECK=true` environment variable to use mock responses instead of actual API calls:
+These examples can be run using the mock provider to avoid making real API calls:
 
 ```bash
-# Run with mock responses
-SKIP_API_KEY_CHECK=true uv run python examples/query_example.py
+# Run with mock provider (no API key required)
+uv run python examples/query_example.py --provider mock
 ```
 
 ## Environment Variables

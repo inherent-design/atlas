@@ -594,6 +594,67 @@ if __name__ == "__main__":
 
 ## Configuration Troubleshooting
 
+### Configuration Diagnostic Utility
+
+Atlas includes a comprehensive diagnostic utility in the `scripts/debug` directory that helps you check and validate your configuration settings:
+
+```bash
+# Basic usage
+uv run python -m atlas.scripts.debug.check_config
+
+# Show detailed information including all environment variables
+uv run python -m atlas.scripts.debug.check_config --verbose
+
+# Check a specific provider
+uv run python -m atlas.scripts.debug.check_config --provider anthropic
+
+# Load from a custom .env file
+uv run python -m atlas.scripts.debug.check_config --env-file /path/to/.env
+
+# Validate API keys (makes API calls)
+uv run python -m atlas.scripts.debug.check_config --validate-api-keys
+```
+
+The diagnostic tool provides:
+
+- **Environment Variables**: Shows all Atlas-related environment variables by category
+- **Configuration Object**: Displays current AtlasConfig settings and their sources
+- **Provider Availability**: Shows which providers are available and lists their models
+- **Database Settings**: Displays information about the ChromaDB database configuration
+- **Path Information**: Shows important directories and .env file locations
+- **API Key Validation**: Optional feature to verify API keys are valid
+
+This is especially useful when:
+- Setting up Atlas for the first time
+- Debugging configuration-related issues
+- Verifying which provider models are available
+- Checking if API keys are properly configured
+
+Example output:
+```
+=== Environment Variables ===
+
+Application Configuration:
+  ATLAS_ENV_PATH: None (NOT SET)
+  ATLAS_LOG_LEVEL: INFO (SET)
+  ATLAS_DB_PATH: /users/username/atlas_db (SET)
+  ATLAS_COLLECTION_NAME: atlas_knowledge_base (SET)
+
+API Keys:
+  ANTHROPIC_API_KEY: sk-a...nxyz (SET)
+  OPENAI_API_KEY: None (NOT SET)
+
+=== Provider Availability ===
+
+Anthropic Provider:
+  Status: AVAILABLE
+  API Key: SET
+  Available Models:
+    - claude-3-7-sonnet-20250219
+    - claude-3-5-sonnet-20240620
+    - claude-3-opus-20240229
+```
+
 ### Common Issues
 
 1. **Missing API Key**:
@@ -646,9 +707,9 @@ if __name__ == "__main__":
    uv pip install python-dotenv
    ```
 
-### Debugging Configuration
+### Manual Debugging
 
-For debugging configuration issues:
+For manual debugging of configuration issues:
 
 ```python
 # Set debug log level for detailed logs
