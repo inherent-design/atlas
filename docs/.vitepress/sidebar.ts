@@ -73,10 +73,10 @@ export const sidebar: DefaultTheme.Sidebar = [
         ],
       },
       {
-        text: "Knowledge & Models",
+        text: "Knowledge & Providers",
         collapsed: true,
         items: [
-          { 
+          {
             text: "Knowledge",
             collapsed: true,
             items: [
@@ -85,15 +85,15 @@ export const sidebar: DefaultTheme.Sidebar = [
               { text: "Retrieval", link: "/components/knowledge/retrieval" },
             ],
           },
-          { 
-            text: "Models",
+          {
+            text: "Providers",
             collapsed: true,
             items: [
-              { text: "Overview", link: "/components/models/" },
-              { text: "Anthropic", link: "/components/models/anthropic" },
-              { text: "OpenAI", link: "/components/models/openai" },
-              { text: "Ollama", link: "/components/models/ollama" },
-              { text: "Mock", link: "/components/models/mock" },
+              { text: "Overview", link: "/components/providers/" },
+              { text: "Anthropic", link: "/components/providers/anthropic" },
+              { text: "OpenAI", link: "/components/providers/openai" },
+              { text: "Ollama", link: "/components/providers/ollama" },
+              { text: "Mock", link: "/components/providers/mock" },
             ],
           },
         ],
@@ -142,20 +142,8 @@ export const sidebar: DefaultTheme.Sidebar = [
           { text: "Type Checking", link: "/guides/type_checking" },
         ],
       },
-      {
-        text: "Examples",
-        collapsed: true,
-        items: [
-          { text: "Overview", link: "/guides/examples/" },
-          { text: "Query", link: "/guides/examples/query_example" },
-          { text: "Retrieval", link: "/guides/examples/retrieval_example" },
-          { text: "Hybrid Retrieval", link: "/guides/examples/hybrid_retrieval_example" },
-          { text: "Streaming", link: "/guides/examples/streaming_example" },
-          { text: "Multi-Agent", link: "/guides/examples/multi_agent_example" },
-          { text: "Tool Agent", link: "/guides/examples/tool_agent_example" },
-          { text: "Advanced", link: "/guides/examples/advanced_examples" },
-        ],
-      },
+      // Examples have been moved to the project root directory
+      // See /examples/* for the latest example implementations
     ],
   },
   {

@@ -376,7 +376,7 @@ Cost formatting varies based on the magnitude:
 
 ## Related Documentation
 
-- [Models Overview](./) - Overview of all model providers
+- [Providers Overview](./) - Overview of all providers
 - [Anthropic Provider](./anthropic.md) - Documentation for the Anthropic provider
 - [Ollama Provider](./ollama.md) - Documentation for the Ollama provider
 - [Environment Variables](../../reference/env_variables.md) - Configuration options

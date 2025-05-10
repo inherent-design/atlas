@@ -7,7 +7,7 @@ This document explains how the core modules in Atlas interact, with a focus on t
 Atlas consists of several core modules that work together:
 
 - **agents**: Defines agent implementations and behaviors
-- **models**: Handles integration with various LLM providers
+- **providers**: Handles integration with various LLM providers
 - **knowledge**: Manages document storage, retrieval, and processing
 - **graph**: Structures agent workflows and decision-making processes
 - **orchestration**: Coordinates multi-agent interactions and parallel processing
@@ -21,15 +21,15 @@ flowchart TD
     User[User Input] --> Controller[Controller Agent]
     Controller --> Graph[Graph Module]
     Graph --> Knowledge[Knowledge Module]
-    Graph --> Models[Models Module]
+    Graph --> Providers[Providers Module]
     Graph --> Workers[Worker Agents]
-    Knowledge --> Models
-    Workers --> Models
+    Knowledge --> Providers
+    Workers --> Providers
     Orchestration[Orchestration Module] --> Controller
     Orchestration --> Workers
     Graph --> Orchestration
     Workers --> Knowledge
-    Models --> Response[Response to User]
+    Providers --> Response[Response to User]
 ```
 
 ### Graph Module: The Workflow Engine
@@ -135,7 +135,7 @@ When a user submits a query:
 1. **Entry Point**: The query is received by a controller agent or directly by the graph module
 2. **Knowledge Retrieval**: The graph module executes a node that calls the knowledge module to find relevant documents
 3. **Context Integration**: The retrieved context is added to the state
-4. **Model Invocation**: A node in the graph calls the models module to generate a response
+4. **Provider Invocation**: A node in the graph calls the providers module to generate a response
 5. **Response Delivery**: The final state with the response is returned to the user
 
 ### 2. Multi-Agent Collaboration
@@ -286,6 +286,6 @@ result = coordinator.process_task("Complex task requiring multiple agents")
 - The **orchestration module** coordinates multiple agents, handling task distribution and result aggregation
 - Together, these modules enable complex agent behaviors and multi-agent collaboration
 - The knowledge module provides information retrieval capabilities to both workflows and agents
-- The models module serves as the core intelligence, generating responses and processing information
+- The providers module serves as the core intelligence, generating responses and processing information
 
 By understanding how these modules interact, you can leverage the full power of Atlas to create sophisticated agent systems that effectively combine knowledge retrieval, workflow management, and multi-agent coordination.

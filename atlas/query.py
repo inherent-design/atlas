@@ -85,7 +85,16 @@ class AtlasQuery:
         """
         return self.agent.process_message(query_text)
 
-    def query_with_context(self, query_text: str) -> Dict[str, Any]:
+    def query_with_context(
+        self,
+        query_text: str,
+        filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
+        max_results: int = 10,
+        min_relevance_score: float = 0.0,
+        use_hybrid_search: bool = False,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
+    ) -> Dict[str, Any]:
         """Query Atlas and return both the response and context used.
 
         This method is useful for debugging or for applications that need
@@ -93,19 +102,55 @@ class AtlasQuery:
 
         Args:
             query_text: The text query to process.
+            filter: Optional metadata filter to apply. Can be a dictionary or RetrievalFilter object.
+            max_results: Maximum number of results to retrieve (default: 10).
+            min_relevance_score: Minimum relevance score threshold for results (default: 0.0).
+            use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
+            semantic_weight: Weight for semantic search results (0-1) when using hybrid search.
+            keyword_weight: Weight for keyword search results (0-1) when using hybrid search.
 
         Returns:
             Dictionary containing the response and context used.
         """
-        # Retrieve relevant documents from the knowledge base
-        documents = self.knowledge_base.retrieve(query_text)
+        from atlas.knowledge.retrieval import RetrievalFilter, RetrievalSettings
 
-        # Process the query using the agent
-        response = self.agent.process_message(query_text)
+        # Prepare retrieval filter if provided
+        retrieval_filter = None
+        if filter is not None:
+            if isinstance(filter, dict):
+                retrieval_filter = RetrievalFilter(where=filter)
+            elif isinstance(filter, RetrievalFilter):
+                retrieval_filter = filter
+            else:
+                raise TypeError("filter must be a dictionary or RetrievalFilter object")
+
+        # Prepare retrieval settings
+        settings = RetrievalSettings(
+            use_hybrid_search=use_hybrid_search,
+            semantic_weight=semantic_weight,
+            keyword_weight=keyword_weight,
+            num_results=max_results,
+            min_relevance_score=min_relevance_score,
+            rerank_results=True  # Always apply reranking for better results
+        )
+
+        # Retrieve relevant documents from the knowledge base
+        documents = self.knowledge_base.retrieve(
+            query_text,
+            filter=retrieval_filter,
+            settings=settings
+        )
+
+        # Process the query using the agent with the same filter and settings
+        response = self.agent.process_message(
+            query_text,
+            filter=retrieval_filter,
+            settings=settings
+        )
 
         # Format the response with context
         formatted_docs = []
-        for doc in documents[:3]:  # Include top 3 documents
+        for doc in documents:  # Include all filtered documents
             if hasattr(doc, 'to_dict'):
                 # It's a RetrievalResult object
                 doc_dict = doc.to_dict()
@@ -113,6 +158,7 @@ class AtlasQuery:
                     "content": doc_dict["content"],
                     "source": doc_dict["metadata"].get("source", "Unknown"),
                     "relevance_score": doc_dict["relevance_score"],
+                    "metadata": doc_dict["metadata"],  # Include all metadata for more context
                 })
             else:
                 # It's a dictionary
@@ -120,18 +166,38 @@ class AtlasQuery:
                     "content": doc["content"],
                     "source": doc["metadata"].get("source", "Unknown"),
                     "relevance_score": doc["relevance_score"],
+                    "metadata": doc["metadata"],  # Include all metadata for more context
                 })
-                
+
+        # Build the response with detailed filter and settings information
+        filter_info = None
+        if retrieval_filter:
+            filter_info = retrieval_filter.where
+
+        # Extract settings for context
+        settings_dict = settings.to_dict() if settings else {}
+
         return {
             "response": response,
             "context": {
                 "documents": formatted_docs,
                 "query": query_text,
+                "filter": filter_info,
+                "settings": settings_dict,
+                "total_documents_found": len(documents),
             },
         }
 
     def query_streaming(
-        self, query_text: str, callback: Callable[[str, str], None]
+        self,
+        query_text: str,
+        callback: Callable[[str, str], None],
+        filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
+        max_results: int = 10,
+        min_relevance_score: float = 0.0,
+        use_hybrid_search: bool = False,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
     ) -> str:
         """Query Atlas with streaming response.
 
@@ -142,31 +208,90 @@ class AtlasQuery:
             query_text: The text query to process.
             callback: Function called for each chunk of the response, with arguments
                       (delta_text, full_text).
+            filter: Optional metadata filter to apply. Can be a dictionary or RetrievalFilter object.
+            max_results: Maximum number of results to retrieve (default: 10).
+            min_relevance_score: Minimum relevance score threshold for results (default: 0.0).
+            use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
+            semantic_weight: Weight for semantic search results (0-1) when using hybrid search.
+            keyword_weight: Weight for keyword search results (0-1) when using hybrid search.
 
         Returns:
             The complete response text.
         """
+        from atlas.knowledge.retrieval import RetrievalFilter, RetrievalSettings
+
         try:
+            # Prepare retrieval filter if provided
+            retrieval_filter = None
+            if filter is not None:
+                if isinstance(filter, dict):
+                    retrieval_filter = RetrievalFilter(where=filter)
+                elif isinstance(filter, RetrievalFilter):
+                    retrieval_filter = filter
+                else:
+                    logger.warning(f"Unsupported filter type: {type(filter)}. Converting to string representation.")
+                    try:
+                        # Try to convert to a dictionary if possible
+                        filter_dict = {"custom_filter": str(filter)}
+                        retrieval_filter = RetrievalFilter(where=filter_dict)
+                    except Exception as filter_err:
+                        logger.error(f"Error converting filter to dictionary: {filter_err}")
+                        raise TypeError("filter must be a dictionary or RetrievalFilter object")
+
+            # Prepare retrieval settings
+            settings = RetrievalSettings(
+                use_hybrid_search=use_hybrid_search,
+                semantic_weight=semantic_weight,
+                keyword_weight=keyword_weight,
+                num_results=max_results,
+                min_relevance_score=min_relevance_score,
+                rerank_results=True  # Always apply reranking for better results
+            )
+
+            # Log the filter and settings for debugging
+            logger.debug(f"Streaming query with filter: {retrieval_filter.where if retrieval_filter else None}")
+            logger.debug(f"Streaming query with settings: {settings.to_dict()}")
+
             # Check if the agent has the streaming method
             if hasattr(self.agent, "process_message_streaming"):
                 # Use the agent's streaming implementation
-                return self.agent.process_message_streaming(query_text, callback)
+                return self.agent.process_message_streaming(
+                    query_text,
+                    callback,
+                    filter=retrieval_filter,
+                    settings=settings
+                )
             else:
                 # Fallback to non-streaming if not available
                 logger.warning(
                     "Streaming not supported by agent - falling back to regular query"
                 )
-                response = self.agent.process_message(query_text)
+                response = self.agent.process_message(
+                    query_text,
+                    filter=retrieval_filter,
+                    settings=settings
+                )
                 # Call the callback once with the full response
                 callback(response, response)
                 return response
         except Exception as e:
             logger.error(f"Error in streaming query: {e}", exc_info=True)
-            # Fall back to regular query
+            # Fall back to regular query without filtering
             response = self.agent.process_message(query_text)
+            # Call the callback with the error response
+            callback(response, response)
             return response
 
-    def retrieve_only(self, query_text: str) -> List[Dict[str, Any]]:
+    def retrieve_only(
+        self,
+        query_text: str,
+        filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
+        max_results: int = 10,
+        min_relevance_score: float = 0.0,
+        use_hybrid_search: bool = False,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
+    ) -> List[Dict[str, Any]]:
         """Retrieve documents from the knowledge base without generating a response.
 
         This method is useful for applications that want to access Atlas's knowledge
@@ -174,27 +299,80 @@ class AtlasQuery:
 
         Args:
             query_text: The text query to search for.
+            filter: Optional metadata filter to apply. Can be a dictionary or RetrievalFilter object.
+            max_results: Maximum number of results to retrieve (default: 10).
+            min_relevance_score: Minimum relevance score threshold for results (default: 0.0).
+            use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
+            semantic_weight: Weight for semantic search results (0-1) when using hybrid search.
+            keyword_weight: Weight for keyword search results (0-1) when using hybrid search.
 
         Returns:
             List of relevant documents with their metadata.
         """
-        documents = self.knowledge_base.retrieve(query_text)
+        from atlas.knowledge.retrieval import RetrievalFilter, RetrievalSettings
 
-        # Format and return documents
-        result = []
-        for doc in documents:
-            # Handle both dictionary-like and RetrievalResult objects
-            if hasattr(doc, 'to_dict'):
-                # It's a RetrievalResult object
-                result.append(doc.to_dict())
+        # Prepare retrieval filter if provided
+        retrieval_filter = None
+        if filter is not None:
+            if isinstance(filter, dict):
+                retrieval_filter = RetrievalFilter(where=filter)
+            elif isinstance(filter, RetrievalFilter):
+                retrieval_filter = filter
             else:
-                # It's already a dictionary
-                result.append({
-                    "content": doc["content"],
-                    "metadata": doc["metadata"],
-                    "relevance_score": doc["relevance_score"],
-                })
-        return result
+                logger.warning(f"Unsupported filter type: {type(filter)}. Using string representation.")
+                try:
+                    # Try to convert to a dictionary if possible
+                    filter_dict = {"custom_filter": str(filter)}
+                    retrieval_filter = RetrievalFilter(where=filter_dict)
+                except Exception as filter_err:
+                    logger.error(f"Error converting filter to dictionary: {filter_err}")
+                    raise TypeError("filter must be a dictionary or RetrievalFilter object")
+
+        # Prepare retrieval settings
+        settings = RetrievalSettings(
+            use_hybrid_search=use_hybrid_search,
+            semantic_weight=semantic_weight,
+            keyword_weight=keyword_weight,
+            num_results=max_results,
+            min_relevance_score=min_relevance_score,
+            rerank_results=not use_hybrid_search  # Apply reranking for regular search
+        )
+
+        # Log the filter and settings for debugging
+        logger.debug(f"Retrieving documents with filter: {retrieval_filter.where if retrieval_filter else None}")
+        logger.debug(f"Retrieving documents with settings: {settings.to_dict()}")
+
+        try:
+            # Retrieve relevant documents
+            documents = self.knowledge_base.retrieve(
+                query_text,
+                filter=retrieval_filter,
+                settings=settings
+            )
+
+            # Format and return documents
+            result = []
+            for doc in documents:
+                # Handle both dictionary-like and RetrievalResult objects
+                if hasattr(doc, 'to_dict'):
+                    # It's a RetrievalResult object
+                    result.append(doc.to_dict())
+                else:
+                    # It's already a dictionary
+                    result.append({
+                        "content": doc["content"],
+                        "metadata": doc["metadata"],
+                        "relevance_score": doc["relevance_score"],
+                        "distance": doc.get("distance", 0.0),
+                    })
+
+            logger.info(f"Retrieved {len(result)} documents for query: {query_text[:50]}...")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error retrieving documents: {e}", exc_info=True)
+            # Return empty list on error
+            return []
 
 
 # Convenience factory function

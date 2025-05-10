@@ -18,6 +18,13 @@ from atlas.providers.base import (
     CostEstimate,
 )
 
+# Provider configuration and options
+from atlas.providers.options import ProviderOptions
+from atlas.providers.resolver import (
+    resolve_provider_options,
+    create_provider_from_options,
+)
+
 # Factory functions
 from atlas.providers.factory import (
     discover_providers,
@@ -60,6 +67,10 @@ __all__ = [
     "ModelRole",
     "TokenUsage",
     "CostEstimate",
+    # Provider configuration
+    "ProviderOptions",
+    "resolve_provider_options",
+    "create_provider_from_options",
     # Factory functions
     "discover_providers",
     "create_provider",

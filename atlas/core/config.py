@@ -6,10 +6,13 @@ This module defines configuration options and settings for the Atlas framework.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 
 from atlas.core import env
 from atlas.core.errors import ConfigurationError, ValidationError, ErrorSeverity
+
+# Forward references to avoid circular imports
+ProviderOptionsType = Union[Dict[str, Any], 'ProviderOptions']
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,7 @@ class AtlasConfig:
         max_tokens: Optional[int] = None,
         parallel_enabled: bool = False,
         worker_count: int = 3,
+        provider_options: Optional[ProviderOptionsType] = None,
     ):
         """Initialize Atlas configuration.
 
@@ -37,6 +41,7 @@ class AtlasConfig:
             max_tokens: Maximum tokens in responses. If None, read from environment or use default.
             parallel_enabled: Enable parallel processing with LangGraph.
             worker_count: Number of worker agents in parallel mode.
+            provider_options: Optional provider options for model selection.
         """
         # API key (from args, environment, or env module)
         self.anthropic_api_key = anthropic_api_key or env.get_string(
@@ -93,6 +98,17 @@ class AtlasConfig:
         # Log level from environment
         self.log_level = env.get_string("ATLAS_LOG_LEVEL", "INFO")
 
+        # Provider options
+        self.provider_options = None
+        if provider_options is not None:
+            # Handle dictionary representation
+            if isinstance(provider_options, dict):
+                # Lazy import to avoid circular imports
+                from atlas.providers import ProviderOptions
+                self.provider_options = ProviderOptions.from_dict(provider_options)
+            else:
+                self.provider_options = provider_options
+
         # Validate configuration
         try:
             self.validate()
@@ -143,7 +159,7 @@ class AtlasConfig:
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         # Note: We don't include the API key in the dict for security
-        return {
+        result = {
             "collection_name": self.collection_name,
             "db_path": self.db_path,
             "model_name": self.model_name,
@@ -154,3 +170,29 @@ class AtlasConfig:
             "mock_api": self.mock_api,
             "log_level": self.log_level,
         }
+
+        # Include provider options if available
+        if self.provider_options is not None:
+            result["provider_options"] = self.provider_options.to_dict()
+
+        return result
+
+    def get_provider_options(self):
+        """Get provider options from this configuration.
+
+        If provider_options is already set, returns it directly.
+        Otherwise, creates new ProviderOptions from the config values.
+
+        Returns:
+            ProviderOptions instance
+        """
+        # Use existing provider options if available
+        if self.provider_options is not None:
+            return self.provider_options
+
+        # Create new options from config values
+        from atlas.providers import ProviderOptions
+        return ProviderOptions(
+            model_name=self.model_name,
+            max_tokens=self.max_tokens
+        )

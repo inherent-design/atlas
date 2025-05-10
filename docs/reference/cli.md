@@ -61,13 +61,27 @@ Options for multi-agent workflows with LangGraph:
 Options for selecting model providers and configurations:
 
 ```
---provider {anthropic,openai,ollama}
-                      Model provider to use (default: anthropic)
+--provider {anthropic,openai,ollama,mock}
+                      Model provider to use (default: anthropic, auto-detected if only model is specified)
 --model MODEL         Model to use (provider-specific, e.g., claude-3-opus-20240229, gpt-4o, llama3)
-                      (default: claude-3-7-sonnet-20250219)
+                      If provided without --provider, the provider will be auto-detected
+--capability {inexpensive,efficient,premium,vision,standard}
+                      Model capability to use when no specific model is provided (default: inexpensive)
 --max-tokens MAX_TOKENS
                       Maximum tokens in model responses (default: 2000)
---base-url BASE_URL   Base URL for API (used primarily with Ollama, default: http://localhost:11434)
+```
+
+### Provider-Specific Options
+
+#### Ollama Provider Options
+
+```
+--ollama-api-endpoint URL
+                      Ollama API endpoint URL (default: http://localhost:11434/api)
+--ollama-connect-timeout SECONDS
+                      Connection timeout for Ollama server in seconds (default: 2)
+--ollama-request-timeout SECONDS
+                      Request timeout for Ollama API calls in seconds (default: 60)
 ```
 
 ### Query Options
@@ -110,7 +124,7 @@ uv run python main.py --provider anthropic --model claude-3-opus-20240229
 uv run python main.py --provider openai --model gpt-4o
 
 # Use the Ollama provider with a local model
-uv run python main.py --provider ollama --model llama3 --base-url http://localhost:11434
+uv run python main.py --provider ollama --model llama3 --ollama-api-endpoint http://localhost:11434/api
 ```
 
 ### Multi-Agent Examples

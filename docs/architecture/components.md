@@ -25,17 +25,17 @@ graph TD
         DocProc --> KB
     end
 
-    %% Model Components
-    subgraph "Model Provider Components"
-        ModelFactory[ModelFactory]
-        ModelProvider[ModelProvider]
+    %% Provider Components
+    subgraph "Provider Components"
+        ProviderFactory[ProviderFactory]
+        Provider[Provider]
         Anthropic[AnthropicProvider]
         OpenAI[OpenAIProvider]
         Ollama[OllamaProvider]
-        ModelFactory --> ModelProvider
-        Anthropic --> ModelProvider
-        OpenAI --> ModelProvider
-        Ollama --> ModelProvider
+        ProviderFactory --> Provider
+        Anthropic --> Provider
+        OpenAI --> Provider
+        Ollama --> Provider
     end
 
     %% Graph Components
@@ -164,23 +164,23 @@ classDiagram
     DocumentProcessor --> KnowledgeBase: adds documents to
 ```
 
-### Model Provider Components
+### Provider Components
 
-The model provider components abstract interactions with language model APIs:
+The provider components abstract interactions with language model APIs:
 
-- **ModelProvider**: Base interface for all providers
+- **Provider**: Base interface for all providers
   - **AnthropicProvider**: Implementation for Anthropic Claude models
   - **OpenAIProvider**: Implementation for OpenAI GPT models
   - **OllamaProvider**: Implementation for local Ollama models
 
-- **ModelFactory**: Creates appropriate provider instances
+- **ProviderFactory**: Creates appropriate provider instances
   - Handles provider detection and selection
   - Manages provider registration
   - Implements fallback logic
 
 ```mermaid
 classDiagram
-    class ModelProvider {
+    class Provider {
         +name: str
         +model_name: str
         +max_tokens: int
@@ -210,16 +210,16 @@ classDiagram
         +create_streaming_completion(messages)
     }
 
-    class ModelFactory {
+    class ProviderFactory {
         +create_provider(provider_name, model_name, max_tokens)
         +discover_providers()
         +get_provider_class(provider_name)
     }
 
-    ModelProvider <|-- AnthropicProvider
-    ModelProvider <|-- OpenAIProvider
-    ModelProvider <|-- OllamaProvider
-    ModelFactory --> ModelProvider: creates
+    Provider <|-- AnthropicProvider
+    Provider <|-- OpenAIProvider
+    Provider <|-- OllamaProvider
+    ProviderFactory --> Provider: creates
 ```
 
 ### Graph Components
@@ -316,18 +316,18 @@ classDiagram
 
 The following table shows the key dependencies between components:
 
-| Component       | Dependencies                         |
-| --------------- | ------------------------------------ |
-| AtlasAgent      | ModelProvider, KnowledgeBase, Config |
-| ControllerAgent | AtlasAgent, WorkerAgent, StateGraph  |
-| WorkerAgent     | AtlasAgent, KnowledgeBase            |
-| KnowledgeBase   | ChromaDB, Config                     |
-| ModelProvider   | Config, Telemetry                    |
-| StateGraph      | Node, Edge, Config                   |
+| Component       | Dependencies                      |
+| --------------- | --------------------------------- |
+| AtlasAgent      | Provider, KnowledgeBase, Config   |
+| ControllerAgent | AtlasAgent, WorkerAgent, StateGraph |
+| WorkerAgent     | AtlasAgent, KnowledgeBase         |
+| KnowledgeBase   | ChromaDB, Config                  |
+| Provider        | Config, Telemetry                 |
+| StateGraph      | Node, Edge, Config                |
 
 ## Next Steps
 
 - See [Agents](../components/agents/controller.md) for detailed agent documentation
 - See [Knowledge](../components/knowledge/) for knowledge system details
-- See [Models](../components/models/) for model provider information
+- See [Providers](../components/providers/) for provider information
 - See [Graph](../components/graph/) for workflow documentation

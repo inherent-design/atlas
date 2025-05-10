@@ -187,4 +187,4 @@ The query workflow is designed to be integrated into other applications:
 
 - [Retrieval Workflow](./retrieval.md) - Deeper details on document retrieval
 - [Getting Started Guide](../guides/getting_started.md) - Basic usage tutorial
-- [Model Providers](../components/models/) - Supported LLM providers
+- [Providers](../components/providers/) - Supported LLM providers

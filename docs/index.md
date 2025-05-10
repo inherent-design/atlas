@@ -14,7 +14,7 @@ hero:
       link: /architecture/
     - theme: alt
       text: Components
-      link: /components/models/
+      link: /components/providers/
 
 features:
   - icon: 🤖
@@ -63,7 +63,7 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 - **[Agent System](./components/agents/controller.md)**: Agent implementation and registry
 - **[Knowledge System](./components/knowledge/)**: Document processing and retrieval
 - **[Graph System](./components/graph/)**: State management and workflow construction
-- **[Model Providers](./components/models/)**: Integration with different LLM providers
+- **[Providers](./components/providers/)**: Integration with different LLM providers
 
 #### Workflows (Holistic Integration)
 - **[Query Workflow](./workflows/query.md)**: Standard query-response flow

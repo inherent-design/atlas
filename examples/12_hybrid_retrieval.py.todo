@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""
+Hybrid Retrieval Example (12_hybrid_retrieval.py)
+
+IMPLEMENTATION BLOCKED: Requires hybrid retrieval implementation
+
+This example will demonstrate hybrid retrieval combining semantic and keyword search:
+1. Pure semantic search (embedding-based)
+2. Pure keyword search (BM25 or similar)
+3. Hybrid search with weighted combination
+4. Results comparison between methods
+
+Requirements to unblock:
+1. Implement hybrid retriever in atlas/knowledge/retrieval.py
+2. Add keyword search capability
+3. Create weighting mechanism between methods
+4. Implement result merging algorithm
+
+Example sketch:
+```python
+import sys
+from typing import Dict, Any, List
+
+# Import common utilities for Atlas examples
+from common import setup_example, create_provider_from_args, print_example_footer, ensure_example_data, handle_example_error
+from atlas.core import logging
+
+# Import atlas modules
+from atlas.knowledge.retrieval import KnowledgeBase, RetrievalSettings
+
+def add_example_arguments(parser):
+    """Add example-specific arguments to the parser."""
+    parser.add_argument(
+        "--semantic-weight",
+        type=float,
+        default=0.7,
+        help="Weight for semantic search results (default: 0.7)"
+    )
+    parser.add_argument(
+        "--keyword-weight",
+        type=float,
+        default=0.3,
+        help="Weight for keyword search results (default: 0.3)"
+    )
+    parser.add_argument(
+        "--query",
+        type=str,
+        help="Specific query to use instead of example queries"
+    )
+    parser.add_argument(
+        "--n-results",
+        type=int,
+        default=5,
+        help="Number of results to return (default: 5)"
+    )
+
+def main():
+    """Run the hybrid retrieval example."""
+    # Set up the example with standardized logging and argument parsing
+    args = setup_example("Atlas Hybrid Retrieval Example", add_example_arguments)
+    logger = logging.get_logger(__name__)
+
+    # Ensure we have example data
+    was_ingested, document_count = ensure_example_data(args)
+    if was_ingested:
+        logger.info("Example data was ingested automatically")
+        print("Example data was ingested automatically for this example")
+
+    try:
+        # Initialize different retrievers
+        semantic_retriever = SemanticRetriever(collection_name=args.collection, db_path=args.db_path)
+        keyword_retriever = KeywordRetriever(collection_name=args.collection, db_path=args.db_path)
+        hybrid_retriever = HybridRetriever(
+            collection_name=args.collection,
+            db_path=args.db_path,
+            semantic_weight=args.semantic_weight,
+            keyword_weight=args.keyword_weight
+        )
+
+        # Compare retrieval results
+        query = args.query or "Atlas knowledge representation"
+        print(f"Query: {query}")
+
+        semantic_results = semantic_retriever.retrieve(query, n_results=args.n_results)
+        keyword_results = keyword_retriever.retrieve(query, n_results=args.n_results)
+        hybrid_results = hybrid_retriever.retrieve(query, n_results=args.n_results)
+
+        # Compare and display results
+
+    except Exception as e:
+        handle_example_error(logger, e, "Error during hybrid retrieval")
+
+    # Print footer
+    print_example_footer()
+
+if __name__ == "__main__":
+    main()
+```
+
+Priority: Medium
+Related files:
+- atlas/knowledge/retrieval.py
+- examples/11_basic_retrieval.py
+"""
+
+# This file is a placeholder. See the docstring above for implementation details.

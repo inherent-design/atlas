@@ -26,6 +26,14 @@ Environment variables:
     OPENAI_API_KEY: API key for OpenAI
     OPENAI_ORGANIZATION: Organization ID for OpenAI (optional)
     
+    # Model Configuration
+    ATLAS_DEFAULT_PROVIDER: Default model provider (default: anthropic)
+    ATLAS_DEFAULT_MODEL: Default model to use (provider-specific)
+    ATLAS_DEFAULT_CAPABILITY: Default capability for model selection (default: inexpensive)
+    ATLAS_ANTHROPIC_DEFAULT_MODEL: Default Anthropic model (default: claude-3-5-sonnet-20240620)
+    ATLAS_OPENAI_DEFAULT_MODEL: Default OpenAI model (default: gpt-4o)
+    ATLAS_OLLAMA_DEFAULT_MODEL: Default Ollama model (default: llama3)
+    
     # Development Settings
     ATLAS_DEV_MODE: Enable development mode (default: false)
 """
@@ -61,6 +69,19 @@ PROVIDER_API_KEYS = {
     "anthropic": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
     "ollama": None,  # Ollama doesn't require an API key
+}
+
+# Provider-specific API endpoints and configuration
+PROVIDER_ENDPOINTS = {
+    "ollama": "OLLAMA_API_ENDPOINT",  # The endpoint for Ollama server
+}
+
+# Provider-specific timeout settings
+PROVIDER_TIMEOUTS = {
+    "ollama": {
+        "connect": "OLLAMA_CONNECT_TIMEOUT",
+        "request": "OLLAMA_REQUEST_TIMEOUT",
+    }
 }
 
 
@@ -195,7 +216,10 @@ def get_string(name: str, default: Optional[str] = None) -> Optional[str]:
         String value of the variable, or default if not set.
     """
     _ensure_env_loaded()
-    return _ENV_CACHE.get(name, default)
+    value = _ENV_CACHE.get(name)
+    if value is None or value.strip() == "":
+        return default
+    return value
 
 
 def get_int(name: str, default: Optional[int] = None) -> Optional[int]:
@@ -341,6 +365,61 @@ def get_api_key(provider: str) -> Optional[str]:
     return get_string(env_var)
 
 
+def get_provider_endpoint(provider: str) -> Optional[str]:
+    """Get the API endpoint for a provider.
+
+    Args:
+        provider: Name of the provider (anthropic, openai, ollama).
+
+    Returns:
+        API endpoint for the provider, or None if not set or provider unknown.
+    """
+    # Normalize provider name
+    provider = provider.lower()
+
+    # Check if provider is known
+    if provider not in PROVIDER_ENDPOINTS:
+        logger.warning(f"Unknown provider endpoint configuration for: {provider}")
+        return None
+
+    # Get environment variable name for API endpoint
+    env_var = PROVIDER_ENDPOINTS.get(provider)
+
+    # If no environment variable is defined for this provider
+    if env_var is None:
+        return None
+
+    return get_string(env_var)
+
+
+def get_provider_timeout(provider: str, timeout_type: str) -> Optional[float]:
+    """Get timeout setting for a provider.
+
+    Args:
+        provider: Name of the provider (anthropic, openai, ollama).
+        timeout_type: Type of timeout ("connect" or "request").
+
+    Returns:
+        Timeout value in seconds, or None if not set or provider unknown.
+    """
+    # Normalize provider name
+    provider = provider.lower()
+
+    # Check if provider has timeout settings
+    if provider not in PROVIDER_TIMEOUTS:
+        return None
+
+    # Check if the timeout type exists for this provider
+    if timeout_type not in PROVIDER_TIMEOUTS[provider]:
+        return None
+
+    # Get environment variable name for the timeout
+    env_var = PROVIDER_TIMEOUTS[provider][timeout_type]
+
+    # Get the value
+    return get_float(env_var)
+
+
 def has_api_key(provider: str) -> bool:
     """Check if an API key is available for a provider.
 
@@ -397,13 +476,27 @@ def validate_provider_requirements(providers: List[str]) -> Dict[str, bool]:
             try:
                 import requests
 
+                # Get API endpoint from environment or fall back to default
+                api_endpoint = get_provider_endpoint(provider) or "http://localhost:11434/api"
+
+                # Get connect timeout from environment or use default
+                connect_timeout = get_provider_timeout("ollama", "connect") or 2
+
                 try:
                     response = requests.get(
-                        "http://localhost:11434/api/version", timeout=1
+                        f"{api_endpoint}/version", timeout=connect_timeout
                     )
                     results[provider] = response.status_code == 200
+                    if not results[provider]:
+                        logger.warning(f"Ollama server returned status code {response.status_code}")
+                except requests.exceptions.ConnectionError as e:
+                    logger.warning(f"Unable to connect to Ollama server at {api_endpoint}: {e}")
+                    results[provider] = False
+                except requests.exceptions.Timeout as e:
+                    logger.warning(f"Timeout connecting to Ollama server at {api_endpoint}: {e}")
+                    results[provider] = False
                 except Exception as e:
-                    logger.debug(f"Error checking Ollama: {e}")
+                    logger.warning(f"Error checking Ollama: {e}")
                     results[provider] = False
             except ImportError:
                 results[provider] = False
@@ -460,26 +553,52 @@ def validate_api_keys(
                 try:
                     import requests
 
-                    response = requests.get(
-                        "http://localhost:11434/api/version", timeout=1
-                    )
-                    valid = response.status_code == 200
-                    results[provider_name] = {
-                        "valid": valid,
-                        "provider": provider_name,
-                        "key_present": True,  # Ollama doesn't need a key
-                        "error": (
-                            None
-                            if valid
-                            else "Ollama server not running or not responding"
-                        ),
-                    }
-                except Exception as e:
+                    # Get API endpoint and timeout
+                    api_endpoint = get_provider_endpoint(provider_name) or "http://localhost:11434/api"
+                    connect_timeout = get_provider_timeout("ollama", "connect") or 2
+
+                    try:
+                        response = requests.get(
+                            f"{api_endpoint}/version", timeout=connect_timeout
+                        )
+                        valid = response.status_code == 200
+                        results[provider_name] = {
+                            "valid": valid,
+                            "provider": provider_name,
+                            "key_present": True,  # Ollama doesn't need a key
+                            "error": (
+                                None
+                                if valid
+                                else f"Ollama server at {api_endpoint} not running or not responding"
+                            ),
+                        }
+                    except requests.exceptions.ConnectionError as e:
+                        results[provider_name] = {
+                            "valid": False,
+                            "provider": provider_name,
+                            "key_present": True,  # Ollama doesn't need a key
+                            "error": f"Unable to connect to Ollama server at {api_endpoint}: {str(e)}",
+                        }
+                    except requests.exceptions.Timeout as e:
+                        results[provider_name] = {
+                            "valid": False,
+                            "provider": provider_name,
+                            "key_present": True,  # Ollama doesn't need a key
+                            "error": f"Timeout connecting to Ollama server at {api_endpoint}: {str(e)}",
+                        }
+                    except Exception as e:
+                        results[provider_name] = {
+                            "valid": False,
+                            "provider": provider_name,
+                            "key_present": True,  # Ollama doesn't need a key
+                            "error": f"Error connecting to Ollama: {str(e)}",
+                        }
+                except ImportError as e:
                     results[provider_name] = {
                         "valid": False,
                         "provider": provider_name,
                         "key_present": True,  # Ollama doesn't need a key
-                        "error": f"Error connecting to Ollama: {str(e)}",
+                        "error": f"Requests package not available: {str(e)}",
                     }
                 continue
 

@@ -44,11 +44,19 @@ class OllamaProvider(ModelProvider):
     # Default Ollama API endpoint
     DEFAULT_API_ENDPOINT = "http://localhost:11434/api"
 
+    # Default connection timeout in seconds
+    DEFAULT_CONNECT_TIMEOUT = 2
+
+    # Default request timeout in seconds
+    DEFAULT_REQUEST_TIMEOUT = 60
+
     def __init__(
         self,
         model_name: str = "llama3",
         max_tokens: int = 2000,
         api_endpoint: Optional[str] = None,
+        connect_timeout: Optional[float] = None,
+        request_timeout: Optional[float] = None,
         retry_config: Optional[RetryConfig] = None,
         circuit_breaker: Optional[CircuitBreaker] = None,
         **kwargs: Any,
@@ -59,6 +67,8 @@ class OllamaProvider(ModelProvider):
             model_name: Name of the Ollama model to use.
             max_tokens: Maximum tokens for model generation.
             api_endpoint: URL of the Ollama API endpoint.
+            connect_timeout: Timeout in seconds for establishing connection to Ollama server.
+            request_timeout: Timeout in seconds for API requests to Ollama server.
             retry_config: Optional custom retry configuration.
             circuit_breaker: Optional custom circuit breaker.
             **kwargs: Additional provider-specific parameters.
@@ -68,7 +78,7 @@ class OllamaProvider(ModelProvider):
         """
         # Initialize base ModelProvider with retry configuration
         super().__init__(retry_config=retry_config, circuit_breaker=circuit_breaker)
-        
+
         # Check if Requests is available
         if not REQUESTS_AVAILABLE:
             raise ValidationError(
@@ -80,10 +90,14 @@ class OllamaProvider(ModelProvider):
         self._max_tokens = max_tokens
         self._additional_params = kwargs or {}
 
+        # Set timeouts with fallbacks to environment variables or defaults
+        self._connect_timeout = connect_timeout or env.get_provider_timeout(
+            "ollama", "connect") or self.DEFAULT_CONNECT_TIMEOUT
+        self._request_timeout = request_timeout or env.get_provider_timeout(
+            "ollama", "request") or self.DEFAULT_REQUEST_TIMEOUT
+
         # Get API endpoint from env module or use default
-        self._api_endpoint = api_endpoint or env.get_string(
-            "OLLAMA_API_ENDPOINT", default=self.DEFAULT_API_ENDPOINT
-        )
+        self._api_endpoint = api_endpoint or env.get_provider_endpoint("ollama") or self.DEFAULT_API_ENDPOINT
 
         # Normalize API endpoint (remove trailing slash) - handle possible None
         if self._api_endpoint is not None:
@@ -92,7 +106,8 @@ class OllamaProvider(ModelProvider):
             self._api_endpoint = self.DEFAULT_API_ENDPOINT
 
         logger.debug(
-            f"Initialized Ollama provider with model {model_name} at {self._api_endpoint}"
+            f"Initialized Ollama provider with model {model_name} at {self._api_endpoint} "
+            f"(connect_timeout={self._connect_timeout}s, request_timeout={self._request_timeout}s)"
         )
 
     @property
@@ -113,15 +128,25 @@ class OllamaProvider(ModelProvider):
         # For Ollama, we're validating server availability rather than an API key
         # Wrap this in safe_execute for consistent error handling
         def check_server_availability() -> bool:
-            # Try to get the Ollama version
-            response = requests.get(f"{self._api_endpoint}/version", timeout=2)
-            if response.status_code == 200:
-                logger.info(f"Successfully connected to Ollama server at {self._api_endpoint}")
-                return True
-            else:
-                logger.warning(
-                    f"Ollama server responded with status code {response.status_code}"
-                )
+            try:
+                # Try to get the Ollama version with configured connect timeout
+                response = requests.get(f"{self._api_endpoint}/version", timeout=self._connect_timeout)
+                if response.status_code == 200:
+                    logger.info(f"Successfully connected to Ollama server at {self._api_endpoint}")
+                    return True
+                else:
+                    logger.warning(
+                        f"Ollama server responded with status code {response.status_code}"
+                    )
+                    return False
+            except requests.exceptions.ConnectionError as e:
+                logger.warning(f"Unable to connect to Ollama server at {self._api_endpoint}: {e}")
+                return False
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"Timeout connecting to Ollama server at {self._api_endpoint}: {e}")
+                return False
+            except Exception as e:
+                logger.warning(f"Error checking Ollama server at {self._api_endpoint}: {e}")
                 return False
 
         # Use safe execution to handle errors
@@ -135,29 +160,77 @@ class OllamaProvider(ModelProvider):
 
         return result
 
+    def validate_api_key_detailed(self) -> Dict[str, Any]:
+        """Validate API key with detailed response.
+
+        Returns:
+            Dictionary with validation details:
+            - valid: Whether server is accessible
+            - key_present: Always True for Ollama as no key is needed
+            - provider: Provider name
+            - error: Error message if validation failed
+        """
+        # Perform the validation
+        is_valid = self.validate_api_key()
+
+        # Construct detailed response
+        return {
+            "valid": is_valid,
+            "key_present": True,  # Ollama doesn't need an API key
+            "provider": self.name,
+            "error": None if is_valid else f"Ollama server at {self._api_endpoint} is not accessible"
+        }
+
     def get_available_models(self) -> List[str]:
         """Get a list of available models for this provider.
 
         Returns:
-            A list of model identifiers.
+            A list of model identifiers available on the Ollama server.
+            Returns an empty list if the server is unavailable or returns no models.
         """
         # Define function for the API call
         def fetch_models() -> List[str]:
-            # Get models from API
-            response = requests.get(f"{self._api_endpoint}/tags", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return [model["name"] for model in data.get("models", [])]
-            else:
-                logger.warning(
-                    f"Failed to get models from Ollama API (status code {response.status_code})"
+            try:
+                # Get models from API with configured timeouts
+                response = requests.get(
+                    f"{self._api_endpoint}/tags",
+                    timeout=(self._connect_timeout, min(10, self._request_timeout))  # Use shorter timeout for model listing
                 )
-                return ["llama3", "mistral", "gemma"]
 
-        # Use safe execution to handle errors
+                # Check if the request was successful
+                if response.status_code == 200:
+                    data = response.json()
+                    models = [model["name"] for model in data.get("models", [])]
+
+                    # Log the discovered models
+                    if models:
+                        logger.info(f"Discovered {len(models)} models from Ollama server: {', '.join(models[:5])}" +
+                                   (f" and {len(models) - 5} more" if len(models) > 5 else ""))
+                        return models
+                    else:
+                        logger.warning("Ollama server returned no models")
+                        return []
+                else:
+                    logger.warning(
+                        f"Failed to get models from Ollama API (status code {response.status_code})"
+                    )
+                    return []
+
+            except requests.exceptions.ConnectionError as e:
+                logger.warning(f"Unable to connect to Ollama server to fetch models: {e}")
+                return []
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"Timeout connecting to Ollama server while fetching models: {e}")
+                return []
+            except Exception as e:
+                logger.warning(f"Unexpected error fetching Ollama models: {e}")
+                return []
+
+        # Use safe execution to handle errors, but don't provide default models
+        # We want to explicitly know when the server doesn't respond
         models = safe_execute(
             fetch_models,
-            default=["llama3", "mistral", "gemma"],  # Default models
+            default=[],  # Return empty list instead of fallback models
             error_msg="Failed to get available models from Ollama API",
             error_cls=APIError,
             log_error=True,
@@ -260,7 +333,7 @@ class OllamaProvider(ModelProvider):
             response = requests.post(
                 f"{self._api_endpoint}/generate",
                 json=api_request,
-                timeout=60,
+                timeout=(self._connect_timeout, self._request_timeout),
             )
 
             if response.status_code != 200:
@@ -497,7 +570,7 @@ class OllamaProvider(ModelProvider):
             response = requests.post(
                 f"{self._api_endpoint}/generate",
                 json=api_request,
-                timeout=60,
+                timeout=(self._connect_timeout, self._request_timeout),
                 stream=True,
             )
 

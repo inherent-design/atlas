@@ -95,10 +95,28 @@ class AnthropicProvider(ModelProvider):
             **kwargs: Additional provider-specific parameters.
 
         Raises:
-            ValidationError: If the Anthropic API key is missing or the SDK is not installed.
+            ValidationError: If the Anthropic API key is missing, the SDK is not installed,
+                            or if the requested model is not compatible.
         """
         # Initialize base ModelProvider with retry configuration
         super().__init__(retry_config=retry_config, circuit_breaker=circuit_breaker)
+        
+        # Validate model compatibility before proceeding
+        available_models = self.get_available_models()
+        if model_name not in available_models:
+            # Check if this looks like a non-Anthropic model (e.g., starts with "gpt")
+            if model_name.startswith("gpt") or model_name.startswith("text-"):
+                raise ValidationError(
+                    message=f"Model '{model_name}' appears to be an OpenAI model and is not compatible with Anthropic. "
+                    f"Available Anthropic models include: {', '.join(available_models[:3])}...",
+                    severity=ErrorSeverity.ERROR,
+                )
+            else:
+                raise ValidationError(
+                    message=f"Model '{model_name}' is not a recognized Anthropic model. "
+                    f"Available models include: {', '.join(available_models[:3])}...",
+                    severity=ErrorSeverity.ERROR,
+                )
         
         self._model_name = model_name
         self._max_tokens = max_tokens

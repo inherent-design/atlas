@@ -1,6 +1,6 @@
-# Query Example
+# Basic Query Example
 
-This example demonstrates how to use the Atlas query client for knowledge-augmented text generation in your applications.
+This example demonstrates how to use the Atlas query client for knowledge-augmented text generation in your applications, with support for the new provider options system.
 
 ## Overview
 
@@ -11,23 +11,47 @@ The query client provides a lightweight interface to access Atlas's RAG capabili
 3. Retrieve relevant documents without generating responses
 4. Return both responses and source documents
 
+## Provider Options System
+
+Atlas now uses a flexible provider options system that supports:
+
+1. **Direct Provider Selection**: Specify the provider you want to use
+2. **Capability-Based Model Selection**: Select models based on capabilities like "inexpensive" or "premium"
+3. **Auto-Detection**: Automatically determine the provider from a model name
+4. **Default Fallback**: Use sensible defaults when no specifics are provided
+
 ## Setup
 
 First, import the necessary modules and create a query client:
 
 ```python
 from atlas import create_query_client
+from atlas.providers import ProviderOptions, resolve_provider_options, create_provider_from_options
 
 # Create a query client with default settings
 client = create_query_client()
 
-# Alternatively, customize with specific parameters
+# Create a client with provider options
+options = ProviderOptions(
+    provider_name="anthropic",       # Specify provider directly
+    model_name="claude-3-7-sonnet-20250219", # Specific model
+    capability="inexpensive",       # Or use capability-based selection
+    max_tokens=2000                 # Additional parameters
+)
+
+# Resolve provider options (auto-detection happens here)
+resolved_options = resolve_provider_options(options)
+
+# Create provider from resolved options
+provider = create_provider_from_options(resolved_options)
+
+# Create query client with the provider
 custom_client = create_query_client(
+    provider_name=provider.name,
+    model_name=provider.model_name,
     system_prompt_file="path/to/custom_prompt.md",
     collection_name="custom_collection",
-    db_path="/path/to/custom/db",
-    provider_name="anthropic",
-    model_name="claude-3-7-sonnet-20250219"
+    db_path="/path/to/custom/db"
 )
 ```
 

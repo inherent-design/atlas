@@ -6,15 +6,14 @@ Main entry point for the Atlas module.
 
 import os
 import sys
-import argparse
-
-# Type imports removed as they are unused
-from dotenv import load_dotenv
+import time
+from typing import Dict, Any, Optional
 
 # Set tokenizers parallelism to false to avoid warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# Load environment variables from .env file
+# Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
 # Ensure atlas package is importable
@@ -31,243 +30,90 @@ logging.configure_logging(
     quiet_loggers=["chromadb", "uvicorn", "httpx", "opentelemetry"]
 )
 
+# Import CLI utilities
+from atlas.cli.parser import parse_cli_args
+from atlas.cli.config import create_provider_options_from_args, create_atlas_config_from_args
+
+# Import core components
+from atlas.core.config import AtlasConfig
+from atlas.core import env
 from atlas.agents.base import AtlasAgent
-# Import DocumentProcessor at module level to standardize imports
 from atlas.knowledge.ingest import DocumentProcessor
 
 
-def parse_args():
-    """Parse command-line arguments with dimensional contexts."""
-    # Create main parser
-    parser = argparse.ArgumentParser(
-        description="Atlas: Advanced Multi-Modal Learning & Guidance Framework",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-
-    # Create subparsers for different modes
-    mode_subparsers = parser.add_subparsers(
-        dest="mode",
-        title="operation modes",
-        description="Select an operation mode for Atlas",
-        help="Mode of operation",
-        required=True,
-    )
-
-    # Common parser for shared arguments
-    common_parser = argparse.ArgumentParser(add_help=False)
-    common_parser.add_argument(
-        "-s", "--system-prompt", type=str, help="Path to system prompt file"
-    )
-    common_parser.add_argument(
-        "-c",
-        "--collection",
-        type=str,
-        default="atlas_knowledge_base",
-        help="Name of the ChromaDB collection to use",
-    )
-    common_parser.add_argument(
-        "--db-path", type=str, help="Path to ChromaDB database directory"
-    )
-
-    # Model provider options for common parser
-    model_group = common_parser.add_argument_group("Model Provider Options")
-    model_group.add_argument(
-        "--provider",
-        type=str,
-        choices=["anthropic", "openai", "ollama"],
-        default="anthropic",
-        help="Model provider to use",
-    )
-    model_group.add_argument(
-        "--model",
-        type=str,
-        help="Model to use (provider-specific, defaults to provider's latest model)"
-    )
-    model_group.add_argument(
-        "--models",
-        action="store_true",
-        help="List available models for the specified provider and exit",
-    )
-    model_group.add_argument(
-        "--max-tokens", 
-        type=int, 
-        default=2000,
-        help="Maximum tokens in model responses"
-    )
-    model_group.add_argument(
-        "--base-url",
-        type=str,
-        help="Base URL for API (used primarily with Ollama, default: http://localhost:11434)",
-    )
-
-    # CLI mode subparser
-    cli_parser = mode_subparsers.add_parser(
-        "cli",
-        parents=[common_parser],
-        help="Interactive CLI mode",
-        description="Run Atlas in interactive CLI mode with conversation history",
-    )
-
-    # Query mode subparser
-    query_parser = mode_subparsers.add_parser(
-        "query",
-        parents=[common_parser],
-        help="Process a single query",
-        description="Run Atlas in query mode to process a single query (non-interactive)",
-    )
-    query_parser.add_argument(
-        "-q", "--query", type=str, required=True, help="Single query to process"
-    )
-
-    # Ingest mode subparser
-    ingest_parser = mode_subparsers.add_parser(
-        "ingest",
-        parents=[common_parser],
-        help="Ingest documents",
-        description="Run Atlas in document ingestion mode to process files into the knowledge base",
-    )
-    ingest_parser.add_argument(
-        "-d", "--directory", type=str, help="Directory to ingest documents from"
-    )
-    ingest_parser.add_argument(
-        "-r", "--recursive", action="store_true", help="Recursively process directories"
-    )
-    ingest_parser.add_argument(
-        "--embedding", 
-        type=str,
-        choices=["default", "anthropic", "hybrid"],
-        default="default",
-        help="Embedding strategy to use (default uses ChromaDB's built-in, anthropic uses Anthropic's API)"
-    )
-    ingest_parser.add_argument(
-        "--no-dedup",
-        action="store_true",
-        help="Disable content deduplication during ingestion"
-    )
-    ingest_parser.add_argument(
-        "--watch",
-        action="store_true",
-        help="Watch directory for changes and ingest new/modified files automatically"
-    )
-
-    # Controller mode subparser (experimental)
-    controller_parser = mode_subparsers.add_parser(
-        "controller",
-        parents=[common_parser],
-        help="[Experimental] Multi-agent controller mode",
-        description="Run Atlas in controller mode to coordinate multiple worker agents (experimental feature)",
-    )
-    controller_parser.add_argument(
-        "--parallel",
-        action="store_true",
-        help="Enable parallel processing with LangGraph",
-    )
-    controller_parser.add_argument(
-        "--workers",
-        type=int,
-        default=3,
-        help="Number of worker agents to spawn",
-    )
-    controller_parser.add_argument(
-        "--workflow",
-        choices=["rag", "advanced", "custom"],
-        default="rag",
-        help="LangGraph workflow to use",
-    )
-    controller_parser.add_argument(
-        "--experimental",
-        action="store_true",
-        help="Acknowledge this is an experimental feature",
-        required=True,
-    )
-
-    # Worker mode subparser (experimental)
-    worker_parser = mode_subparsers.add_parser(
-        "worker",
-        parents=[common_parser],
-        help="[Experimental] Worker agent mode",
-        description="Run Atlas in worker mode as a specialized agent (experimental feature)",
-    )
-    worker_parser.add_argument(
-        "--worker-type",
-        choices=["retrieval", "analysis", "draft"],
-        default="retrieval",
-        help="Worker type to use",
-    )
-    worker_parser.add_argument(
-        "--experimental",
-        action="store_true",
-        help="Acknowledge this is an experimental feature",
-        required=True,
-    )
-
-    return parser.parse_args()
-
-
-def validate_provider_api_key(provider_name="anthropic"):
+def validate_provider_api_key(provider_name: str = "anthropic") -> bool:
     """Validate that the API key for the given provider is available.
 
     Args:
-        provider_name: The model provider to validate (anthropic, openai, ollama)
+        provider_name: The model provider to validate (anthropic, openai, ollama, mock)
 
     Returns:
         Boolean indicating if the provider can be used (API key available or not needed).
     """
+    # The mock provider doesn't need an API key
+    if provider_name == "mock":
+        logger.info("Using mock provider (no API key required)")
+        return True
+        
     # Import environment utilities 
     from atlas.core import env
+    
+    # Ollama doesn't need an API key, just a running server
+    if provider_name == "ollama":
+        logger.warning(
+            "Ollama server doesn't appear to be running at http://localhost:11434"
+        )
+        logger.warning("Please start Ollama before running Atlas with Ollama provider.")
+        logger.warning("Example: ollama serve")
+        logger.warning("Continuing anyway, but expect connection errors...")
+        return True  # Still allow Ollama even if server is not running
     
     # Check if the provider is available
     provider_status = env.validate_provider_requirements([provider_name])
     
     if not provider_status.get(provider_name, False):
-        if provider_name == "ollama":
-            logger.warning(
-                "Ollama server doesn't appear to be running at http://localhost:11434"
-            )
-            logger.warning("Please start Ollama before running Atlas with Ollama provider.")
-            logger.warning("Example: ollama serve")
-            logger.warning("Continuing anyway, but expect connection errors...")
-            return True  # Still allow Ollama even if server is not running
-        else:
-            # API key is required but not available
-            env_var_name = f"{provider_name.upper()}_API_KEY"
-            logger.error(f"{env_var_name} environment variable is not set.")
-            logger.error(f"Please set it before running Atlas with {provider_name} provider.")
-            logger.error(f"Example: export {env_var_name}=your_api_key_here")
-            return False
+        # API key is required but not available
+        env_var_name = f"{provider_name.upper()}_API_KEY"
+        logger.error(f"{env_var_name} environment variable is not set.")
+        logger.error(f"Please set it before running Atlas with {provider_name} provider.")
+        logger.error(f"Example: export {env_var_name}=your_api_key_here")
+        return False
     
     return True
 
 
-def ingest_documents(args):
-    """Ingest documents from the specified directory."""
-    # Import config and needed components
-    from atlas.core.config import AtlasConfig
-    from atlas.knowledge.ingest import DocumentProcessor, live_ingest_directory
-
+def ingest_documents(args: Dict[str, Any]) -> bool:
+    """Ingest documents from the specified directory.
+    
+    Args:
+        args: Command-line arguments as a dictionary
+        
+    Returns:
+        True if ingestion was successful, False otherwise
+    """
     # Create config with command line parameters
-    config = AtlasConfig(collection_name=args.collection, db_path=args.db_path)
+    config_dict = create_atlas_config_from_args(args)
+    config = AtlasConfig(**config_dict)
 
     # Get db_path from config
     db_path = config.db_path
 
     # Set up embedding and other parameters
     anthropic_api_key = None
-    if args.provider == "anthropic" and args.embedding == "anthropic":
+    if args.get("provider") == "anthropic" and args.get("embedding") == "anthropic":
         # If we're using Anthropic for embeddings, get the API key
-        from atlas.core import env
         anthropic_api_key = env.get_api_key("anthropic")
         if not anthropic_api_key:
             logger.error("Anthropic API key required for Anthropic embeddings")
             return False
 
     # Check embedding strategy
-    embedding_strategy = args.embedding if hasattr(args, 'embedding') else "default"
-    enable_deduplication = not getattr(args, 'no_dedup', False)
-    watch_mode = getattr(args, 'watch', False)
+    embedding_strategy = args.get('embedding', "default")
+    enable_deduplication = not args.get('no_dedup', False)
+    watch_mode = args.get('watch', False)
 
     # Process directory or default directories
-    if not args.directory:
+    if not args.get('directory'):
         # Use default directories if none specified
         default_dirs = [
             "./src-markdown/prev/v1",
@@ -287,7 +133,7 @@ def ingest_documents(args):
         
         processor = DocumentProcessor(
             anthropic_api_key=anthropic_api_key,
-            collection_name=args.collection, 
+            collection_name=args.get('collection', 'atlas_knowledge_base'), 
             db_path=db_path,
             enable_deduplication=enable_deduplication,
             embedding_strategy=embedding_strategy
@@ -296,23 +142,25 @@ def ingest_documents(args):
         for dir_path in default_dirs:
             if os.path.exists(dir_path):
                 logger.info(f"Ingesting documents from {dir_path}")
-                processor.process_directory(dir_path, recursive=getattr(args, 'recursive', True))
+                processor.process_directory(dir_path, recursive=args.get('recursive', True))
             else:
                 logger.warning(f"Directory not found: {dir_path}")
     else:
-        logger.info(f"Ingesting documents from {args.directory}")
+        logger.info(f"Ingesting documents from {args['directory']}")
         logger.info(f"Using ChromaDB at: {db_path}")
         logger.info(f"Embedding strategy: {embedding_strategy}")
         
         # If watch mode is enabled, use live ingestion
         if watch_mode:
             try:
+                from atlas.knowledge.ingest import live_ingest_directory
+                
                 logger.info("Starting live ingestion (watch mode)")
                 processor = live_ingest_directory(
-                    directory=args.directory,
-                    collection_name=args.collection,
+                    directory=args['directory'],
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
                     db_path=db_path,
-                    recursive=getattr(args, 'recursive', True),
+                    recursive=args.get('recursive', True),
                     enable_deduplication=enable_deduplication,
                 )
                 
@@ -332,58 +180,78 @@ def ingest_documents(args):
             # Standard one-time processing
             processor = DocumentProcessor(
                 anthropic_api_key=anthropic_api_key,
-                collection_name=args.collection, 
+                collection_name=args.get('collection', 'atlas_knowledge_base'), 
                 db_path=db_path,
                 enable_deduplication=enable_deduplication,
                 embedding_strategy=embedding_strategy
             )
             
-            processor.process_directory(args.directory, recursive=getattr(args, 'recursive', True))
+            processor.process_directory(args['directory'], recursive=args.get('recursive', True))
 
     return True
 
 
-def run_cli_mode(args):
-    """Run Atlas in interactive CLI mode."""
+def run_cli_mode(args: Dict[str, Any]) -> bool:
+    """Run Atlas in interactive CLI mode.
+    
+    Args:
+        args: Command-line arguments as a dictionary
+        
+    Returns:
+        True if CLI mode ran successfully, False otherwise
+    """
     logger.info("\nAtlas CLI Mode")
     logger.info("-------------")
 
-    # Import config and agent
-    from atlas.core.config import AtlasConfig
-    from atlas.providers.factory import discover_providers
-
-    # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path,
-        model_name=args.model,
-        max_tokens=args.max_tokens,
-    )
-
-    # Get additional provider params
-    provider_params = {}
-    if args.base_url and args.provider == "ollama":
-        provider_params["base_url"] = args.base_url
-
-    # Determine which model to use
-    model_name = args.model
-    if not model_name:
-        # If no model specified, get the default model for the provider
-        available_providers = discover_providers()
-        if args.provider in available_providers and available_providers[args.provider]:
-            model_name = available_providers[args.provider][0]
-            logger.info(f"No model specified, using default model: {model_name}")
-
-    # Initialize agent
-    logger.info(f"Using {args.provider} provider with model: {model_name or 'default'}")
-    agent = AtlasAgent(
-        system_prompt_file=args.system_prompt,
-        collection_name=args.collection,
-        config=config,
-        provider_name=args.provider,
-        model_name=model_name,
-        **provider_params,
-    )
+    # Create provider options from CLI arguments
+    from atlas.providers import create_provider_from_options
+    provider_options = create_provider_options_from_args(args)
+    
+    # Create config
+    config_dict = create_atlas_config_from_args(args)
+    config = AtlasConfig(**config_dict)
+    
+    try:
+        # Create provider with auto-detection and resolution
+        provider = create_provider_from_options(provider_options)
+        
+        # Log provider and model information
+        logger.info(f"Using {provider.name} provider with model: {provider.model_name}")
+        if args.get('capability') and not args.get('model'):
+            logger.info(f"Model selected based on '{args['capability']}' capability")
+        
+        # Initialize agent with the provider
+        agent = AtlasAgent(
+            system_prompt_file=args.get('system_prompt'),
+            collection_name=args.get('collection', 'atlas_knowledge_base'),
+            config=config,
+            provider=provider,
+        )
+    except Exception as e:
+        logger.error(f"Error initializing provider: {e}")
+        logger.warning("Falling back to default configuration")
+        
+        # Fall back to default configuration
+        try:
+            # Create minimal provider options
+            minimal_options = create_provider_options_from_args({"provider": args.get('provider', 'anthropic')})
+            provider = create_provider_from_options(minimal_options)
+            
+            agent = AtlasAgent(
+                system_prompt_file=args.get('system_prompt'),
+                collection_name=args.get('collection', 'atlas_knowledge_base'),
+                config=config,
+                provider=provider,
+            )
+        except Exception as second_e:
+            logger.error(f"Second error: {second_e}")
+            logger.warning("Falling back to minimal configuration")
+            
+            # Last resort - use minimal configuration
+            agent = AtlasAgent(
+                system_prompt_file=args.get('system_prompt'),
+                collection_name=args.get('collection', 'atlas_knowledge_base'),
+            )
 
     logger.info("Atlas is ready. Type 'exit' or 'quit' to end the session.")
     logger.info("---------------------------------------------------")
@@ -418,77 +286,120 @@ def run_cli_mode(args):
         except Exception as e:
             print(f"\nUnexpected error: {str(e)}")
             print("Let's continue with a fresh conversation.")
-            # Reinitialize agent
-            provider_params = {}
-            if args.base_url and args.provider == "ollama":
-                provider_params["base_url"] = args.base_url
+            # Reinitialize with minimal configuration
             agent = AtlasAgent(
-                system_prompt_file=args.system_prompt,
-                collection_name=args.collection,
+                system_prompt_file=args.get('system_prompt'),
+                collection_name=args.get('collection', 'atlas_knowledge_base'),
+            )
+    
+    return True
+
+
+def run_query_mode(args: Dict[str, Any]) -> bool:
+    """Run Atlas in query mode (single query, non-interactive).
+    
+    Args:
+        args: Command-line arguments as a dictionary
+        
+    Returns:
+        True if query was processed successfully, False otherwise
+    """
+    # Create provider options from CLI arguments
+    from atlas.providers import create_provider_from_options
+    provider_options = create_provider_options_from_args(args)
+    
+    # Create config
+    config_dict = create_atlas_config_from_args(args)
+    config = AtlasConfig(**config_dict)
+    
+    print(f"Processing query: {args['query']}")
+    
+    try:
+        # Create provider with auto-detection and resolution
+        provider = create_provider_from_options(provider_options)
+        
+        # Log the provider and model information
+        print(f"Using {provider.name} provider with model: {provider.model_name}")
+        if args.get('capability') and not args.get('model'):
+            print(f"Model selected based on '{args['capability']}' capability")
+        
+        # Initialize agent with the provider
+        agent = AtlasAgent(
+            system_prompt_file=args.get('system_prompt'),
+            collection_name=args.get('collection', 'atlas_knowledge_base'),
+            config=config,
+            provider=provider,
+        )
+    except Exception as e:
+        print(f"Error initializing provider: {e}")
+        print("Falling back to default configuration")
+        
+        try:
+            # Create minimal provider options
+            minimal_options = create_provider_options_from_args({"provider": args.get('provider', 'anthropic')})
+            provider = create_provider_from_options(minimal_options)
+            
+            agent = AtlasAgent(
+                system_prompt_file=args.get('system_prompt'),
+                collection_name=args.get('collection', 'atlas_knowledge_base'),
                 config=config,
-                provider_name=args.provider,
-                model_name=model_name,
-                **provider_params,
+                provider=provider,
+            )
+        except Exception as second_e:
+            print(f"Second error: {second_e}")
+            print("Falling back to minimal configuration")
+            
+            # Last resort - try minimal config
+            agent = AtlasAgent(
+                system_prompt_file=args.get('system_prompt'),
+                collection_name=args.get('collection', 'atlas_knowledge_base'),
             )
 
-
-def run_query_mode(args):
-    """Run Atlas in query mode (single query, non-interactive)."""
-    # Import and use config
-    from atlas.core.config import AtlasConfig
-
-    # Create config with command line parameters
-    config = AtlasConfig(
-        collection_name=args.collection,
-        db_path=args.db_path,
-        model_name=args.model,
-        max_tokens=args.max_tokens,
-    )
-
-    print(f"Processing query: {args.query}")
-
-    # Get additional provider params
-    provider_params = {}
-    if args.base_url and args.provider == "ollama":
-        provider_params["base_url"] = args.base_url
-
-    # Initialize agent
-    print(f"Using {args.provider} provider with model: {args.model or 'default'}")
-    agent = AtlasAgent(
-        system_prompt_file=args.system_prompt,
-        collection_name=args.collection,
-        config=config,
-        provider_name=args.provider,
-        model_name=args.model,
-        **provider_params,
-    )
-
-    response = agent.process_message(args.query)
+    response = agent.process_message(args['query'])
     print(f"Response: {response}")
     return True
 
 
-def run_controller_mode(args):
-    """Run Atlas in controller mode (experimental)."""
+def run_controller_mode(args: Dict[str, Any]) -> bool:
+    """Run Atlas in controller mode (experimental).
+    
+    Args:
+        args: Command-line arguments as a dictionary
+        
+    Returns:
+        True if controller mode ran successfully, False otherwise
+    """
     print("\nAtlas Controller Mode (Experimental)")
     print("-----------------------------------")
     
-    if not getattr(args, 'experimental', False):
+    if not args.get('experimental', False):
         print("ERROR: Controller mode is experimental. Use --experimental flag to acknowledge.")
         return False
 
     try:
         # Import here to avoid circular imports
         from atlas.orchestration.coordinator import AgentCoordinator
+        
+        # Create provider options from CLI arguments
+        from atlas.providers import create_provider_from_options
+        provider_options = create_provider_options_from_args(args)
+        
+        # Try to create the provider for diagnostic purposes
+        try:
+            provider = create_provider_from_options(provider_options)
+            print(f"Using {provider.name} provider with model: {provider.model_name}")
+        except Exception as e:
+            print(f"Warning: Could not initialize provider: {e}")
+            print("Controller will use default provider")
 
         # Initialize coordinator with parallel processing if enabled
         coordinator = AgentCoordinator(
-            system_prompt_file=args.system_prompt,
-            collection_name=args.collection,
-            worker_count=args.workers,
+            system_prompt_file=args.get('system_prompt'),
+            collection_name=args.get('collection', 'atlas_knowledge_base'),
+            worker_count=args.get('workers', 3),
         )
 
-        print(f"Controller initialized with {args.workers} workers.")
+        print(f"Controller initialized with {args.get('workers', 3)} workers.")
         print("⚠️  NOTE: Controller mode is experimental and may not work as expected.")
         print("      The multi-agent architecture is still under development.")
         print("Atlas is ready. Type 'exit' or 'quit' to end the session.")
@@ -525,9 +436,9 @@ def run_controller_mode(args):
                 print(f"\nUnexpected error in controller mode: {str(e)}")
                 print("Let's continue with a fresh conversation.")
                 coordinator = AgentCoordinator(
-                    system_prompt_file=args.system_prompt,
-                    collection_name=args.collection,
-                    worker_count=args.workers,
+                    system_prompt_file=args.get('system_prompt'),
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    worker_count=args.get('workers', 3),
                 )
 
         return True
@@ -537,60 +448,98 @@ def run_controller_mode(args):
         return run_cli_mode(args)
 
 
-def run_worker_mode(args):
-    """Run Atlas in worker mode (experimental)."""
+def run_worker_mode(args: Dict[str, Any]) -> bool:
+    """Run Atlas in worker mode (experimental).
+    
+    Args:
+        args: Command-line arguments as a dictionary
+        
+    Returns:
+        True if worker mode ran successfully, False otherwise
+    """
     print("\nAtlas Worker Mode (Experimental)")
     print("--------------------------------")
     
-    if not getattr(args, 'experimental', False):
+    if not args.get('experimental', False):
         print("ERROR: Worker mode is experimental. Use --experimental flag to acknowledge.")
         return False
 
     try:
         # Import here to avoid circular imports
         from atlas.agents.worker import RetrievalWorker, AnalysisWorker, DraftWorker
+        
+        # Create provider options from CLI arguments
+        from atlas.providers import create_provider_from_options
+        provider_options = create_provider_options_from_args(args)
+        
+        try:
+            # Create provider with auto-detection and resolution
+            provider = create_provider_from_options(provider_options)
+            
+            # Log the provider and model information
+            print(f"Using {provider.name} provider with model: {provider.model_name}")
+            if args.get('capability') and not args.get('model'):
+                print(f"Model selected based on '{args['capability']}' capability")
+                
+        except Exception as e:
+            print(f"Error creating provider: {e}")
+            print("Continuing with original model/provider settings")
+            provider = None
 
         # Get worker type from args
-        worker_type = getattr(args, 'worker_type', 'retrieval')
+        worker_type = args.get('worker_type', 'retrieval')
         
         print(f"Initializing {worker_type} worker...")
 
         # Import Union type for type annotation
         from typing import Union
 
-        # Create appropriate worker type
-        # Use a variable with the right type annotation
-        worker: Union[AnalysisWorker, DraftWorker, RetrievalWorker]
-
+        # Create appropriate worker type based on worker_type
         if worker_type == "analysis":
-            analysis_worker = AnalysisWorker(
-                system_prompt_file=args.system_prompt, 
-                collection_name=args.collection,
-                provider_name=args.provider,
-                model_name=args.model
-            )
-            worker = analysis_worker
+            if provider:
+                worker = AnalysisWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider=provider
+                )
+            else:
+                worker = AnalysisWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider_name=args.get('provider', 'anthropic'),
+                    model_name=args.get('model')
+                )
             worker_desc = "Analysis Worker: Specializes in query analysis and information needs identification"
         elif worker_type == "draft":
-            draft_worker = DraftWorker(
-                system_prompt_file=args.system_prompt, 
-                collection_name=args.collection,
-                provider_name=args.provider,
-                model_name=args.model
-            )
-            worker = draft_worker
+            if provider:
+                worker = DraftWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider=provider
+                )
+            else:
+                worker = DraftWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider_name=args.get('provider', 'anthropic'),
+                    model_name=args.get('model')
+                )
             worker_desc = "Draft Worker: Specializes in generating draft responses"
         else:  # Default to retrieval worker
-            retrieval_worker = RetrievalWorker(
-                system_prompt_file=args.system_prompt, 
-                collection_name=args.collection,
-                provider_name=args.provider,
-                model_name=args.model
-            )
-            worker = retrieval_worker
-            worker_desc = (
-                "Retrieval Worker: Specializes in document retrieval and summarization"
-            )
+            if provider:
+                worker = RetrievalWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider=provider
+                )
+            else:
+                worker = RetrievalWorker(
+                    system_prompt_file=args.get('system_prompt'), 
+                    collection_name=args.get('collection', 'atlas_knowledge_base'),
+                    provider_name=args.get('provider', 'anthropic'),
+                    model_name=args.get('model')
+                )
+            worker_desc = "Retrieval Worker: Specializes in document retrieval and summarization"
 
         print(f"Worker initialized: {worker_desc}")
         print("⚠️  NOTE: Worker mode is experimental and may not work as expected.")
@@ -635,17 +584,23 @@ def run_worker_mode(args):
         return run_cli_mode(args)
 
 
-def list_available_models(provider_name):
+def list_available_models(provider_name: str) -> bool:
     """List available models for the specified provider and exit.
 
     Args:
         provider_name: The name of the provider to list models for.
+        
+    Returns:
+        True if models were listed successfully, False otherwise
     """
-    from atlas.providers.factory import create_provider
+    from atlas.providers import create_provider_from_options, ProviderOptions
     
     try:
-        # Create provider instance without specifying model
-        provider = create_provider(provider_name=provider_name)
+        # Create minimal provider options
+        options = ProviderOptions(provider_name=provider_name)
+        
+        # Create provider instance
+        provider = create_provider_from_options(options)
         
         # Get available models
         models = provider.get_available_models()
@@ -701,44 +656,51 @@ def list_available_models(provider_name):
 
 def main():
     """Main entry point for Atlas."""
-    args = parse_args()
-
-    # Check if user wants to list available models
-    if hasattr(args, 'models') and args.models:
-        # Validate API key availability
-        if not validate_provider_api_key(args.provider):
+    # Parse command-line arguments
+    args = parse_cli_args()
+    
+    # Handle model listing request
+    if args.get('models'):
+        provider_name = args.get('provider', 'anthropic')
+        
+        # Validate API key availability (mock provider doesn't need validation)
+        if provider_name != "mock" and not validate_provider_api_key(provider_name):
             sys.exit(1)
-            
-        success = list_available_models(args.provider)
-        sys.exit(0 if success else 1)
 
+        success = list_available_models(provider_name)
+        sys.exit(0 if success else 1)
+    
     # Handle different operation modes
-    if args.mode == "ingest":
+    if args.get('mode') == "ingest":
         # For ingest mode, validate API key only if using Anthropic embeddings
-        if hasattr(args, 'embedding') and args.embedding == "anthropic":
-            if args.provider != "anthropic":
+        if args.get('embedding') == "anthropic":
+            if args.get('provider') != "anthropic":
                 logger.warning("Setting provider to 'anthropic' since Anthropic embeddings were requested")
-                args.provider = "anthropic"
-            
+                args['provider'] = "anthropic"
+
             if not validate_provider_api_key("anthropic"):
                 logger.error("Anthropic API key is required for Anthropic embeddings")
                 sys.exit(1)
     else:
         # For other modes, validate API key for the selected provider
-        if not validate_provider_api_key(args.provider):
+        # Mock provider doesn't need API key validation
+        provider_name = args.get('provider', 'anthropic')
+        if provider_name != "mock" and not validate_provider_api_key(provider_name):
             sys.exit(1)
 
     # Run the appropriate mode
     success = True
-    if args.mode == "cli":
-        run_cli_mode(args)
-    elif args.mode == "ingest":
+    mode = args.get('mode')
+    
+    if mode == "cli":
+        success = run_cli_mode(args)
+    elif mode == "ingest":
         success = ingest_documents(args)
-    elif args.mode == "query":
+    elif mode == "query":
         success = run_query_mode(args)
-    elif args.mode == "controller":
+    elif mode == "controller":
         success = run_controller_mode(args)
-    elif args.mode == "worker":
+    elif mode == "worker":
         success = run_worker_mode(args)
 
     sys.exit(0 if success else 1)

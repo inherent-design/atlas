@@ -54,8 +54,8 @@ export const nav: DefaultTheme.NavItem[] = [
         link: "/components/knowledge/",
       },
       {
-        text: "Models",
-        link: "/components/models/",
+        text: "Providers",
+        link: "/components/providers/",
       },
       {
         text: "Tools",
@@ -98,10 +98,6 @@ export const nav: DefaultTheme.NavItem[] = [
       {
         text: "Type Checking",
         link: "/guides/type_checking",
-      },
-      {
-        text: "Examples",
-        link: "/guides/examples/",
       },
     ],
   },

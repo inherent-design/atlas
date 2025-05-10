@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""
+Multi-Agent Example (21_multi_agent.py)
+
+IMPLEMENTATION BLOCKED: Requires agent controller updates for provider options
+
+This example will demonstrate the controller-worker pattern in Atlas:
+1. Creating a controller agent with provider options
+2. Spawning worker agents with different roles
+3. Coordinating tasks between agents
+4. Aggregating results from multiple agents
+
+Requirements to unblock:
+1. Update agents/controller.py to use provider options
+2. Enhance worker agent creation with provider options
+3. Fix message passing between controller and workers
+4. Add support for different capability requirements per agent type
+
+Example sketch:
+```python
+# Create controller options
+controller_options = ProviderOptions(
+    provider_name="anthropic",
+    capability="premium",  # Need higher capability for coordination
+)
+
+# Create controller agent
+controller = AgentController(
+    provider_options=controller_options,
+    worker_count=3,
+)
+
+# Define worker configurations with different specialties
+worker_configs = [
+    WorkerConfig(role="researcher", capability="efficient"),
+    WorkerConfig(role="writer", capability="premium"),
+    WorkerConfig(role="editor", capability="standard"),
+]
+
+# Create the multi-agent system
+system = MultiAgentSystem(
+    controller=controller,
+    worker_configs=worker_configs,
+)
+
+# Run a complex task
+result = system.run_task("Research and write a report on quantum computing")
+```
+
+Priority: High
+Related files:
+- atlas/agents/controller.py
+- atlas/agents/worker.py 
+- atlas/agents/messaging/message.py
+"""
+
+# This file is a placeholder. See the docstring above for implementation details.

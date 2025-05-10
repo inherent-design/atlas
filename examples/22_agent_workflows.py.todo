@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""
+Agent Workflows Example (22_agent_workflows.py)
+
+IMPLEMENTATION BLOCKED: Requires LangGraph integration update for provider options
+
+This example will demonstrate how to use LangGraph for agent workflows:
+1. Creating graph-based workflows with Atlas agents
+2. Defining conditional transitions between states
+3. Managing state across workflow steps
+4. Implementing complex decision flows
+
+Requirements to unblock:
+1. Update graph/workflows.py to use provider options
+2. Enhance node execution with provider-specific capabilities
+3. Fix state management to include provider context
+4. Update edge routing to work with latest provider system
+
+Example sketch:
+```python
+# Create provider options
+options = ProviderOptions(
+    provider_name=args.provider,
+    model_name=args.model,
+    capability=args.capability,
+)
+
+# Create workflow builder
+workflow = WorkflowBuilder(provider_options=options)
+
+# Define workflow nodes
+workflow.add_node("understand_query", understand_query_fn)
+workflow.add_node("research", research_fn)
+workflow.add_node("draft_response", draft_response_fn)
+workflow.add_node("refine", refine_fn)
+workflow.add_node("finalize", finalize_fn)
+
+# Define conditional edges
+workflow.add_edge("understand_query", "research", 
+                 condition=lambda state: state.needs_research)
+workflow.add_edge("understand_query", "draft_response", 
+                 condition=lambda state: not state.needs_research)
+workflow.add_edge("research", "draft_response")
+workflow.add_edge("draft_response", "refine")
+workflow.add_edge("refine", "finalize")
+
+# Execute workflow
+result = workflow.run("Explain how quantum computing works")
+```
+
+Priority: Medium
+Related files:
+- atlas/graph/workflows.py
+- atlas/graph/nodes.py
+- atlas/graph/edges.py
+- atlas/graph/state.py
+"""
+
+# This file is a placeholder. See the docstring above for implementation details.

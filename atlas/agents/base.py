@@ -5,14 +5,16 @@ This module defines the unified Atlas agent with multi-provider support.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Union
 
 from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
 from atlas.core.telemetry import traced, TracedClass
 from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.providers.factory import create_provider, discover_providers
-from atlas.providers.base import ModelRequest, ModelMessage
+from atlas.providers.base import ModelRequest, ModelMessage, ModelProvider
+from atlas.providers.options import ProviderOptions
+from atlas.providers.resolver import create_provider_from_options, resolve_provider_options
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,12 @@ class AtlasAgent(TracedClass):
         system_prompt_file: Optional[str] = None,
         collection_name: str = "atlas_knowledge_base",
         config: Optional[AtlasConfig] = None,
-        provider_name: str = "anthropic",
+        provider: Optional[ModelProvider] = None,
+        provider_options: Optional[ProviderOptions] = None,
+        provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
+        capability: Optional[str] = None,
+        **kwargs
     ):
         """Initialize the Atlas agent.
 
@@ -34,8 +40,13 @@ class AtlasAgent(TracedClass):
             system_prompt_file: Optional path to a file containing the system prompt.
             collection_name: Name of the Chroma collection to use.
             config: Optional configuration object. If not provided, default values are used.
-            provider_name: Name of the model provider to use (anthropic, openai, ollama).
+            provider: Optional pre-configured provider instance. If provided, other provider options are ignored.
+            provider_options: Optional pre-configured ProviderOptions instance. If provided, individual
+                              provider parameters are ignored.
+            provider_name: Optional name of the model provider to use (anthropic, openai, ollama, mock).
             model_name: Optional name of the specific model to use (defaults to provider's default).
+            capability: Optional capability for model selection (inexpensive, efficient, premium, vision).
+            **kwargs: Additional provider parameters to pass through.
 
         Raises:
             RuntimeError: If model provider initialization fails.
@@ -46,13 +57,47 @@ class AtlasAgent(TracedClass):
         # Load the system prompt
         self.system_prompt = load_system_prompt(system_prompt_file)
 
+        # Store provider options for potential reuse
+        self.provider_options = None
+
         # Initialize the model provider
         try:
-            self.provider = create_provider(
-                provider_name=provider_name,
-                model_name=model_name or self.config.model_name,
-                max_tokens=self.config.max_tokens,
-            )
+            # If a provider is already provided, use it directly
+            if provider is not None:
+                self.provider = provider
+            else:
+                # Determine provider options - either use provided options or create new ones
+                if provider_options is not None:
+                    # Use provided provider options directly
+                    options = provider_options
+                else:
+                    # Create options for provider factory from individual parameters
+                    options_kwargs = {
+                        "provider_name": provider_name or "anthropic",
+                        "model_name": model_name or self.config.model_name,
+                        "capability": capability,
+                    }
+
+                    # Only add max_tokens if not in kwargs to avoid duplicate argument errors
+                    if "max_tokens" not in kwargs and self.config.max_tokens is not None:
+                        options_kwargs["max_tokens"] = self.config.max_tokens
+
+                    # Extract known ProviderOptions parameters, put everything else in extra_params
+                    known_params = ["provider_name", "model_name", "capability", "max_tokens", "base_url"]
+                    extra_params = {k: v for k, v in kwargs.items() if k not in known_params}
+
+                    # Create options with core parameters
+                    options = ProviderOptions(**options_kwargs)
+
+                    # Add any extra parameters to extra_params field
+                    if extra_params:
+                        options.extra_params.update(extra_params)
+
+                # Store resolved options for potential reuse
+                self.provider_options = resolve_provider_options(options)
+
+                # Create the provider with all detection logic handled in the factory
+                self.provider = create_provider_from_options(self.provider_options)
 
             # Get model name safely with fallback
             model_display_name = getattr(
@@ -61,9 +106,20 @@ class AtlasAgent(TracedClass):
                 model_name or self.config.model_name or "unknown",
             )
 
-            logger.info(
-                f"Using {provider_name} provider with model: {model_display_name}"
+            # Get provider name safely with fallback
+            provider_display_name = getattr(
+                self.provider,
+                "name",
+                provider_name or "unknown",
             )
+
+            logger.info(
+                f"Using {provider_display_name} provider with model: {model_display_name}"
+            )
+
+            # Set up agent metadata
+            self.agent_id = f"atlas-{provider_display_name}-{model_display_name}"
+
         except Exception as e:
             error_msg = f"Failed to initialize model provider: {str(e)}"
             logger.error(error_msg)
@@ -77,21 +133,27 @@ class AtlasAgent(TracedClass):
         # Initialize conversation history
         self.messages: List[Dict[str, str]] = []
 
-        # Set up agent metadata
-        self.agent_id = f"atlas-{provider_name}-{self.provider.model_name}"
+        # Set agent version
         self.agent_version = "1.0.0"  # Should come from version module later
 
     @traced(name="query_knowledge_base")
-    def query_knowledge_base(self, query: str) -> List[Dict[str, Any]]:
+    def query_knowledge_base(
+        self,
+        query: str,
+        filter: Optional[Any] = None,
+        settings: Optional[Any] = None,
+    ) -> List[Dict[str, Any]]:
         """Query the knowledge base for relevant information.
 
         Args:
             query: The query string.
+            filter: Optional filter for retrieval.
+            settings: Optional retrieval settings for fine-grained control.
 
         Returns:
             A list of relevant documents.
         """
-        return self.knowledge_base.retrieve(query)
+        return self.knowledge_base.retrieve(query, filter=filter, settings=settings)
 
     @traced(name="format_knowledge_context")
     def format_knowledge_context(self, documents: List[Any]) -> str:
@@ -126,24 +188,55 @@ class AtlasAgent(TracedClass):
         return context_text
 
     @traced(name="process_message")
-    def process_message(self, message: str) -> str:
+    def process_message(
+        self,
+        message: str,
+        filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
+        use_hybrid_search: bool = False,
+        settings: Optional['RetrievalSettings'] = None,
+    ) -> str:
         """Process a user message and return the agent's response.
 
         Args:
             message: The user's message.
+            filter: Optional metadata filter to apply during retrieval.
+            use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
+            settings: Optional retrieval settings for fine-grained control. If provided, overrides
+                     filter and use_hybrid_search.
 
         Returns:
             The agent's response.
         """
         try:
+            from atlas.knowledge.retrieval import RetrievalFilter, RetrievalSettings
+
             # Add user message to history
             self.messages.append({"role": "user", "content": message})
+
+            # Prepare retrieval settings
+            retrieval_filter = None
+            retrieval_settings = settings
+
+            if filter is not None and not settings:
+                if isinstance(filter, dict):
+                    retrieval_filter = RetrievalFilter(where=filter)
+                elif hasattr(filter, 'where'):  # Assuming it's a RetrievalFilter instance
+                    retrieval_filter = filter
+                else:
+                    raise TypeError("filter must be a dictionary or RetrievalFilter object")
+
+            if not settings and use_hybrid_search:
+                retrieval_settings = RetrievalSettings(use_hybrid_search=True)
 
             # Retrieve relevant documents from the knowledge base
             logger.info(
                 f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}"
             )
-            documents = self.query_knowledge_base(message)
+            documents = self.query_knowledge_base(
+                message,
+                filter=retrieval_filter,
+                settings=retrieval_settings
+            )
             logger.info(f"Retrieved {len(documents)} relevant documents")
 
             if documents:
@@ -204,26 +297,56 @@ class AtlasAgent(TracedClass):
 
     @traced(name="process_message_streaming")
     def process_message_streaming(
-        self, message: str, callback: Callable[[str, str], None]
+        self,
+        message: str,
+        callback: Callable[[str, str], None],
+        filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
+        use_hybrid_search: bool = False,
+        settings: Optional['RetrievalSettings'] = None,
     ) -> str:
         """Process a user message with streaming response.
 
         Args:
             message: The user's message.
             callback: Function called for each chunk of the response, with arguments (delta, full_text).
+            filter: Optional metadata filter to apply during retrieval.
+            use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
+            settings: Optional retrieval settings for fine-grained control. If provided, overrides
+                     filter and use_hybrid_search.
 
         Returns:
             The complete agent response.
         """
         try:
+            from atlas.knowledge.retrieval import RetrievalFilter, RetrievalSettings
+
             # Add user message to history
             self.messages.append({"role": "user", "content": message})
+
+            # Prepare retrieval settings
+            retrieval_filter = None
+            retrieval_settings = settings
+
+            if filter is not None and not settings:
+                if isinstance(filter, dict):
+                    retrieval_filter = RetrievalFilter(where=filter)
+                elif hasattr(filter, 'where'):  # Assuming it's a RetrievalFilter instance
+                    retrieval_filter = filter
+                else:
+                    raise TypeError("filter must be a dictionary or RetrievalFilter object")
+
+            if not settings and use_hybrid_search:
+                retrieval_settings = RetrievalSettings(use_hybrid_search=True)
 
             # Retrieve relevant documents from the knowledge base
             logger.info(
                 f"Querying knowledge base: {message[:50]}{'...' if len(message) > 50 else ''}"
             )
-            documents = self.query_knowledge_base(message)
+            documents = self.query_knowledge_base(
+                message,
+                filter=retrieval_filter,
+                settings=retrieval_settings
+            )
             logger.info(f"Retrieved {len(documents)} relevant documents")
 
             # Create system message with context

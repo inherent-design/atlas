@@ -13,13 +13,13 @@ Atlas is built around several core architectural components that work together t
 ```mermaid
 graph TD
     User([User]) --> Agent[Agent System]
-    Agent --> Models[Model Provider System]
+    Agent --> Providers[Provider System]
     Agent --> Knowledge[Knowledge System]
     Agent --> Graph[Graph Workflow System]
     Knowledge --> DB[(ChromaDB)]
-    Models --> APIs([LLM APIs])
+    Providers --> APIs([LLM APIs])
     Core[Core Infrastructure] --> Agent
-    Core --> Models
+    Core --> Providers
     Core --> Knowledge
     Core --> Graph
 ```
@@ -42,14 +42,15 @@ The Knowledge System manages document storage, retrieval, and processing. Key fe
 - **Metadata Management**: Source tracking and document categorization
 - **Relevance Ranking**: Scoring and filtering of search results
 
-### 3. Model Provider System
+### 3. Provider System
 
-The Model Provider System handles interactions with language model APIs. Key features include:
+The Provider System handles interactions with language model APIs. Key features include:
 
-- **Provider Abstraction**: Unified interface across model providers
+- **Provider Abstraction**: Unified interface across LLM providers
+- **Provider Options**: Configuration framework with capability-based model selection
 - **Streaming Support**: Real-time token-by-token responses
-- **Cost Tracking**: Monitoring of token usage and API costs
 - **Error Handling**: Robust error recovery and retry logic
+- **Auto-detection**: Automatic provider selection from model name
 
 ### 4. Graph Workflow System
 

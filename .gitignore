@@ -140,3 +140,5 @@ MANIFEST
 
 **/.vitepress/cache/
 **/.vitepress/dist/
+
+**/examples/example_data/

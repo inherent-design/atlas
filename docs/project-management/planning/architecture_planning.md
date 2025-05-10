@@ -306,27 +306,163 @@ These pathways represent specialized areas of functionality that can be accelera
 - [ ] Add dynamic agent allocation based on task requirements
 - [ ] Implement feedback and observability mechanisms
 
-### Provider Flexibility & Performance ⚡ [Accel]
+### Enhanced Provider System Architecture ⚡ [High Priority]
 
-- [x] Complete streaming implementation for Anthropic provider
-- [x] Complete full implementations for all providers
-  - [x] OpenAI Provider Implementation
-    - [x] Proper API key validation with test API call
-    - [x] Complete streaming implementation with StreamHandler
-    - [x] Error handling using standardized error types
-    - [x] Token usage and cost calculation
-    - [x] Add support for stream_with_callback()
-  - [x] Ollama Provider Implementation
-    - [x] Enhanced server availability validation
-    - [x] Complete streaming implementation with StreamHandler
-    - [x] Error handling using standardized error types
-    - [x] Token usage estimation improvements
-    - [x] Add support for stream_with_callback()
-- [x] Implement basic API key validation for providers
-- [x] Implement sophisticated streaming with token tracking for all providers
-- [ ] Add connection pooling and performance optimizations
-- [ ] Create provider switching based on cost/performance needs
-- [ ] Implement fallback mechanisms between providers
+#### Current Status
+- ✅ Created centralized `ProviderOptions` data class
+- ✅ Moved provider detection logic from CLI to factory layer
+- ✅ Implemented provider resolution system
+- ✅ Updated entry points to use factory interface
+- ✅ Basic capability-based model selection
+- ✅ Standardized provider interface with consistent methods
+- ✅ Ollama provider improvements (dynamic model discovery, error handling, timeout configuration)
+
+#### Next Phase: Enhanced Provider System
+
+The current provider system has limitations:
+- Limited capability system only covers basic operational features (inexpensive, efficient, premium)
+- No provider fallback or aggregation capabilities
+- Provider and model relationships are determined through pattern matching
+- No task-aware model selection based on specialized capabilities
+
+##### Provider Registry Architecture
+
+```python
+class ProviderRegistry:
+    """Central registry for provider, model, and capability information."""
+
+    def __init__(self):
+        # Core data structures
+        self._providers: Dict[str, Type[BaseProvider]] = {}  # name -> Provider class
+        self._provider_models: Dict[str, List[str]] = {}  # provider_name -> list of models
+        self._model_capabilities: Dict[str, Dict[str, CapabilityStrength]] = {}  # model_name -> {capability -> strength}
+        self._capability_models: Dict[str, Set[str]] = {}  # capability -> set of models
+        self._model_providers: Dict[str, str] = {}  # model_name -> provider_name
+```
+
+##### Enhanced Capability System
+
+```python
+class CapabilityStrength(IntEnum):
+    """Enumeration of capability strength levels."""
+    BASIC = 1       # Has the capability but limited
+    MODERATE = 2    # Average capability
+    STRONG = 3      # Excellent at this capability
+    EXCEPTIONAL = 4 # Best-in-class for this capability
+
+# Capability categories
+CAPABILITY_INEXPENSIVE = "inexpensive"  # Lower cost models
+CAPABILITY_CODE = "code"                # Code generation and understanding
+CAPABILITY_REASONING = "reasoning"      # Logical reasoning and problem-solving
+CAPABILITY_DOMAIN_SCIENCE = "science"   # Scientific domain knowledge
+
+# Task capability mapping
+TASK_CAPABILITY_REQUIREMENTS = {
+    "code_generation": {
+        CAPABILITY_CODE: CapabilityStrength.STRONG,
+        CAPABILITY_REASONING: CapabilityStrength.MODERATE
+    }
+}
+```
+
+##### ProviderGroup Architecture
+
+```python
+class ProviderGroup(BaseProvider):
+    """A provider that encapsulates multiple providers with fallback capabilities."""
+
+    def __init__(
+        self,
+        providers: List[BaseProvider],
+        selection_strategy: Callable = ProviderSelectionStrategy.failover,
+        name: str = "provider_group",
+    ):
+        """Initialize a provider group with a list of providers."""
+        self.providers = providers
+        self.selection_strategy = selection_strategy
+        self._name = name
+        self._health_status = {provider: True for provider in providers}
+        self._context = {}  # Context for selection strategy
+```
+
+##### Selection Strategies
+
+```python
+class ProviderSelectionStrategy:
+    """Strategy for selecting providers from a group."""
+
+    @staticmethod
+    def failover(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
+        """Returns providers in order, for failover purposes."""
+        return providers
+
+    @staticmethod
+    def round_robin(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
+        """Rotates through providers in sequence."""
+        # Implementation details
+
+    @staticmethod
+    def cost_optimized(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
+        """Sorts providers by estimated cost."""
+        # Implementation details
+
+class TaskAwareSelectionStrategy:
+    """Selects models based on task requirements and capability strengths."""
+
+    @staticmethod
+    def select(providers, context=None):
+        """Select providers optimized for specific task types."""
+        # Implementation details
+```
+
+##### Factory Integration
+
+```python
+def create_provider_group(
+    providers: List[str] = None,
+    models: List[str] = None,
+    strategy: str = "failover",
+    options: Optional[ProviderOptions] = None,
+) -> ProviderGroup:
+    """Create a provider group with multiple providers."""
+    # Implementation details
+```
+
+##### CLI and Configuration Integration
+
+```python
+# Provider group options
+provider_group = parser.add_argument_group("Provider Group Options")
+provider_group.add_argument(
+    "--providers",
+    type=str,
+    nargs="+",
+    help="Multiple providers to use as a group",
+)
+provider_group.add_argument(
+    "--provider-strategy",
+    type=str,
+    choices=["failover", "round_robin", "cost_optimized", "task_aware"],
+    default="failover",
+    help="Strategy for selecting providers in a group",
+)
+
+# Task-aware selection options
+task_group = parser.add_argument_group("Task-Aware Selection Options")
+task_group.add_argument(
+    "--task-type",
+    type=str,
+    help="Task type for automatic capability selection",
+)
+task_group.add_argument(
+    "--capabilities",
+    type=str,
+    nargs="+",
+    help="Specific capability requirements (e.g., code:strong reasoning:moderate)",
+)
+```
+
+This enhanced provider system architecture provides a comprehensive framework for provider management, capability-based selection, and resilient operations through provider groups with fallback capabilities.
 
 ## Development Principles
 

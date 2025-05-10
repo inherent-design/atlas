@@ -369,7 +369,7 @@ If you encounter issues with token usage tracking or cost estimation, check the 
 
 ## Related Documentation
 
-- [Models Overview](./) - Overview of all model providers
+- [Providers Overview](./) - Overview of all providers
 - [OpenAI Provider](./openai.md) - Documentation for the OpenAI provider
 - [Ollama Provider](./ollama.md) - Documentation for the Ollama provider
 - [Environment Variables](../../reference/env_variables.md) - Configuration options

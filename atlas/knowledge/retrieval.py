@@ -22,16 +22,22 @@ logger = logging.getLogger(__name__)
 
 
 class RetrievalFilter:
-    """Filter for retrieval queries."""
-    
-    def __init__(self, where: Optional[Dict[str, Any]] = None):
+    """Filter for retrieval queries.
+
+    This class provides a structured way to build filters for ChromaDB queries,
+    supporting all the filter operations defined in ChromaDB 1.0+.
+    """
+
+    def __init__(self, where: Optional[Dict[str, Any]] = None, where_document: Optional[Dict[str, Any]] = None):
         """Initialize a retrieval filter.
-        
+
         Args:
-            where: ChromaDB where clause for filtering.
+            where: ChromaDB where clause for filtering metadata.
+            where_document: ChromaDB where_document clause for filtering document content.
         """
         self.where = where or {}
-    
+        self.where_document = where_document or {}
+
     @staticmethod
     def from_metadata(
         source_path: Optional[str] = None,
@@ -42,7 +48,7 @@ class RetrievalFilter:
         additional_filters: Optional[Dict[str, Any]] = None,
     ) -> "RetrievalFilter":
         """Create a filter from metadata fields.
-        
+
         Args:
             source_path: Optional path to filter by source.
             file_type: Optional file type to filter by.
@@ -50,66 +56,255 @@ class RetrievalFilter:
             section_title: Optional section title to filter by.
             exclude_duplicates: Whether to exclude duplicate chunks.
             additional_filters: Additional filters to apply.
-            
+
         Returns:
             A RetrievalFilter instance.
         """
-        where = {}
-        
+        filters = []
+
         if source_path:
-            # Allow partial path matching
-            if source_path.endswith("/"):
-                # Directory path, match all files in directory
-                where["source"] = {"$regex": f"^{source_path}"}
-            else:
-                # Exact file path
-                where["source"] = source_path
-                
+            # For exact source path matching
+            filters.append({"source": source_path})
+
         if file_type:
-            where["file_type"] = file_type
-            
+            filters.append({"file_type": file_type})
+
         if version:
-            where["version"] = version
-            
+            filters.append({"version": version})
+
         if section_title:
-            # Allow partial section title matching
-            where["section_title"] = {"$contains": section_title}
-            
-        if exclude_duplicates:
-            # Exclude chunks that are duplicates
-            where["$not"] = {"duplicate_of": {"$exists": True}}
-        
+            # For exact section title matching
+            filters.append({"section_title": section_title})
+
+        # Combine all filters with $and
+        where = {}
+        if filters:
+            if len(filters) == 1:
+                where = filters[0]
+            else:
+                where = {"$and": filters}
+
         # Add any additional filters
         if additional_filters:
-            where.update(additional_filters)
-        
+            if not where:
+                where = additional_filters
+            elif "$and" in where:
+                if isinstance(additional_filters, list):
+                    # If additional_filters is a list, extend the $and array
+                    where["$and"].extend(additional_filters)
+                else:
+                    # If additional_filters is a dict, add it to the $and array
+                    where["$and"].append(additional_filters)
+            else:
+                where = {"$and": [where, additional_filters]}
+
         return RetrievalFilter(where)
-    
+
     def add_filter(self, key: str, value: Any) -> "RetrievalFilter":
         """Add a filter condition.
-        
+
         Args:
             key: The metadata key to filter on.
             value: The value to filter for.
-            
+
         Returns:
             Self for chaining.
         """
-        self.where[key] = value
+        # If we already have filters, we need to combine them
+        if self.where:
+            if "$and" in self.where:
+                self.where["$and"].append({key: value})
+            else:
+                self.where = {"$and": [self.where, {key: value}]}
+        else:
+            self.where[key] = value
         return self
-    
+
+    def add_operator_filter(self, key: str, operator: str, value: Any) -> "RetrievalFilter":
+        """Add a filter with specific operator.
+
+        Args:
+            key: The metadata key to filter on.
+            operator: The operator to use ($eq, $gt, $lt, etc.).
+            value: The value to filter for.
+
+        Returns:
+            Self for chaining.
+        """
+        # Auto-add $ prefix if missing for safety
+        if not operator.startswith("$"):
+            operator = f"${operator}"
+            logger.debug(f"Auto-corrected operator: added $ prefix to {operator}")
+        return self.add_filter(key, {operator: value})
+
+    def add_range_filter(self, key: str, min_value: Any, max_value: Any,
+                         inclusive: bool = True) -> "RetrievalFilter":
+        """Add a range filter.
+
+        Args:
+            key: The metadata key to filter on.
+            min_value: The minimum value (inclusive).
+            max_value: The maximum value (inclusive).
+            inclusive: Whether the range bounds are inclusive.
+
+        Returns:
+            Self for chaining.
+        """
+        min_op = "$gte" if inclusive else "$gt"
+        max_op = "$lte" if inclusive else "$lt"
+
+        min_filter = {key: {min_op: min_value}}
+        max_filter = {key: {max_op: max_value}}
+
+        if not self.where:
+            self.where = {"$and": [min_filter, max_filter]}
+        elif "$and" in self.where:
+            self.where["$and"].extend([min_filter, max_filter])
+        else:
+            self.where = {"$and": [self.where, min_filter, max_filter]}
+
+        return self
+
+    def add_in_filter(self, key: str, values: List[Any]) -> "RetrievalFilter":
+        """Add an $in filter.
+
+        Args:
+            key: The metadata key to filter on.
+            values: List of values to match.
+
+        Returns:
+            Self for chaining.
+        """
+        return self.add_operator_filter(key, "$in", values)
+
+    def add_nin_filter(self, key: str, values: List[Any]) -> "RetrievalFilter":
+        """Add a $nin (not in) filter.
+
+        Args:
+            key: The metadata key to filter on.
+            values: List of values to exclude.
+
+        Returns:
+            Self for chaining.
+        """
+        return self.add_operator_filter(key, "$nin", values)
+
     def remove_filter(self, key: str) -> "RetrievalFilter":
         """Remove a filter condition.
-        
+
         Args:
             key: The metadata key to remove filtering for.
-            
+
         Returns:
             Self for chaining.
         """
+        # Direct key removal for simple filters
         if key in self.where:
             del self.where[key]
+            return self
+
+        # For complex filters with $and, we need to filter out the condition
+        if "$and" in self.where:
+            filtered_conditions = []
+            for condition in self.where["$and"]:
+                if isinstance(condition, dict):
+                    # Skip conditions that directly match the key
+                    if len(condition) == 1 and key in condition:
+                        continue
+                    # Check for operator conditions on the key
+                    if key in condition and isinstance(condition[key], dict):
+                        continue
+                filtered_conditions.append(condition)
+
+            if filtered_conditions:
+                if len(filtered_conditions) == 1:
+                    self.where = filtered_conditions[0]
+                else:
+                    self.where["$and"] = filtered_conditions
+            else:
+                self.where = {}
+
         return self
+
+    def add_document_filter(self, content_filter: Dict[str, Any]) -> "RetrievalFilter":
+        """Add document content filter.
+
+        This allows filtering by document content using ChromaDB's where_document parameter,
+        such as finding documents containing specific text.
+
+        Args:
+            content_filter: Filter dictionary for document content.
+                Example: {'$contains': 'search term'}
+
+        Returns:
+            Self for chaining.
+        """
+        self.where_document = content_filter
+        return self
+
+    def add_document_contains(self, text: str) -> "RetrievalFilter":
+        """Add a filter to find documents containing specific text.
+
+        Args:
+            text: Text to search for in documents.
+
+        Returns:
+            Self for chaining.
+        """
+        self.where_document = {"$contains": text}
+        return self
+
+    def add_document_not_contains(self, text: str) -> "RetrievalFilter":
+        """Add a filter to find documents not containing specific text.
+
+        Args:
+            text: Text that should not be in matching documents.
+
+        Returns:
+            Self for chaining.
+        """
+        self.where_document = {"$not_contains": text}
+        return self
+
+    @staticmethod
+    def combine_filters(filters: List["RetrievalFilter"], operator: str = "$and") -> "RetrievalFilter":
+        """Combine multiple filters using a logical operator.
+
+        Args:
+            filters: List of RetrievalFilter instances to combine.
+            operator: Logical operator to use, can be "$and" or "$or".
+
+        Returns:
+            A new RetrievalFilter instance combining all filters.
+        """
+        if not filters:
+            return RetrievalFilter()
+
+        if len(filters) == 1:
+            return filters[0]
+
+        # Process metadata filters
+        conditions = []
+        for filter_obj in filters:
+            if filter_obj.where:
+                conditions.append(filter_obj.where)
+
+        if not conditions:
+            result_where = {}
+        elif len(conditions) == 1:
+            result_where = conditions[0]
+        else:
+            result_where = {operator: conditions}
+
+        # Process document filters - take the first non-empty one
+        # Note: ChromaDB doesn't support combining document filters
+        result_where_document = {}
+        for filter_obj in filters:
+            if filter_obj.where_document:
+                result_where_document = filter_obj.where_document
+                break
+
+        return RetrievalFilter(where=result_where, where_document=result_where_document)
 
 
 class RetrievalResult:
@@ -320,21 +515,34 @@ class KnowledgeBase:
         self,
         query: str,
         n_results: int = 5,
-        filter: Optional[RetrievalFilter] = None,
+        filter: Optional[Union[Dict[str, Any], RetrievalFilter]] = None,
         rerank: bool = False,
         settings: Optional[RetrievalSettings] = None,
     ) -> List[RetrievalResult]:
         """Retrieve relevant documents based on a query.
-        
+
         Args:
             query: The query to search for.
             n_results: Number of results to return.
-            filter: Optional filter to apply to the query.
+            filter: Optional filter to apply to the query. Can be a RetrievalFilter object
+                   or a dictionary with metadata filters.
             rerank: Whether to rerank results using additional criteria.
             settings: Optional retrieval settings to use. If provided, overrides other parameters.
-            
+
         Returns:
             A list of relevant documents with their metadata.
+
+        Example:
+            ```python
+            # Create a filter for metadata
+            filter = RetrievalFilter().add_filter("source", {"$eq": "docs/components"})
+
+            # Add document content filter
+            filter.add_document_contains("knowledge graph")
+
+            # Retrieve with filter
+            results = kb.retrieve("How does Atlas work?", filter=filter)
+            ```
         """
         # Use settings if provided, otherwise use individual parameters
         if settings:
@@ -351,7 +559,15 @@ class KnowledgeBase:
             rerank = settings.rerank_results
         
         # Prepare filters if any
-        where_clause = filter.where if filter else None
+        where_clause = None
+        where_document = None
+
+        if filter:
+            if isinstance(filter, RetrievalFilter):
+                where_clause = filter.where
+                where_document = filter.where_document if filter.where_document else None
+            elif isinstance(filter, dict):
+                where_clause = filter
         
         # Generate query embedding if using custom strategy
         query_embedding = self.embedding_strategy.embed_query(query)
@@ -377,12 +593,14 @@ class KnowledgeBase:
                     query_embeddings=[query_embedding],
                     n_results=fetch_n_results,
                     where=where_clause,
+                    where_document=where_document,
                 )
             else:
                 results = self.collection.query(
                     query_texts=[query],
                     n_results=fetch_n_results,
                     where=where_clause,
+                    where_document=where_document,
                 )
             
             # Format results
@@ -573,32 +791,35 @@ class KnowledgeBase:
             return []
     
     def search_by_metadata(
-        self, 
-        metadata_field: str, 
-        value: Any, 
+        self,
+        metadata_field: str,
+        value: Any,
         n_results: int = 100
     ) -> List[str]:
         """Search for unique values in a metadata field that match a value.
-        
+
         Args:
             metadata_field: The metadata field to search.
             value: The value to search for (can be a string or regex pattern).
             n_results: Maximum number of results to return.
-            
+
         Returns:
             A list of unique matching values.
         """
         try:
-            # Get all documents with this metadata field
-            where_clause = {metadata_field: {"$exists": True}}
-            results = self.collection.get(where=where_clause, limit=min(5000, n_results))
-            
+            # Get documents to search through - get a reasonable sample
+            sample_size = min(5000, n_results, self.collection.count())
+            if sample_size == 0:
+                return []
+
+            results = self.collection.get(limit=sample_size)
+
             # Extract values
             values = set()
             for metadata in results["metadatas"]:
                 if metadata_field in metadata:
                     field_value = metadata[metadata_field]
-                    
+
                     # Exact value match
                     if isinstance(value, str) and isinstance(field_value, str):
                         if value.lower() in field_value.lower():
@@ -606,11 +827,11 @@ class KnowledgeBase:
                     # Direct comparison for non-strings
                     elif field_value == value:
                         values.add(field_value)
-            
+
             # Convert to list and limit
             value_list = list(values)
             return value_list[:n_results]
-            
+
         except Exception as e:
             print(f"Error searching metadata: {str(e)}")
             logger.error(f"Error searching metadata: {str(e)}")

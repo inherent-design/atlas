@@ -44,6 +44,7 @@ Atlas uses environment variables as the primary configuration mechanism. These c
 | `ATLAS_OPENAI_DEFAULT_MODEL`    | Default OpenAI model       | `gpt-4o`                     | `gpt-4-turbo`            |
 | `ATLAS_OLLAMA_DEFAULT_MODEL`    | Default Ollama model       | `llama3`                     | `mixtral`                |
 | `OPENAI_ORGANIZATION`           | Organization ID for OpenAI | (Optional)                   | `org-xyz123...`          |
+| `ATLAS_DEFAULT_CAPABILITY`      | Default model capability   | `inexpensive`                | `premium`                |
 
 ### Telemetry Variables
 
@@ -188,6 +189,50 @@ if missing:
 These utilities provide a safe, consistent way to interact with environment variables and ensure proper type conversion.
 
 ## Advanced Configuration Patterns
+
+### Capability-Based Model Selection
+
+Atlas now supports selecting models based on their capabilities rather than explicit model names:
+
+```python
+from atlas.providers.factory import create_provider
+
+# Create a provider using capability-based model selection
+provider = create_provider(
+    provider_name="anthropic",
+    capability="inexpensive"  # Will select the inexpensive model for Anthropic
+)
+
+# Available capabilities
+# - "inexpensive": Cost-effective models suitable for most tasks
+# - "efficient": Models optimized for speed and lower resource usage
+# - "premium": High-performance, state-of-the-art models
+# - "vision": Models with image processing capabilities
+# - "standard": General-purpose models (all models have this capability)
+
+# Create provider with auto-detection from model name
+provider = create_provider(
+    model_name="gpt-4o"  # Will automatically use OpenAI provider
+)
+
+# Get capabilities of a model
+from atlas.providers.factory import get_model_capabilities
+capabilities = get_model_capabilities("anthropic", "claude-3-opus-20240229")
+print(capabilities)  # ['premium', 'vision', 'standard']
+```
+
+The capability-based model selection automatically works with the CLI:
+
+```bash
+# Use the inexpensive model from Anthropic
+uv run python main.py --provider anthropic --capability inexpensive
+
+# Use a premium model from any provider
+uv run python main.py --capability premium
+
+# Auto-detect provider from model name
+uv run python main.py --model gpt-4o
+```
 
 ### Dynamic Provider Selection
 
@@ -490,6 +535,9 @@ def main():
     parser.add_argument("query", help="Query text")
     parser.add_argument("--provider", help="Model provider", default=None)
     parser.add_argument("--model", help="Model name", default=None)
+    parser.add_argument("--capability", help="Model capability", choices=[
+        "inexpensive", "efficient", "premium", "vision", "standard"
+    ], default="inexpensive")
     parser.add_argument("--max-tokens", type=int, help="Maximum tokens", default=None)
     parser.add_argument("--db-path", help="Path to database", default=None)
     args = parser.parse_args()
@@ -498,6 +546,7 @@ def main():
     client = create_query_client(
         provider_name=args.provider,
         model_name=args.model,
+        capability=args.capability if not args.model else None,
         db_path=args.db_path,
     )
 
@@ -534,6 +583,7 @@ class QueryRequest(BaseModel):
     query: str
     provider: str = None
     model: str = None
+    capability: str = None
     stream: bool = False
 
 class QueryResponse(BaseModel):
@@ -562,6 +612,7 @@ async def query(request: QueryRequest):
             clients[provider_name] = create_query_client(
                 provider_name=provider_name,
                 model_name=request.model,
+                capability=request.capability,
                 config=config
             )
 
@@ -707,6 +758,20 @@ Anthropic Provider:
    uv pip install python-dotenv
    ```
 
+5. **Incompatible Model and Provider**:
+   ```
+   ValueError: Model 'gpt-4o' is not compatible with the anthropic provider
+   ```
+
+   **Solution**: Use the auto-detection feature or specify the correct provider
+   ```python
+   # Let Atlas auto-detect the provider
+   provider = create_provider(model_name="gpt-4o")
+   
+   # Or specify the correct provider
+   provider = create_provider(provider_name="openai", model_name="gpt-4o")
+   ```
+
 ### Manual Debugging
 
 For manual debugging of configuration issues:
@@ -740,5 +805,5 @@ for key, value in config.to_dict().items():
 
 - [Environment Variables Reference](../reference/env_variables.md)
 - [API Reference](../reference/api.md)
-- [Model Providers](../components/models/)
+- [Model Providers](../components/providers/)
 - [Telemetry System](../components/core/telemetry.md)

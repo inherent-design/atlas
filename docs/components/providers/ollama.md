@@ -314,7 +314,7 @@ To use the Ollama provider, you need to:
 
 ## Related Documentation
 
-- [Models Overview](./) - Overview of all model providers
+- [Providers Overview](./) - Overview of all providers
 - [Anthropic Provider](./anthropic.md) - Documentation for the Anthropic provider
 - [OpenAI Provider](./openai.md) - Documentation for the OpenAI provider
 - [Environment Variables](../../reference/env_variables.md) - Configuration options

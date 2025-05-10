@@ -68,6 +68,38 @@ self.collection = self.chroma_client.get_or_create_collection(
 )
 ```
 
+#### Metadata Filtering with ChromaDB 1.0.8+
+
+With ChromaDB 1.0.8 and newer versions, Atlas supports enhanced metadata filtering using the `RetrievalFilter` class:
+
+```python
+from atlas.knowledge.retrieval import RetrievalFilter, KnowledgeBase
+
+# Initialize knowledge base
+kb = KnowledgeBase()
+
+# Create filter for documents from a specific source path
+filter = RetrievalFilter().add_filter("source", {"$eq": "docs/components/knowledge"})
+
+# Add additional filters
+filter = filter.add_range_filter("version", "2", "3")  # Version between 2 and 3 (inclusive)
+filter = filter.add_in_filter("file_name", ["index.md", "retrieval.md"])  # File is one of these
+
+# Retrieve with filter
+results = kb.retrieve("knowledge system", filter=filter)
+```
+
+The `RetrievalFilter` class supports these ChromaDB 1.0.8+ compatible filter operations:
+
+- **Equality**: `add_filter(key, {"$eq": value})` - Exact match
+- **Inequality**: `add_filter(key, {"$ne": value})` - Not equal to
+- **Range Filters**: `add_range_filter(key, min, max)` - Between min and max values
+- **Comparison**: `add_operator_filter(key, "$gt/$gte/$lt/$lte", value)` - Greater/less than
+- **Inclusion**: `add_in_filter(key, [value1, value2])` - Value is in the list
+- **Exclusion**: `add_filter(key, {"$nin": [value1, value2]})` - Value is not in the list
+
+These filters can be combined for precise document retrieval and access.
+
 ### Document Processing System
 
 The `DocumentProcessor` class manages the ingestion pipeline:

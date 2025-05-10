@@ -1,6 +1,6 @@
 # Mock Provider
 
-The Mock Provider is a specialized provider implementation designed for testing and development without requiring actual API access. It simulates the behavior of real model providers (like Anthropic, OpenAI, and Ollama) by generating synthetic responses.
+The Mock Provider is a specialized provider implementation designed for testing and development without requiring actual API access. It simulates the behavior of real providers (like Anthropic, OpenAI, and Ollama) by generating synthetic responses.
 
 ## Overview
 

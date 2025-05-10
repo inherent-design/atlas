@@ -9,7 +9,7 @@ Files in /Users/zer0cell/Production/Software/llm/atlas/docs with .md links:
    - Line 188: - [Retrieval Workflow](./retrieval.md) - Deeper details on document retrieval
    - Line 189: - [Getting Started Guide](../guides/getting_started.md) - Basic usage tutorial
 
-3. /Users/zer0cell/Production/Software/llm/atlas/docs/components/models/index.md
+3. /Users/zer0cell/Production/Software/llm/atlas/docs/components/providers/index.md
    - Line 77: - **Documentation**: [Anthropic Provider](./anthropic.md)
    - Line 84: - **Documentation**: [OpenAI Provider](./openai.md)
    - Line 91: - **Documentation**: [Ollama Provider](./ollama.md)

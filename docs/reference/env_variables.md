@@ -72,8 +72,17 @@ ATLAS_DEFAULT_MODEL=claude-3-7-sonnet-20250219
 |----------|-------------|---------|
 | `ATLAS_DEFAULT_PROVIDER` | Default model provider | `anthropic` |
 | `ATLAS_DEFAULT_MODEL` | Default model to use | `claude-3-7-sonnet-20250219` |
+| `ATLAS_DEFAULT_CAPABILITY` | Default capability when selecting models | `inexpensive` |
 | `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | `2000` |
 | `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default |
+
+### Provider-Specific Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OLLAMA_API_ENDPOINT` | Endpoint URL for Ollama server | `http://localhost:11434/api` |
+| `OLLAMA_CONNECT_TIMEOUT` | Connection timeout for Ollama server in seconds | `2` |
+| `OLLAMA_REQUEST_TIMEOUT` | Request timeout for Ollama API calls in seconds | `60` |
 
 ### Development Settings
 
