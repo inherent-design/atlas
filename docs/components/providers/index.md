@@ -116,18 +116,18 @@ The `ProviderOptions` class centralizes all parameters used for provider selecti
 @dataclass
 class ProviderOptions:
     """Options for creating and configuring model providers."""
-    
+
     # Core provider and model selection
     provider_name: Optional[str] = None
     model_name: Optional[str] = None
     capability: Optional[str] = None
-    
+
     # Performance and resource limits
     max_tokens: Optional[int] = None
-    
+
     # Connection parameters
     base_url: Optional[str] = None
-    
+
     # Additional provider-specific parameters
     extra_params: Dict[str, Any] = field(default_factory=dict)
 ```
@@ -262,14 +262,14 @@ final_response = stream_handler.process_stream(process_chunk)
 
 The Provider System can be configured through environment variables:
 
-| Environment Variable   | Description                | Default                    |
-| ---------------------- | -------------------------- | -------------------------- |
-| ATLAS_DEFAULT_PROVIDER | Default provider to use    | anthropic                  |
-| ATLAS_DEFAULT_MODEL    | Default model to use       | claude-3-7-sonnet-20250219 |
-| ATLAS_MAX_TOKENS       | Maximum tokens to generate | 2000                       |
-| ANTHROPIC_API_KEY      | Anthropic API key          | -                          |
-| OPENAI_API_KEY         | OpenAI API key             | -                          |
-| OLLAMA_BASE_URL        | Ollama API base URL        | <a href="http://localhost:11434" target="_blank">http://localhost:11434</a>     |
+| Environment Variable   | Description                | Default                                                              |
+| ---------------------- | -------------------------- | -------------------------------------------------------------------- |
+| ATLAS_DEFAULT_PROVIDER | Default provider to use    | anthropic                                                            |
+| ATLAS_DEFAULT_MODEL    | Default model to use       | claude-3-7-sonnet-20250219                                           |
+| ATLAS_MAX_TOKENS       | Maximum tokens to generate | 2000                                                                 |
+| ANTHROPIC_API_KEY      | Anthropic API key          | -                                                                    |
+| OPENAI_API_KEY         | OpenAI API key             | -                                                                    |
+| OLLAMA_BASE_URL        | Ollama API base URL        | <a href="http://localhost:11434" target="_blank">localhost:11434</a> |
 
 ## Error Handling
 
@@ -341,19 +341,19 @@ Provider Instances → Selection Strategy → Provider Ordering → Sequential E
 
 ## Implementation Status
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Basic provider interface | ✅ Implemented | Core provider interface is stable |
-| Anthropic provider | ✅ Implemented | Full support for Claude models |
-| OpenAI provider | ✅ Implemented | Support for GPT models |
-| Ollama provider | ✅ Implemented | Support for local models |
-| Provider options | ✅ Implemented | Core options framework is available |
-| Provider auto-detection | ✅ Implemented | Model name pattern detection |
+| Feature                    | Status        | Notes                                  |
+| -------------------------- | ------------- | -------------------------------------- |
+| Basic provider interface   | ✅ Implemented | Core provider interface is stable      |
+| Anthropic provider         | ✅ Implemented | Full support for Claude models         |
+| OpenAI provider            | ✅ Implemented | Support for GPT models                 |
+| Ollama provider            | ✅ Implemented | Support for local models               |
+| Provider options           | ✅ Implemented | Core options framework is available    |
+| Provider auto-detection    | ✅ Implemented | Model name pattern detection           |
 | Capability-based selection | 🚧 In Progress | Basic capability selection implemented |
-| Provider Registry | 🔲 Planned | Implementation in development |
-| Enhanced Capability System | 🔲 Planned | Implementation in development |
-| Provider Group | 🔲 Planned | Implementation in development |
-| Task-Aware Selection | 🔲 Planned | Implementation in development |
+| Provider Registry          | 🔲 Planned     | Implementation in development          |
+| Enhanced Capability System | 🔲 Planned     | Implementation in development          |
+| Provider Group             | 🔲 Planned     | Implementation in development          |
+| Task-Aware Selection       | 🔲 Planned     | Implementation in development          |
 
 ## Data Flow Patterns
 

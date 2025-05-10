@@ -80,9 +80,10 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 - **[Examples](https://github.com/inherent-design/atlas/tree/main/examples)**: Practical demonstrations of Atlas functionality
 
 #### Project Management
-- **[MVP Strategy](./project-management/roadmap/mvp_strategy.md)**: Implementation approach for MVP
+- **[Product Roadmap](./project-management/roadmap/product_roadmap.md)**: Comprehensive development roadmap
+- **[Implementation Plan](./project-management/planning/accelerated_implementation_plan.md)**: Week-by-week execution plan
 - **[Progress Tracking](./project-management/tracking/todo.md)**: Current implementation status
-- **[Documentation Planning](./project-management/planning/implementation_planning.md)**: Implementation and documentation plans
+- **[Project Overview](./project-management/index.md)**: Project management documentation
 
 #### Reference
 - **[API Reference](./reference/api.md)**: Core API documentation

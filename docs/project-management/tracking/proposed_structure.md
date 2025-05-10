@@ -1,6 +1,6 @@
-# Proposed Final Project Structure
+# Proposed Atlas Project Structure
 
-This document outlines the proposed final structure for the Atlas project after completing all tasks in the implementation plan. The structure represents the target state of the codebase once all planned features are implemented.
+This document outlines the refined structure for the Atlas project, focusing on clean architecture, minimal dependencies, and clear component boundaries. This structure represents a clean-break approach that simplifies the codebase while ensuring all required functionality is maintained.
 
 ## Status Legend
 - ✅ Existing and complete
@@ -8,216 +8,449 @@ This document outlines the proposed final structure for the Atlas project after 
 - 🔲 Planned but not yet implemented
 - 🗑️ To be removed or refactored
 
+## Implementation Priority Legend
+- 🔴 Core MVP - Essential for core user/developer experience
+- 🟠 Next Phase - Important for established product with users
+- 🟢 Future - Enhances capabilities for mature product
+
 ## Core Directory Structure
 
 ```
 atlas/
-├── __init__.py                         ✅ Main entry point exports
-├── agent.py                            ✅ Base agent functionality
-├── agents/                             🚧 Agent system module (needs update)
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── base.py                         🚧 Base agent (needs provider options update)
-│   ├── controller.py                   🚧 Controller agent implementation
-│   ├── messaging/                      ✅ Agent messaging system
-│   │   ├── __init__.py                 ✅ Module initialization  
-│   │   └── message.py                  ✅ Message object definitions
-│   ├── registry.py                     ✅ Agent registry for dynamic discovery
-│   ├── specialized/                    🚧 Specialized agent implementations
-│   │   ├── __init__.py                 ✅ Module initialization
-│   │   └── tool_agent.py               🚧 Tool-using agent implementation
-│   └── worker.py                       🚧 Worker agent implementation
-├── cli/                                ✅ Command-line interface
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── config.py                       ✅ CLI configuration utilities
-│   └── parser.py                       ✅ Command-line argument parsing
-├── core/                               ✅ Core utilities and configuration
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── config.py                       ✅ Configuration management
-│   ├── env.py                          ✅ Environment variable handling
-│   ├── errors.py                       ✅ Error handling system
-│   ├── logging.py                      ✅ Logging configuration
-│   ├── prompts.py                      ✅ System prompt management
-│   ├── retry.py                        ✅ Retry mechanisms
-│   └── telemetry.py                    ✅ Telemetry and metrics
-├── graph/                              🚧 LangGraph integration
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── edges.py                        ✅ Graph edge definitions
-│   ├── nodes.py                        ✅ Graph node definitions
-│   ├── state.py                        🚧 State management (needs updates)
-│   └── workflows.py                    🚧 Workflow definitions (needs updates)
-├── knowledge/                          🚧 Knowledge management system
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── chunking.py                     🚧 Document chunking strategies (needs enhancement)
-│   ├── embedding.py                    ✅ Embedding generation
-│   ├── ingest.py                       ✅ Document ingestion
-│   ├── retrieval.py                    ✅ Document retrieval with advanced filtering
-│   └── settings.py                     ✅ Retrieval settings
-├── orchestration/                      🔲 Agent orchestration (mostly planned)
-│   ├── __init__.py                     ✅ Module initialization
-│   ├── coordinator.py                  🚧 Multi-agent coordination
-│   ├── messaging/                      🔲 Inter-agent messaging protocols
-│   │   └── __init__.py                 ✅ Module initialization
-│   ├── parallel.py                     🔲 Parallel processing utilities
-│   ├── scheduler.py                    🔲 Task scheduling system
-│   └── workflow/                       🔲 Workflow definitions
-│       └── __init__.py                 ✅ Module initialization
-├── providers/                          🚧 Model provider system
-│   ├── __init__.py                     ✅ Module initialization and exports
-│   ├── anthropic.py                    ✅ Anthropic provider
-│   ├── base.py                         ✅ Base provider interface
-│   ├── capabilities.py                 🔲 Enhanced capability system (to be added)
-│   ├── factory.py                      ✅ Provider factory
-│   ├── group.py                        🔲 ProviderGroup implementation (to be added)
-│   ├── mock.py                         ✅ Mock provider for testing
-│   ├── ollama.py                       ✅ Ollama provider
-│   ├── openai.py                       ✅ OpenAI provider
-│   ├── options.py                      ✅ Provider options data class
-│   ├── registry.py                     🔲 Provider registry with capability tracking (to be added)
-│   └── resolver.py                     ✅ Provider resolution system
-├── query.py                            ✅ Query client interface with metadata filtering
-├── scripts/                            ✅ Utility scripts
-│   ├── __init__.py                     ✅ Module initialization
-│   └── debug/                          ✅ Debugging utilities
-│       ├── __init__.py                 ✅ Module initialization
-│       ├── check_config.py             ✅ Configuration checker
-│       ├── check_db.py                 ✅ Database checker
-│       └── check_models.py             ✅ Model checker
-└── tools/                              🔲 Tools system (mostly planned)
-    ├── __init__.py                     ✅ Module initialization
-    ├── base.py                         🔲 Base tool interface (to be implemented)
-    ├── discovery.py                    🔲 Tool discovery (to be added)
-    ├── mcp/                            🔲 MCP tools (planned)
-    │   └── __init__.py                 ✅ Module initialization
-    ├── registry.py                     🔲 Tool registry (to be added)
-    └── standard/                       🔲 Standard tools (mostly planned)
-        ├── __init__.py                 ✅ Module initialization
-        ├── knowledge_tools.py          🚧 Knowledge tools
-        ├── system_tools.py             🔲 System tools (to be added)
-        └── web_tools.py                🔲 Web tools (to be added)
+├── __init__.py                      ✅  🔴  Main entry point exports
+├── agent.py                         ✅  🔴  Base agent functionality
+├── agents/                          🚧  🔴  Agent system module
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── registry.py                  ✅  🔴  Agent registry for dynamic discovery
+│   ├── messaging.py                 ✅  🔴  Unified messaging system (consolidation)
+│   ├── controller.py                🚧  🔴  Controller agent implementation (needs provider integration)
+│   ├── worker.py                    🚧  🔴  Worker agent implementation (needs provider integration)
+│   └── specialized/                 🚧  🔴  Specialized agent implementations
+│       ├── __init__.py              ✅  🔴  Module initialization
+│       ├── task_aware.py            ✅  🔴  Task-aware agent implementation
+│       └── tool_agent.py            🚧  🔴  Tool-using agent implementation
+├── cli/                             ✅  🔴  Command-line interface
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── config.py                    ✅  🔴  CLI configuration utilities
+│   └── parser.py                    ✅  🔴  Command-line argument parsing
+├── core/                            ✅  🔴  Core utilities and configuration
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── config.py                    ✅  🔴  Configuration management
+│   ├── env.py                       ✅  🔴  Environment variable handling
+│   ├── errors.py                    ✅  🔴  Error handling system
+│   ├── logging.py                   ✅  🔴  Logging configuration
+│   ├── prompts.py                   ✅  🔴  System prompt management
+│   ├── retry.py                     ✅  🔴  Retry mechanisms
+│   ├── telemetry.py                 ✅  🔴  Telemetry and metrics
+│   └── caching/                     🔲  🟠  Response caching system
+│       ├── __init__.py              🔲  🟠  Module initialization
+│       ├── cache.py                 🔲  🟠  Abstract cache interface
+│       ├── semantic_cache.py        🔲  🟠  Embedding-based similarity caching
+│       └── policies.py              🔲  🟠  Cache policies (TTL, eviction)
+├── graph/                           🚧  🔴  Workflow orchestration
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── state.py                     🚧  🔴  State management
+│   ├── edges.py                     ✅  🔴  Conditional edge routing
+│   ├── nodes.py                     ✅  🔴  Functional node definitions
+│   └── workflows.py                 🚧  🔴  Reusable workflow patterns
+├── knowledge/                       🚧  🔴  Knowledge management system
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── chunking.py                  🚧  🔴  Document chunking strategies
+│   ├── embedding.py                 ✅  🔴  Embedding generation
+│   ├── ingest.py                    ✅  🔴  Document ingestion
+│   ├── retrieval.py                 🚧  🔴  Document retrieval interface
+│   ├── hybrid_search.py             🔲  🔴  Hybrid semantic+keyword search
+│   ├── reranking.py                 🔲  🟠  Result reranking strategies
+│   ├── search_scoring.py            🔲  🟠  Configurable relevance scoring
+│   └── settings.py                  ✅  🔴  Retrieval settings configuration
+├── memory/                          🔲  🟠  Conversation memory system
+│   ├── __init__.py                  🔲  🟠  Module initialization
+│   ├── buffer.py                    🔲  🟠  Conversation buffer with windowing
+│   ├── persistence.py               🔲  🟠  Long-term conversation storage
+│   └── session.py                   🔲  🟠  Session management with resumption
+├── providers/                       🚧  🔴  Model provider system
+│   ├── __init__.py                  ✅  🔴  Module initialization and exports
+│   ├── base.py                      🚧  🔴  Base provider with streaming interface (needs enhancement)
+│   ├── factory.py                   ✅  🔴  Provider factory and instantiation
+│   ├── options.py                   ✅  🔴  Provider options and configuration
+│   ├── capabilities.py              ✅  🔴  Provider capability framework
+│   ├── registry.py                  ✅  🔴  Provider registry with capability tracking
+│   ├── group.py                     ✅  🔴  ProviderGroup with selection strategies
+│   ├── resolver.py                  ✅  🔴  Provider resolution system
+│   ├── rate_limiting/               🔲  🟠  Rate limiting infrastructure
+│   │   ├── __init__.py              🔲  🟠  Module initialization
+│   │   ├── limits.py                🔲  🟠  Rate limit definitions
+│   │   ├── governor.py              🔲  🟠  Request throttling implementation
+│   │   └── backpressure.py          🔲  🟠  Backpressure mechanisms
+│   ├── anthropic.py                 ✅  🔴  Anthropic provider
+│   ├── openai.py                    ✅  🔴  OpenAI provider
+│   ├── ollama.py                    ✅  🔴  Ollama provider
+│   └── mock.py                      ✅  🔴  Mock provider for testing
+├── query.py                         ✅  🔴  Query client interface
+├── reasoning/                       🔲  🟢  Structured reasoning frameworks
+│   ├── __init__.py                  🔲  🟢  Module initialization
+│   ├── chain_of_thought.py          🔲  🟢  Chain-of-thought implementation
+│   ├── verification.py              🔲  🟢  Self-verification mechanisms
+│   └── reflection.py                🔲  🟢  Self-critique and improvement
+├── security/                        🔲  🟠  Security and safety framework
+│   ├── __init__.py                  🔲  🟠  Module initialization
+│   ├── content_filter.py            🔲  🟠  Input/output content filtering
+│   ├── privacy.py                   🔲  🟠  PII detection and redaction
+│   └── sanitization.py              🔲  🟠  Input sanitization for safety
+├── tools/                           🚧  🔴  Tools system
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── base.py                      🚧  🔴  Base tool interface
+│   ├── registry.py                  🔲  🔴  Tool registry and discovery
+│   ├── standard/                    🚧  🔴  Standard built-in tools
+│   │   ├── __init__.py              ✅  🔴  Module initialization
+│   │   ├── knowledge.py             🚧  🔴  Knowledge management tools
+│   │   └── system.py                🔲  🔴  System interaction tools
+│   └── mcp/                         🔲  🟠  MCP integration tools
+│       └── __init__.py              ✅  🟠  Module initialization
+└── scripts/                         ✅  🔴  Utility scripts
+    ├── __init__.py                  ✅  🔴  Module initialization
+    └── debug/                       ✅  🔴  Debugging utilities
+        ├── __init__.py              ✅  🔴  Module initialization
+        ├── check_config.py          ✅  🔴  Configuration checker
+        ├── check_db.py              ✅  🔴  Database checker
+        └── check_models.py          ✅  🔴  Model checker
 ```
 
-## New Files to be Created
+## Documentation Structure
 
-1. **providers/group.py**
-   - Implements ProviderGroup for aggregation and fallback between providers
-   - Supports multiple provider selection strategies:
-     - Failover: Try providers in sequence until one works
-     - Round-robin: Rotate through available providers
-     - Cost-optimized: Select providers based on estimated cost
-   - Includes provider health monitoring and automatic recovery
-   - Implements provider capability detection across multiple providers
-   - Provides seamless integration with existing provider interface
-   - Supports automatic retry with different providers when one fails
+```
+docs/
+├── architecture/                    ✅  🔴  Architecture overview
+│   ├── components.md                ✅  🔴  Component architecture
+│   ├── data_flow.md                 ✅  🔴  Data flow diagrams
+│   ├── design_principles.md         ✅  🔴  Core design principles
+│   └── index.md                     ✅  🔴  Architecture introduction
+├── components/                      ✅  🔴  Detailed component documentation
+│   ├── agents/                      ✅  🔴  Agent system documentation
+│   │   ├── index.md                 🔲  🔴  Agent system overview
+│   │   ├── controller.md            ✅  🔴  Controller agent
+│   │   ├── messaging.md             ✅  🔴  Messaging system
+│   │   ├── workers.md               ✅  🔴  Worker agents
+│   │   └── specialized.md           ✅  🔴  Specialized agents
+│   ├── core/                        ✅  🔴  Core utilities documentation
+│   │   ├── index.md                 🔲  🔴  Core utilities overview
+│   │   ├── config.md                ✅  🔴  Configuration management
+│   │   ├── env.md                   ✅  🔴  Environment variables
+│   │   ├── errors.md                ✅  🔴  Error handling
+│   │   ├── logging.md               ✅  🔴  Logging system
+│   │   ├── prompts.md               ✅  🔴  System prompts
+│   │   ├── telemetry.md             ✅  🔴  Telemetry system
+│   │   └── caching.md               🔲  🟠  Caching system
+│   ├── graph/                       ✅  🔴  Graph system documentation
+│   │   ├── index.md                 ✅  🔴  Graph system overview
+│   │   ├── edges.md                 ✅  🔴  Graph edges
+│   │   ├── nodes.md                 ✅  🔴  Graph nodes
+│   │   └── state.md                 ✅  🔴  State management
+│   ├── knowledge/                   ✅  🔴  Knowledge system documentation
+│   │   ├── index.md                 ✅  🔴  Knowledge system overview
+│   │   ├── chunking.md              🔲  🔴  Document chunking
+│   │   ├── hybrid_search.md         🔲  🔴  Hybrid search strategies
+│   │   ├── ingestion.md             ✅  🔴  Document ingestion
+│   │   └── retrieval.md             ✅  🔴  Document retrieval
+│   ├── memory/                      🔲  🟠  Memory system documentation
+│   │   ├── index.md                 🔲  🟠  Memory system overview
+│   │   ├── buffer.md                🔲  🟠  Conversation buffers
+│   │   ├── persistence.md           🔲  🟠  Long-term storage
+│   │   └── session.md               🔲  🟠  Session management
+│   ├── providers/                   ✅  🔴  Provider system documentation
+│   │   ├── index.md                 ✅  🔴  Provider system overview
+│   │   ├── anthropic.md             ✅  🔴  Anthropic provider
+│   │   ├── capabilities.md          ✅  🔴  Provider capabilities
+│   │   ├── mock.md                  ✅  🔴  Mock provider
+│   │   ├── ollama.md                ✅  🔴  Ollama provider
+│   │   ├── openai.md                ✅  🔴  OpenAI provider
+│   │   ├── provider_group.md        ✅  🔴  Provider group
+│   │   ├── provider_selection.md    ✅  🔴  Provider selection
+│   │   ├── rate_limiting.md         🔲  🟠  Rate limiting system
+│   │   └── registry.md              ✅  🔴  Provider registry
+│   ├── reasoning/                   🔲  🟢  Reasoning framework documentation
+│   │   ├── index.md                 🔲  🟢  Reasoning system overview
+│   │   ├── chain_of_thought.md      🔲  🟢  Chain-of-thought patterns
+│   │   └── verification.md          🔲  🟢  Self-verification strategies
+│   ├── security/                    🔲  🟠  Security framework documentation
+│   │   ├── index.md                 🔲  🟠  Security system overview
+│   │   ├── content_filtering.md     🔲  🟠  Content filtering guide
+│   │   └── privacy.md               🔲  🟠  Privacy protection strategies
+│   └── tools/                       ✅  🔴  Tool system documentation
+│       ├── index.md                 ✅  🔴  Tool system overview
+│       ├── core.md                  ✅  🔴  Core tool interfaces
+│       ├── mcp.md                   ✅  🟠  MCP integration
+│       └── standard.md              ✅  🔴  Standard tools
+├── guides/                          ✅  🔴  User guides
+│   ├── getting_started.md           ✅  🔴  Getting started guide
+│   ├── configuration.md             ✅  🔴  Configuration guide
+│   ├── testing.md                   ✅  🔴  Testing guide
+│   ├── type_checking.md             ✅  🔴  Type checking guide
+│   ├── hybrid_search.md             🔲  🔴  Hybrid search implementation guide
+│   ├── caching.md                   🔲  🟠  Caching guide
+│   ├── memory.md                    🔲  🟠  Memory management guide
+│   ├── security.md                  🔲  🟠  Security best practices
+│   └── rate_limiting.md             🔲  🟠  Rate limiting configuration
+├── project-management/              ✅  🔴  Project management documentation
+│   ├── index.md                     ✅  🔴  Project management overview
+│   ├── audit/                       ✅  🔴  Audit reports and analysis
+│   │   ├── implementation_audit.md  🔲  🔴  Implementation status audit
+│   │   └── archive/                 ✅  🔴  Historical audit documents
+│   │       ├── agent_system_update.md      ✅  🔴  Agent system audit
+│   │       ├── doc_audit.md                ✅  🔴  Documentation audit
+│   │       └── enhanced_provider_alignment.md ✅  🔴  Provider system audit
+│   ├── business/                    ✅  🔴  Business planning and strategy
+│   │   ├── commercialization_timeline.md ✅  🔴  Post-development commercialization plan
+│   │   └── monetization_strategy.md ✅  🔴  Monetization approaches
+│   ├── legal/                       ✅  🔴  Legal considerations
+│   │   ├── compliance_roadmap.md    ✅  🔴  Compliance implementation timeline
+│   │   └── license_selection.md     ✅  🔴  License selection rationale
+│   ├── marketing/                   ✅  🔴  Marketing materials
+│   │   ├── go_to_market_strategy.md ✅  🔴  Comprehensive go-to-market plan
+│   │   ├── pitch_deck_outline.md    ✅  🔴  Pitch deck structure
+│   │   ├── press_release_template.md ✅  🔴  Press release template
+│   │   └── project_overview.md      ✅  🔴  Project overview for audiences
+│   ├── planning/                    ✅  🔴  Planning documents
+│   │   ├── accelerated_implementation_plan.md ✅  🔴  Accelerated execution plan
+│   │   ├── architecture_planning.md ✅  🔴  Architecture design planning
+│   │   ├── archive/                 ✅  🔴  Archived planning documents
+│   │   │   ├── index.md             ✅  🔴  Archive documentation
+│   │   │   ├── cli_planning_2025-05-10.md        ✅  🔴  CLI interface planning (archived)
+│   │   │   ├── implementation_planning_2025-05-10.md ✅  🔴  Implementation strategy (archived)
+│   │   │   └── mvp_completion_strategy_2025-05-10.md ✅  🔴  MVP roadmap (archived)
+│   │   └── possible-future/         ✅  🟢  Future planning documents
+│   │       ├── future_multi_modal_possibilities.md ✅  🟢  Multi-modal support
+│   │       ├── hybrid_retrieval_strategies.md ✅  🟢  Advanced retrieval
+│   │       ├── open_source_strategy.md ✅  🟢  Open source approach
+│   │       └── test_suite_planning.md ✅  🟢  Test suite planning
+│   ├── roadmap/                     ✅  🔴  Product roadmap
+│   │   ├── product_roadmap.md       ✅  🔴  Comprehensive product roadmap
+│   │   └── archive/                 ✅  🔴  Archived roadmap documents
+│   │       ├── index.md             ✅  🔴  Archive documentation
+│   │       └── mvp_strategy_2025-05-10.md  ✅  🔴  MVP strategy (archived)
+│   └── tracking/                    ✅  🔴  Implementation tracking
+│       ├── proposed_structure.md    ✅  🔴  Proposed code structure
+│       ├── todo.md                  ✅  🔴  Current implementation tasks
+│       └── archive/                 ✅  🔴  Historical tracking documents
+│           └── enhanced_provider_todo.md ✅  🔴  Provider system tasks
+├── reference/                       ✅  🔴  Reference documentation
+│   ├── api.md                       ✅  🔴  API reference
+│   ├── cli.md                       ✅  🔴  CLI options reference
+│   ├── env_variables.md             ✅  🔴  Environment variables reference
+│   ├── faq.md                       ✅  🔴  Frequently asked questions
+│   └── licensing.md                 ✅  🔴  Licensing information
+└── workflows/                       ✅  🔴  Workflow documentation
+    ├── query.md                     ✅  🔴  Basic query workflow
+    ├── retrieval.md                 ✅  🔴  Retrieval workflow
+    ├── conversational.md            🔲  🟠  Conversational workflows
+    ├── multi_agent.md               ✅  🔴  Multi-agent workflow
+    └── custom_workflows.md          ✅  🔴  Custom workflow guide
+```
 
-2. **tools/base.py**
-   - Defines the base Tool class with standardized interface
-   - Includes schema validation for tool inputs/outputs
-   - Implements error handling and reporting
-
-3. **tools/registry.py**
-   - Implements dynamic tool discovery and registration
-   - Supports loading tools from multiple locations
-   - Handles tool versioning and compatibility
-
-4. **tools/discovery.py**
-   - Provides utilities for discovering and loading tools
-   - Implements tool capability interfaces
-   - Manages tool metadata
-
-5. **orchestration/messaging/protocol.py**
-   - Defines standardized messaging protocols between agents
-   - Implements message serialization and deserialization
-   - Supports different message types and priorities
-
-6. **orchestration/workflow/executor.py**
-   - Implements workflow execution engine
-   - Manages workflow state transitions
-   - Handles error recovery in workflows
-
-## Files Needing Significant Updates
-
-1. **agents/base.py**
-   - Update to work with provider options
-   - Support integration with the tool system
-   - Implement more robust error handling
-
-2. **providers/base.py**
-   - Standardize streaming interfaces
-   - Add stream control capabilities
-   - Implement proper resource cleanup
-
-3. **knowledge/retrieval.py**
-   - Implement hybrid retrieval system
-   - Improve relevance scoring algorithms
-   - Add caching for performance optimization
-
-4. **knowledge/chunking.py**
-   - Implement enhanced chunking strategies
-   - Add semantic-aware chunking
-   - Improve overlap control and configuration
-
-5. **graph/workflows.py**
-   - Update to work with new agent system
-   - Support multi-agent workflows
-   - Integrate with tool discovery
-
-## Target State for Examples
-
-The examples directory will be organized to demonstrate progressive complexity and feature usage:
+## Example Structure
 
 ```
 examples/
-├── 01_query_simple.py                  ✅ Basic query
-├── 02_query_streaming.py               ✅ Streaming query
-├── 03_provider_selection.py            ✅ Provider selection and options
-├── 04_provider_group.py                🔲 Provider group with fallback (to be added)
-├── 05_task_aware_providers.py          🔲 Task-aware provider selection (to be added)
-├── 06_agent_options_verification.py    ✅ Agent initialization with provider options
-├── 10_document_ingestion.py            ✅ Document ingestion
-├── 11_basic_retrieval.py               ✅ Basic retrieval
-├── 15_advanced_filtering.py            ✅ Advanced metadata and content filtering
-├── 12_hybrid_retrieval.py.todo         🚧 Hybrid retrieval (planned)
-├── 20_tool_agent.py.todo               🚧 Tool agent (planned)
-├── 21_multi_agent.py.todo              🚧 Multi-agent system (planned)
-├── 22_agent_workflows.py.todo          🚧 Agent workflows (planned)
-├── common.py                           ✅ Shared utilities for examples
-├── EXAMPLES.md                         ✅ Example implementation standards
-└── README.md                           ✅ Examples guide with implementation status
+├── 01_query_simple.py               ✅  🔴  Basic query
+├── 02_query_streaming.py            ✅  🔴  Streaming query
+├── 03_provider_selection.py         ✅  🔴  Provider selection and options
+├── 04_provider_group.py             ✅  🔴  Provider group with fallback
+├── 05_task_aware_providers.py       ✅  🔴  Task-aware provider selection
+├── 06_task_aware_agent.py           ✅  🔴  Task-aware agent implementation
+├── 10_document_ingestion.py         ✅  🔴  Document ingestion
+├── 11_basic_retrieval.py            ✅  🔴  Basic retrieval
+├── 12_hybrid_retrieval.py           🚧  🔴  Hybrid retrieval
+├── 15_advanced_filtering.py         ✅  🔴  Advanced metadata and content filtering
+├── 20_tool_agent.py                 🚧  🔴  Tool agent usage
+├── 21_multi_agent.py                🚧  🔴  Multi-agent system
+├── 22_agent_workflows.py            🚧  🔴  Agent workflows
+├── 30_memory_conversation.py        🔲  🟠  Memory-enabled conversations
+├── 31_caching_example.py            🔲  🟠  Response caching demonstration
+├── 32_rate_limiting.py              🔲  🟠  Rate limiting configuration
+├── 33_security_filtering.py         🔲  🟠  Content filtering and security
+├── 40_chain_of_thought.py           🔲  🟢  Chain-of-thought reasoning
+├── 41_self_verification.py          🔲  🟢  Self-verification techniques
+├── common.py                        ✅  🔴  Shared utilities for examples
+├── EXAMPLES.md                      ✅  🔴  Example implementation standards
+└── README.md                        ✅  🔴  Examples guide
 ```
 
-## Implementation Priority
+## Key Simplifications and Enhancements
 
-The implementation priority follows the phased approach outlined in the todo.md document:
+### 1. Core Functionality (MVP) 🔴
 
-1. **Phase 1: Implement ProviderGroup**
-   - Create ProviderGroup class implementing BaseProvider interface
-   - Implement provider selection strategies (failover, round-robin, cost-based)
-   - Add provider health monitoring and recovery
-   - Update AtlasAgent to work with provider instances
-   - Add CLI and configuration support for provider groups
-   - Create examples demonstrating provider groups
+#### Provider System Completion
+- Standardized provider interface with comprehensive streaming controls (current focus)
+- Robust ProviderGroup with enhanced fallback mechanisms (current focus)
+- Capability-based provider selection (completed)
+- Error handling and lifecycle management improvements (current focus)
 
-2. **Phase 2: Streamline Streaming Architecture**
-   - Create unified StreamResponse model
-   - Standardize stream handlers across providers
-   - Implement proper resource cleanup for all streams
-   - Add stream control capabilities
+#### Knowledge System Enhancement
+- Hybrid retrieval combining semantic and keyword search
+- Improved chunking strategies for better document understanding
+- Streamlined retrieval interface with unified search approach
 
-3. **Phase 3: Enhance Agent System with Tools**
-   - Update AtlasAgent to work with provider options
-   - Create simplified tool interface
-   - Define tool discovery and capability interfaces
-   - Implement standardized tool invocation patterns
+#### Agent System Refinement
+- Consolidated messaging system into a single file (completed)
+- Clear base class responsibilities (completed)
+- Specialized agent implementations (TaskAwareAgent completed, others in progress)
+- Enhanced provider integration in agent system (current focus)
+- Streaming control propagation to agents (current focus)
 
-4. **Phase 4: Implement Hybrid Retrieval**
-   - Implement combined keyword + semantic search
-   - Add relevance scoring mechanism
-   - Create configurable weighting system
-   - Add example demonstrating hybrid search
+#### Tools System Implementation
+- Simplified tool interface with validation
+- Focused on essential tool categories
+- Clear tool registry architecture
 
-5. **Phase 5: Multi-Agent Workflows**
-   - Implement agent communication protocols
-   - Create workflow state management system
-   - Update multi-agent examples
+#### Graph System Refinement
+- Enhanced state management for workflows
+- Reusable workflow patterns
+- Clean interfaces for new workflows
 
-This proposed structure represents the target state of the codebase after completing all planned features in the implementation plan. It provides a roadmap for development while maintaining compatibility with the existing architecture.
+### 2. Next-Phase Improvements 🟠
+
+#### Memory and Session Management
+- Conversation buffer with windowing strategies
+- Long-term conversation storage and retrieval
+- Session management with resumption capabilities
+
+#### Advanced Caching System
+- Abstract cache interface with multiple backends
+- Semantic similarity caching for non-exact matches
+- Configurable policies for cache management
+
+#### Rate Limiting Infrastructure
+- Provider-specific rate limit definitions
+- Request throttling and queueing implementation
+- Backpressure mechanisms for overload situations
+
+#### Security Framework
+- Content filtering for inputs and outputs
+- PII detection and redaction capabilities
+- Input sanitization to prevent prompt injection
+
+#### Enhanced Observability
+- Detailed metrics collection across components
+- Distributed tracing for complex operations
+- Cost tracking and optimization features
+
+### 3. Future Capabilities 🟢
+
+#### Structured Reasoning Framework
+- Chain-of-thought prompting implementation
+- Self-verification mechanisms
+- Self-critique and reflection capabilities
+
+#### Advanced Knowledge Capabilities
+- Sophisticated reranking strategies
+- Multiple scoring algorithms for relevance
+- Knowledge graph integration
+
+#### Multi-Modal Support
+- Image handling and embedding
+- Audio processing capabilities
+- Multi-modal prompt construction
+
+#### Evaluation Framework
+- Quality metrics for responses
+- Automatic evaluations against benchmarks
+- Feedback collection and processing
+
+## Implementation Priorities
+
+### Phase 1: Core MVP 🔴
+
+#### 1. Streaming Infrastructure Enhancement (Current Sprint Focus)
+- Update provider base class with standardized streaming interface
+- Add stream control capabilities (pause, resume, cancel)
+- Implement buffering mechanisms for stream manipulation
+- Add performance metrics tracking during streaming
+- Implement proper resource cleanup for all streams
+- Ensure consistent error handling across streaming operations
+- Enhance ProviderGroup streaming with fallback mechanisms
+
+#### 2. Knowledge System Enhancements
+- Implement hybrid retrieval combining semantic and keyword search
+- Enhance chunking strategies for different document types
+- Develop reusable search patterns across different retrieval approaches
+- Implement configurable search interfaces
+
+#### 3. Tool System Development
+- Implement base Tool interface with validation
+- Create tool registry for discovery and management
+- Develop core set of knowledge and system tools
+- Establish clear extension points for custom tools
+
+#### 4. Agent System Refinements (Current Sprint Focus)
+- Update agents to work with enhanced streaming providers
+- Improve controller-worker communication with streaming controls
+- Add provider capability awareness to agent implementations
+- Create clean agent-provider interface protocol
+- Implement provider performance tracking in agents
+
+#### 5. Example Development (Current Sprint Focus)
+- Create enhanced streaming example with controls
+- Update multi-agent examples with provider groups
+- Demonstrate provider fallback during streaming
+- Illustrate provider capability utilization
+- Ensure consistent error handling in examples
+
+### Phase 2: Next Immediate Improvements 🟠
+
+#### 1. Memory System Implementation
+- Create conversation buffer with windowing strategies
+- Implement persistent conversation storage
+- Develop session management with resumption capabilities
+- Integrate with existing agent architecture
+
+#### 2. Caching Infrastructure
+- Implement abstract cache interface
+- Develop semantic similarity caching for non-exact matches
+- Create configurable policies for TTL and eviction
+- Integration with knowledge retrieval and providers
+
+#### 3. Rate Limiting System
+- Implement provider-specific rate limit definitions
+- Develop request throttling and queueing system
+- Create backpressure mechanisms for overload protection
+- Integrate with provider selection strategies
+
+#### 4. Security Framework
+- Implement content filtering for inputs and outputs
+- Develop PII detection and redaction capabilities
+- Create input sanitization to prevent prompt injection
+- Add configuration for security policy settings
+
+#### 5. Enhanced Observability
+- Expand telemetry to include detailed metrics
+- Implement distributed tracing across components
+- Add token usage and cost tracking features
+- Develop performance monitoring and alerting
+
+### Phase 3: Future Capabilities 🟢
+
+#### 1. Structured Reasoning
+- Implement chain-of-thought prompting patterns
+- Develop self-verification mechanisms
+- Create self-critique and reflection capabilities
+- Integration with knowledge and agent systems
+
+#### 2. Advanced Knowledge Capabilities
+- Implement sophisticated reranking strategies
+- Develop multiple scoring algorithms for relevance
+- Create knowledge graph integration capabilities
+- Support for diverse knowledge representation formats
+
+#### 3. Multi-Modal Support
+- Implement image handling and embedding
+- Develop audio processing capabilities
+- Create multi-modal prompt construction
+- Integration with providers supporting multi-modal inputs
+
+#### 4. Evaluation Framework
+- Develop quality metrics for response evaluation
+- Implement automatic benchmarking against standards
+- Create feedback collection and processing system
+- Integrate with existing components for continuous improvement
+
+This enhanced structure maintains all essential MVP functionality while adding clear pathways for future development. The prioritization ensures that the core user experience is robust and complete before adding advanced capabilities. The implementation strategy allows for incremental adoption of new features while maintaining backward compatibility.
