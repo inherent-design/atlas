@@ -19,7 +19,7 @@ import datetime
 from typing import Dict, Any, List
 
 # Import common utilities for Atlas examples
-from examples.common import setup_example, print_example_footer, handle_example_error
+from common import setup_example, print_example_footer, handle_example_error
 from atlas.core import logging
 
 # Import atlas modules

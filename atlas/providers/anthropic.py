@@ -23,6 +23,7 @@ from atlas.providers.base import (
     ModelResponse,
     TokenUsage,
     CostEstimate,
+    StreamHandler as BaseStreamHandler,
 )
 from atlas.core.retry import RetryConfig, CircuitBreaker
 
@@ -578,7 +579,7 @@ class AnthropicProvider(ModelProvider):
         return stream_handler.process_stream(callback)
 
 
-class StreamHandler:
+class StreamHandler(BaseStreamHandler):
     """Handler for processing Anthropic streaming responses."""
 
     def __init__(self, stream, provider, model, initial_response):
@@ -590,15 +591,26 @@ class StreamHandler:
             model: The model being used.
             initial_response: The initial ModelResponse object to update.
         """
+        super().__init__(
+            content="",  # Will be populated as we stream
+            provider=provider,
+            model=model,
+            initial_response=initial_response
+        )
         self.stream = stream
-        self.provider = provider
-        self.model = model
-        self.response = initial_response
         self.full_text = ""
         self.event_count = 0
         self.finished = False
         self.usage = None
         self._lock = threading.Lock()
+
+    def get_iterator(self):
+        """Get an iterator for the stream.
+
+        Returns:
+            An iterator that yields chunks of the content.
+        """
+        return self
 
     def __iter__(self):
         """Make the handler iterable for processing in a for loop."""

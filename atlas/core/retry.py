@@ -11,6 +11,7 @@ import random
 import time
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, cast
+from dataclasses import dataclass
 
 from atlas.core.errors import APIError, RateLimitError
 
@@ -19,6 +20,36 @@ logger = logging.getLogger(__name__)
 # Type variable for generic function return type
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+@dataclass
+class RetryPolicy:
+    """Policy for retry behavior.
+    
+    Contains configuration for retry attempts, including delays and backoff factors.
+    """
+    enabled: bool = True
+    max_retries: int = 3
+    min_delay: float = 0.5
+    max_delay: float = 30.0
+    backoff_factor: float = 2.0
+    jitter: float = 0.1
+
+
+@dataclass
+class RetryState:
+    """State tracking for retry operations.
+    
+    Tracks the current retry attempt and holds the retry policy.
+    """
+    attempt: int = 0
+    max_retries: int = 3
+    retry_policy: RetryPolicy = None
+    last_error: Exception = None
+    
+    def __post_init__(self):
+        if self.retry_policy is None:
+            self.retry_policy = RetryPolicy()
 
 
 class RetryConfig:
@@ -130,6 +161,41 @@ def calculate_delay(retry_count: int, config: RetryConfig) -> float:
     jitter = delay * config.jitter_factor * random.random()
     delay = delay + jitter
 
+    return delay
+
+
+def calculate_retry_delay(state: RetryState) -> float:
+    """
+    Calculate the delay for a retry operation based on the retry state and policy.
+    
+    Args:
+        state: Current retry state
+        
+    Returns:
+        Delay time in seconds
+    """
+    policy = state.retry_policy
+    
+    if not policy.enabled or state.attempt > state.max_retries:
+        return 0
+    
+    # Calculate base delay with exponential backoff
+    if state.attempt <= 1:
+        base_delay = policy.min_delay
+    else:
+        # We apply the backoff factor to calculate the exponential delay
+        # attempt=2 means (min_delay * backoff_factor^1)
+        backoff_exponent = state.attempt - 1
+        base_delay = policy.min_delay * (policy.backoff_factor ** backoff_exponent)
+    
+    # Apply maximum delay cap
+    delay = min(base_delay, policy.max_delay)
+    
+    # Add jitter to prevent thundering herd problem
+    jitter_amount = delay * policy.jitter
+    # This adds a random component of up to jitter amount
+    delay = delay + (jitter_amount * random.random())
+    
     return delay
 
 

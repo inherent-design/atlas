@@ -7,11 +7,14 @@ model providers in a unified way.
 
 import importlib
 import logging
-from typing import Dict, List, Optional, Any, Type, Tuple, Callable, Set
+import threading
+from typing import Dict, List, Optional, Any, Type, Tuple, Callable, Set, Union
 
 from atlas.core.telemetry import traced, TracedClass
 from atlas.core import env
 from atlas.providers.base import ModelProvider
+from atlas.providers.options import ProviderOptions
+from atlas.providers.capabilities import CapabilityStrength
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +120,21 @@ DEFAULT_CAPABILITY = "inexpensive"
 
 # Cache for provider availability
 _AVAILABLE_PROVIDERS: Optional[Dict[str, List[str]]] = None
+
+# Global provider registry instance
+_PROVIDER_REGISTRY_INSTANCE = None
+_REGISTRY_LOCK = threading.RLock()
+
+
+def get_provider_registry():
+    """Get the global provider registry instance.
+    
+    Returns:
+        The global provider registry instance.
+    """
+    # Import here to avoid circular imports
+    from atlas.providers.registry import get_registry
+    return get_registry()
 
 
 def is_model_compatible_with_provider(model_name: str, provider_name: str) -> bool:
@@ -373,6 +391,18 @@ def register_provider(provider_name: str, class_path: str) -> None:
     # Invalidate the provider cache
     global _AVAILABLE_PROVIDERS
     _AVAILABLE_PROVIDERS = None
+    
+    # Register with the registry if it's initialized
+    try:
+        registry = get_provider_registry()
+        provider_class = get_provider_class(provider_name)
+        registry.register_provider(
+            name=provider_name,
+            provider_class=provider_class
+        )
+        logger.debug(f"Registered provider '{provider_name}' with provider registry")
+    except Exception as e:
+        logger.debug(f"Could not register with provider registry: {e}")
 
 
 @traced(name="set_default_model")
@@ -449,6 +479,40 @@ def create_provider(
     Raises:
         ValueError: If the provider is not supported or required configuration is missing.
     """
+    # First check if we should use the registry
+    try:
+        registry = get_provider_registry()
+        if registry:
+            # Try to use registry for provider creation
+            if model_name:
+                # Create by specific model name
+                return registry.create_provider(
+                    provider_name=provider_name,
+                    model_name=model_name,
+                    max_tokens=max_tokens,
+                    **kwargs
+                )
+            elif capability:
+                # Create by capability
+                capabilities = {capability: CapabilityStrength.MODERATE}
+                return registry.create_provider(
+                    provider_name=provider_name,
+                    capabilities=capabilities,
+                    max_tokens=max_tokens,
+                    **kwargs
+                )
+            elif provider_name:
+                # Create by provider name only
+                return registry.create_provider(
+                    provider_name=provider_name,
+                    max_tokens=max_tokens,
+                    **kwargs
+                )
+    except Exception as e:
+        logger.warning(f"Registry-based provider creation failed, falling back to direct creation: {e}")
+
+    # Fall back to legacy direct provider creation
+    
     # Handle auto-detecting provider from model (if model is specified but provider isn't)
     if model_name is not None and provider_name is None:
         # Try to detect provider from model name
@@ -553,11 +617,92 @@ def create_provider(
 
         provider = provider_class(**provider_kwargs)
         logger.debug(f"Created provider '{provider_name}' with model '{model_name}'")
+        
+        # Register model capabilities with registry if available
+        try:
+            registry = get_provider_registry()
+            if registry and provider_name in PROVIDER_MODELS:
+                model_info = PROVIDER_MODELS[provider_name]["models"].get(model_name, [])
+                for capability in model_info:
+                    if capability in ["premium", "vision"]:
+                        strength = CapabilityStrength.STRONG
+                    elif capability in ["efficient"]:
+                        strength = CapabilityStrength.MODERATE
+                    elif capability in ["inexpensive"]:
+                        strength = CapabilityStrength.BASIC
+                    else:
+                        strength = CapabilityStrength.MODERATE
+                    
+                    registry.register_model_capability(model_name, capability, strength)
+        except Exception as e:
+            logger.debug(f"Could not register model capabilities: {e}")
+        
         return provider
 
     except Exception as e:
         logger.error(f"Failed to create provider '{provider_name}': {e}")
         raise ValueError(f"Error creating provider '{provider_name}': {e}")
+
+
+@traced(name="create_provider_group")
+def create_provider_group(
+    providers: List[Union[str, ModelProvider]],
+    selection_strategy: str = "failover",
+    name: str = "provider_group",
+    **kwargs: Any
+) -> ModelProvider:
+    """Create a provider group with multiple providers and fallback capability.
+    
+    Args:
+        providers: List of provider names or provider instances
+        selection_strategy: Strategy for selecting providers ("failover", "round_robin", "random", "cost_optimized")
+        name: Name for the provider group
+        **kwargs: Additional parameters for provider creation
+        
+    Returns:
+        ProviderGroup instance
+        
+    Raises:
+        ValueError: If no providers are specified or an invalid selection strategy is provided
+    """
+    from atlas.providers.group import ProviderGroup, ProviderSelectionStrategy, TaskAwareSelectionStrategy
+    
+    if not providers:
+        raise ValueError("At least one provider must be specified")
+    
+    # Convert provider names to provider instances if needed
+    provider_instances = []
+    
+    for provider in providers:
+        if isinstance(provider, str):
+            # Create provider instance from name
+            provider_instances.append(create_provider(provider_name=provider, **kwargs))
+        else:
+            # Already a provider instance
+            provider_instances.append(provider)
+    
+    # Get the selection strategy function
+    strategy_function = None
+    
+    if selection_strategy == "failover":
+        strategy_function = ProviderSelectionStrategy.failover
+    elif selection_strategy == "round_robin":
+        strategy_function = ProviderSelectionStrategy.round_robin
+    elif selection_strategy == "random":
+        strategy_function = ProviderSelectionStrategy.random
+    elif selection_strategy == "cost_optimized":
+        strategy_function = ProviderSelectionStrategy.cost_optimized
+    elif selection_strategy == "task_aware":
+        strategy_function = TaskAwareSelectionStrategy.select
+    else:
+        raise ValueError(f"Invalid selection strategy: {selection_strategy}")
+    
+    # Create provider group
+    return ProviderGroup(
+        providers=provider_instances,
+        selection_strategy=strategy_function,
+        name=name
+    )
 
 
 @traced(name="get_all_providers")
@@ -699,6 +844,7 @@ class ProviderFactory(TracedClass):
         self,
         provider_name: str,
         model_name: Optional[str] = None,
+        capability: Optional[str] = None,
         max_tokens: int = 2000,
         **kwargs: Any,
     ) -> ModelProvider:
@@ -707,6 +853,7 @@ class ProviderFactory(TracedClass):
         Args:
             provider_name: Name of the provider to create.
             model_name: Name of the model to use (if None, use provider default).
+            capability: Capability to use for model selection.
             max_tokens: Maximum tokens for model generation.
             **kwargs: Additional provider-specific parameters.
 
@@ -719,6 +866,7 @@ class ProviderFactory(TracedClass):
         provider = create_provider(
             provider_name=provider_name,
             model_name=model_name,
+            capability=capability,
             max_tokens=max_tokens,
             **kwargs,
         )
@@ -731,6 +879,47 @@ class ProviderFactory(TracedClass):
             self._default_provider = provider_name
 
         return provider
+        
+    def create_group(
+        self,
+        providers: List[str],
+        selection_strategy: str = "failover",
+        name: str = "provider_group",
+        **kwargs: Any
+    ) -> ModelProvider:
+        """Create a provider group.
+        
+        Args:
+            providers: List of provider names to include in the group
+            selection_strategy: Strategy for provider selection
+            name: Name for the provider group
+            **kwargs: Additional provider creation parameters
+            
+        Returns:
+            ProviderGroup instance
+        """
+        # Create provider instances for each name
+        provider_instances = []
+        for provider_name in providers:
+            # Check if provider is already created
+            if provider_name in self._providers:
+                provider_instances.append(self._providers[provider_name])
+            else:
+                # Create new provider
+                provider = self.create(provider_name, **kwargs)
+                provider_instances.append(provider)
+        
+        # Create provider group
+        group = create_provider_group(
+            providers=provider_instances,
+            selection_strategy=selection_strategy,
+            name=name
+        )
+        
+        # Store in cache under the group name
+        self._providers[name] = group
+        
+        return group
 
     def get(self, provider_name: Optional[str] = None) -> ModelProvider:
         """Get a provider instance.

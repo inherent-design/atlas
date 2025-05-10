@@ -27,6 +27,7 @@ from atlas.providers.base import (
     ModelResponse,
     TokenUsage,
     CostEstimate,
+    StreamHandler as BaseStreamHandler,
 )
 
 logger = logging.getLogger(__name__)
@@ -392,7 +393,9 @@ class MockProvider(ModelProvider):
         return stream_handler.process_stream(callback)
 
 
-class StreamHandler:
+# StreamHandler already imported as BaseStreamHandler
+
+class StreamHandler(BaseStreamHandler):
     """Handler for processing mock streaming responses."""
 
     def __init__(
@@ -407,20 +410,32 @@ class StreamHandler:
             initial_response: The initial ModelResponse object to update.
             delay_ms: Simulated delay between chunks in milliseconds.
         """
+        super().__init__(
+            content="",  # Will be populated as we stream
+            provider=provider,
+            model=model,
+            initial_response=initial_response,
+            delay_ms=delay_ms
+        )
+
         self.text_to_stream = text_to_stream
-        self.provider = provider
-        self.model = model
-        self.response = initial_response
         self.full_text = ""
         self.event_count = 0
         self.finished = False
         self.usage = None
         self._lock = threading.Lock()
-        self._delay_ms = delay_ms
-        
+
         # Word chunks to stream - simulates how real providers stream
         self.chunks = self.text_to_stream.split()
         self.current_chunk_index = 0
+
+    def get_iterator(self):
+        """Get an iterator for the stream.
+
+        Returns:
+            An iterator that yields chunks of the content.
+        """
+        return self
 
     def __iter__(self):
         """Make the handler iterable for processing in a for loop."""

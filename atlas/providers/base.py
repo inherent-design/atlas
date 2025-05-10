@@ -15,7 +15,144 @@ import logging
 
 from atlas.core.telemetry import traced, TracedClass
 from atlas.core.retry import RetryConfig, CircuitBreaker
-from atlas.core.errors import APIError
+from atlas.core.errors import APIError, AuthenticationError, ValidationError, ErrorSeverity
+
+
+# Provider-specific error classes
+class ProviderError(APIError):
+    """Base class for provider-specific errors."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        provider: Optional[str] = None,
+        retry_possible: bool = False,
+    ):
+        """Initialize the error.
+
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+            retry_possible: Whether the operation can be retried.
+        """
+        details = details or {}
+        if provider:
+            details["provider"] = provider
+
+        super().__init__(
+            message=message,
+            severity=severity,
+            details=details,
+            cause=cause,
+            retry_possible=retry_possible,
+        )
+
+
+class ProviderAuthenticationError(AuthenticationError):
+    """Error related to provider authentication."""
+    pass
+
+
+class ProviderRateLimitError(ProviderError):
+    """Error related to provider rate limiting."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.WARNING,
+        provider: Optional[str] = None,
+        retry_after: Optional[float] = None,
+    ):
+        """Initialize the error.
+
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+            retry_after: Suggested time to wait before retrying (seconds).
+        """
+        details = details or {}
+        if retry_after is not None:
+            details["retry_after"] = retry_after
+
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            retry_possible=True,  # Rate limit errors are always retryable
+        )
+
+
+class ProviderServerError(ProviderError):
+    """Error related to provider server issues."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        provider: Optional[str] = None,
+    ):
+        """Initialize the error.
+
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+        """
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            retry_possible=True,  # Server errors are typically transient and retryable
+        )
+
+
+class ProviderTimeoutError(ProviderError):
+    """Error related to provider timeouts."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.WARNING,
+        provider: Optional[str] = None,
+    ):
+        """Initialize the error.
+
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+        """
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            retry_possible=True,  # Timeout errors are retryable
+        )
 
 # Type variable for generic function return type
 T = TypeVar("T")
@@ -31,6 +168,9 @@ class ModelRole(str, Enum):
     ASSISTANT = "assistant"
     FUNCTION = "function"
     TOOL = "tool"  # Add Tool role for message factory method tests
+
+    def __str__(self):
+        return self.value
 
 
 @dataclass
@@ -726,16 +866,74 @@ class ModelProvider(TracedClass, abc.ABC):
         pass
 
     @traced(name="stream")
-    def stream(self, request: ModelRequest) -> Tuple[ModelResponse, Any]:
+    def stream(self, request: ModelRequest) -> Tuple[ModelResponse, "StreamHandler"]:
         """Stream a response from the model (if supported).
 
         Args:
             request: The model request.
 
         Returns:
-            A tuple of (final ModelResponse, stream iterator).
+            A tuple of (final ModelResponse, StreamHandler).
 
         Raises:
             NotImplementedError: If streaming is not supported by this provider.
         """
         raise NotImplementedError(f"Streaming not supported by {self.name} provider")
+
+
+class StreamHandler:
+    """Base class for handling streaming responses from model providers.
+
+    This class provides a common interface for processing streaming responses
+    from different model providers. Each provider implements its own subclass
+    with provider-specific stream handling.
+    """
+
+    def __init__(
+        self,
+        content: str,
+        provider: ModelProvider,
+        model: str,
+        initial_response: ModelResponse,
+        delay_ms: int = 50
+    ):
+        """Initialize a stream handler.
+
+        Args:
+            content: Initial or complete content to stream.
+            provider: The provider instance that created this handler.
+            model: The model used for generating the stream.
+            initial_response: The initial ModelResponse to update during streaming.
+            delay_ms: Optional delay between chunks in milliseconds (for throttling).
+        """
+        self.content = content
+        self.provider = provider
+        self.model = model
+        self.response = initial_response
+        self.delay_ms = delay_ms
+        self.iterator = None
+
+    def get_iterator(self):
+        """Get an iterator for the stream.
+
+        Returns:
+            An iterator that yields chunks of the content.
+        """
+        raise NotImplementedError("Subclasses must implement get_iterator")
+
+    def process_stream(self, callback: Callable[[str, ModelResponse], None]) -> ModelResponse:
+        """Process the entire stream with a callback function.
+
+        Args:
+            callback: Function to call for each chunk of content.
+                     It takes (delta, response) parameters where:
+                     - delta is the new content chunk
+                     - response is the updated ModelResponse
+
+        Returns:
+            The final ModelResponse after processing the entire stream.
+        """
+        iterator = self.get_iterator()
+        for chunk in iterator:
+            callback(chunk, self.response)
+        return self.response

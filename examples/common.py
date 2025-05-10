@@ -361,3 +361,136 @@ def handle_example_error(logger, error: Exception, message: str, user_message: s
     # Exit if requested
     if exit_code is not None:
         sys.exit(exit_code)
+
+
+def print_section(title: str) -> None:
+    """Print a section heading with consistent formatting.
+
+    Used to visually separate different sections in example output.
+
+    Args:
+        title: The title of the section
+    """
+    print("\n" + "-"*50)
+    print(title)
+    print("-"*50)
+
+
+def highlight(text: str, color: str = "yellow") -> str:
+    """Highlight text in the terminal with ANSI color codes.
+
+    Args:
+        text: The text to highlight
+        color: Color name (red, green, yellow, blue, purple, cyan)
+
+    Returns:
+        Text with ANSI color codes
+    """
+    colors = {
+        "red": "\033[91m",
+        "green": "\033[92m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "purple": "\033[95m",
+        "cyan": "\033[96m",
+        "end": "\033[0m"
+    }
+    return f"{colors.get(color, colors['yellow'])}{text}{colors['end']}"
+
+
+def create_providers_for_examples(provider_names: Optional[List[str]] = None,
+                                 ensure_mock: bool = True,
+                                 min_providers: int = 1) -> List[Any]:
+    """Create provider instances for examples.
+
+    This function creates a list of provider instances based on available providers,
+    ensuring that at least the specified minimum number of providers are returned.
+    If fewer providers are available than the minimum, mock providers are added.
+
+    Args:
+        provider_names: Optional list of specific provider names to include
+        ensure_mock: Whether to always include a mock provider for testing
+        min_providers: Minimum number of providers to return
+
+    Returns:
+        List of provider instances
+    """
+    from atlas.providers import create_provider, discover_providers, ModelProvider
+
+    # Import here to avoid circular imports
+    logger = logging.get_logger(__name__)
+
+    # Discover available providers
+    available = discover_providers()
+
+    # If specific providers are requested, filter available providers
+    if provider_names:
+        # Convert to list if it's a comma-separated string
+        if isinstance(provider_names, str):
+            provider_names = [p.strip() for p in provider_names.split(",")]
+
+        # Filter available providers
+        available = {k: v for k, v in available.items() if k in provider_names}
+
+    # Start with mock provider if requested or if we need to ensure minimum providers
+    providers = []
+
+    if ensure_mock or (len(available) < min_providers and "mock" in available):
+        mock_provider = create_provider(provider_name="mock", model_name="mock-standard")
+        providers.append(mock_provider)
+        logger.info(f"Added mock provider with model: {mock_provider.model_name}")
+
+    # Add other available providers
+    for provider_name, models in available.items():
+        if provider_name != "mock" or (provider_name == "mock" and not any(p.name == "mock" for p in providers)):
+            try:
+                provider = create_provider(provider_name=provider_name)
+                providers.append(provider)
+                logger.info(f"Added {provider_name} provider with model: {provider.model_name}")
+            except Exception as e:
+                logger.warning(f"{provider_name} provider not added: {e}")
+
+    # Add more mock providers if needed to reach minimum
+    if len(providers) < min_providers:
+        # Add mock-advanced if we already have mock-standard
+        if len(providers) == 1 and providers[0].name == "mock" and providers[0].model_name == "mock-standard":
+            provider = create_provider(provider_name="mock", model_name="mock-advanced")
+        else:
+            provider = create_provider(provider_name="mock", model_name="mock-standard")
+
+        providers.append(provider)
+        logger.info(f"Added mock provider with model: {provider.model_name}")
+
+    return providers
+
+
+def create_provider_group_for_examples(provider_names: Optional[List[str]] = None,
+                                      selection_strategy: str = "failover",
+                                      name: str = "example_provider_group",
+                                      min_providers: int = 2) -> Any:
+    """Create a provider group for examples.
+
+    Args:
+        provider_names: Optional list of specific provider names to include
+        selection_strategy: Strategy for selecting providers (failover, round_robin, etc.)
+        name: Name for the provider group
+        min_providers: Minimum number of providers to include in the group
+
+    Returns:
+        ProviderGroup instance
+    """
+    from atlas.providers import create_provider_group
+
+    # Create provider instances
+    providers = create_providers_for_examples(
+        provider_names=provider_names,
+        ensure_mock=True,
+        min_providers=min_providers
+    )
+
+    # Create provider group with the specified strategy
+    return create_provider_group(
+        providers=providers,
+        selection_strategy=selection_strategy,
+        name=name
+    )
