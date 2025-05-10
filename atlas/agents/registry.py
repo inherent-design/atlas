@@ -23,6 +23,7 @@ _AGENT_REGISTRY: Dict[str, str] = {
     "atlas": "atlas.agents.base.AtlasAgent",
     "controller": "atlas.agents.controller.ControllerAgent",
     "worker": "atlas.agents.worker.WorkerAgent",
+    "task_aware": "atlas.agents.specialized.task_aware_agent.TaskAwareAgent",
 }
 
 # Registry of agent constructors

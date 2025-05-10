@@ -5,7 +5,7 @@ This module defines the unified Atlas agent with multi-provider support.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional, Callable, Union, Sequence
 
 from atlas.core.prompts import load_system_prompt
 from atlas.core.config import AtlasConfig
@@ -14,7 +14,9 @@ from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.providers.factory import create_provider, discover_providers
 from atlas.providers.base import ModelRequest, ModelMessage, ModelProvider
 from atlas.providers.options import ProviderOptions
+from atlas.providers.group import ProviderGroup, ProviderSelectionStrategy, TaskAwareSelectionStrategy
 from atlas.providers.resolver import create_provider_from_options, resolve_provider_options
+from atlas.providers.capabilities import detect_task_type_from_prompt, get_capabilities_for_task
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,10 @@ class AtlasAgent(TracedClass):
         provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
         capability: Optional[str] = None,
+        providers: Optional[Sequence[ModelProvider]] = None,
+        provider_strategy: str = "failover",
+        task_aware: bool = False,
+        streaming_options: Optional[Dict[str, Any]] = None,
         **kwargs
     ):
         """Initialize the Atlas agent.
@@ -46,10 +52,16 @@ class AtlasAgent(TracedClass):
             provider_name: Optional name of the model provider to use (anthropic, openai, ollama, mock).
             model_name: Optional name of the specific model to use (defaults to provider's default).
             capability: Optional capability for model selection (inexpensive, efficient, premium, vision).
+            providers: Optional list of provider instances to use in a provider group.
+            provider_strategy: Strategy for provider selection in a group ("failover", "round_robin", "random",
+                              "cost_optimized", or "task_aware").
+            task_aware: Whether to enable task-aware provider selection.
+            streaming_options: Optional configuration for streaming behavior.
             **kwargs: Additional provider parameters to pass through.
 
         Raises:
             RuntimeError: If model provider initialization fails.
+            ValueError: If both provider and providers are specified.
         """
         # Initialize configuration (use provided or create default)
         self.config = config or AtlasConfig(collection_name=collection_name)
@@ -60,11 +72,31 @@ class AtlasAgent(TracedClass):
         # Store provider options for potential reuse
         self.provider_options = None
 
+        # Store streaming options
+        self.streaming_options = streaming_options or {}
+
         # Initialize the model provider
         try:
-            # If a provider is already provided, use it directly
-            if provider is not None:
+            # Check for conflicting provider specifications
+            if provider is not None and providers is not None:
+                raise ValueError("Cannot specify both 'provider' and 'providers'")
+
+            # If a provider group is requested via multiple providers
+            if providers is not None:
+                # Select the appropriate strategy
+                strategy = self._get_provider_strategy(provider_strategy, task_aware)
+
+                # Create a provider group with the specified strategy
+                group_name = f"atlas_provider_group_{provider_strategy}"
+                self.provider = ProviderGroup(providers, strategy, name=group_name)
+
+                # Store whether this is task-aware for message processing
+                self.task_aware = task_aware
+
+            # If a single provider is already provided, use it directly
+            elif provider is not None:
                 self.provider = provider
+                self.task_aware = False
             else:
                 # Determine provider options - either use provided options or create new ones
                 if provider_options is not None:
@@ -98,6 +130,7 @@ class AtlasAgent(TracedClass):
 
                 # Create the provider with all detection logic handled in the factory
                 self.provider = create_provider_from_options(self.provider_options)
+                self.task_aware = False
 
             # Get model name safely with fallback
             model_display_name = getattr(
@@ -125,6 +158,50 @@ class AtlasAgent(TracedClass):
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
+        # Initialize knowledge base
+        self.knowledge_base = KnowledgeBase(
+            collection_name=self.config.collection_name, db_path=self.config.db_path
+        )
+
+        # Initialize conversation history
+        self.messages = []
+
+        # Set agent version
+        self.agent_version = "1.0.0"  # Should come from version module later
+
+    def _get_provider_strategy(self, strategy: str, task_aware: bool) -> Callable:
+        """Get the provider selection strategy function based on the strategy name.
+
+        Args:
+            strategy: The strategy name.
+            task_aware: Whether to use task-aware provider selection.
+
+        Returns:
+            Strategy function to use.
+
+        Raises:
+            ValueError: If an invalid strategy is specified.
+        """
+        # If task-aware is requested, it overrides other strategies
+        if task_aware:
+            return TaskAwareSelectionStrategy.select
+
+        # Otherwise, select the strategy based on the name
+        strategy_map = {
+            "failover": ProviderSelectionStrategy.failover,
+            "round_robin": ProviderSelectionStrategy.round_robin,
+            "random": ProviderSelectionStrategy.random,
+            "cost_optimized": ProviderSelectionStrategy.cost_optimized,
+        }
+
+        if strategy not in strategy_map:
+            raise ValueError(f"Invalid provider strategy: {strategy}. "
+                             f"Valid options are: {', '.join(strategy_map.keys())}")
+
+        return strategy_map[strategy]
+
+    def __post_init__(self):
+        """Additional initialization steps after __init__."""
         # Initialize knowledge base
         self.knowledge_base = KnowledgeBase(
             collection_name=self.config.collection_name, db_path=self.config.db_path
@@ -194,6 +271,8 @@ class AtlasAgent(TracedClass):
         filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
         use_hybrid_search: bool = False,
         settings: Optional['RetrievalSettings'] = None,
+        task_type: Optional[str] = None,
+        capabilities: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Process a user message and return the agent's response.
 
@@ -203,6 +282,8 @@ class AtlasAgent(TracedClass):
             use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
             settings: Optional retrieval settings for fine-grained control. If provided, overrides
                      filter and use_hybrid_search.
+            task_type: Optional explicit task type for provider selection.
+            capabilities: Optional capability requirements for provider selection.
 
         Returns:
             The agent's response.
@@ -260,13 +341,33 @@ class AtlasAgent(TracedClass):
                 context_text = self.format_knowledge_context(documents)
                 system_msg = system_msg + context_text
 
-            # Generate response using the model provider
+            # Detect task type if task-aware and not explicitly provided
+            detected_task = None
+            if self.task_aware and task_type is None:
+                detected_task = detect_task_type_from_prompt(message)
+                logger.info(f"Detected task type: {detected_task}")
+
+            # Create model request with task information
             model_request = ModelRequest(
                 messages=[ModelMessage.user(msg["content"]) for msg in self.messages],
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )
 
+            # Add task information to metadata if available
+            if not hasattr(model_request, 'metadata'):
+                model_request.metadata = {}
+
+            if detected_task:
+                model_request.metadata['task_type'] = detected_task
+            elif task_type:
+                model_request.metadata['task_type'] = task_type
+
+            # Add capability requirements if provided
+            if capabilities:
+                model_request.metadata['capabilities'] = capabilities
+
+            # Generate response using the model provider
             response = self.provider.generate(model_request)
 
             # Extract response text
@@ -303,6 +404,9 @@ class AtlasAgent(TracedClass):
         filter: Optional[Union[Dict[str, Any], 'RetrievalFilter']] = None,
         use_hybrid_search: bool = False,
         settings: Optional['RetrievalSettings'] = None,
+        task_type: Optional[str] = None,
+        capabilities: Optional[Dict[str, Any]] = None,
+        streaming_control: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Process a user message with streaming response.
 
@@ -313,6 +417,9 @@ class AtlasAgent(TracedClass):
             use_hybrid_search: Whether to use hybrid search combining semantic and keyword search.
             settings: Optional retrieval settings for fine-grained control. If provided, overrides
                      filter and use_hybrid_search.
+            task_type: Optional explicit task type for provider selection.
+            capabilities: Optional capability requirements for provider selection.
+            streaming_control: Optional controls for streaming behavior (pause, resume, cancel).
 
         Returns:
             The complete agent response.
@@ -355,16 +462,42 @@ class AtlasAgent(TracedClass):
                 context_text = self.format_knowledge_context(documents)
                 system_msg = system_msg + context_text
 
-            # Create model request
+            # Detect task type if task-aware and not explicitly provided
+            detected_task = None
+            if self.task_aware and task_type is None:
+                detected_task = detect_task_type_from_prompt(message)
+                logger.info(f"Detected task type: {detected_task}")
+
+            # Create model request with task information
             model_request = ModelRequest(
                 messages=[ModelMessage.user(msg["content"]) for msg in self.messages],
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )
 
+            # Add task information to metadata if available
+            if not hasattr(model_request, 'metadata'):
+                model_request.metadata = {}
+
+            if detected_task:
+                model_request.metadata['task_type'] = detected_task
+            elif task_type:
+                model_request.metadata['task_type'] = task_type
+
+            # Add capability requirements if provided
+            if capabilities:
+                model_request.metadata['capabilities'] = capabilities
+
+            # Add streaming options if available
+            if streaming_control:
+                model_request.metadata['streaming_control'] = streaming_control
+            elif self.streaming_options:
+                model_request.metadata['streaming_control'] = self.streaming_options
+
             # Stream response
             try:
-                initial_response, stream_handler = self.provider.stream(model_request)
+                # Try streaming API with task & capability awareness
+                initial_response, stream_handler = self.provider.generate_stream(model_request)
 
                 # Define a callback adapter to match our function signature
                 def process_chunk(delta, response):
@@ -398,23 +531,45 @@ class AtlasAgent(TracedClass):
 
                 return assistant_message
 
-            except NotImplementedError:
-                # Fallback to non-streaming if provider doesn't support it
-                logger.warning(
-                    f"Streaming not supported by {self.provider.name} provider, fallback to non-streaming"
-                )
-                response = self.provider.generate(model_request)
-                assistant_message = response.content
+            except (NotImplementedError, AttributeError):
+                # Try legacy stream method for backward compatibility
+                try:
+                    initial_response, stream_handler = self.provider.stream(model_request)
 
-                # Call callback once with full response
-                callback(assistant_message, assistant_message)
+                    # Define a callback adapter to match our function signature
+                    def process_chunk(delta, response):
+                        callback(delta, response.content)
 
-                # Add assistant response to history
-                self.messages.append(
-                    {"role": "assistant", "content": assistant_message}
-                )
+                    # Process the stream
+                    final_response = stream_handler.process_stream(process_chunk)
 
-                return assistant_message
+                    # Extract response text
+                    assistant_message = final_response.content
+
+                    # Add assistant response to history
+                    self.messages.append(
+                        {"role": "assistant", "content": assistant_message}
+                    )
+
+                    return assistant_message
+
+                except NotImplementedError:
+                    # Fallback to non-streaming if provider doesn't support it
+                    logger.warning(
+                        f"Streaming not supported by {self.provider.name} provider, fallback to non-streaming"
+                    )
+                    response = self.provider.generate(model_request)
+                    assistant_message = response.content
+
+                    # Call callback once with full response
+                    callback(assistant_message, assistant_message)
+
+                    # Add assistant response to history
+                    self.messages.append(
+                        {"role": "assistant", "content": assistant_message}
+                    )
+
+                    return assistant_message
 
         except Exception as e:
             logger.error(f"Error processing streaming message: {str(e)}", exc_info=True)

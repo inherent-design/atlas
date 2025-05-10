@@ -7,12 +7,12 @@ and creating provider instances from resolved options.
 
 import copy
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from atlas.core import env
 from atlas.providers.factory import (
-    create_provider, 
-    detect_model_provider, 
+    create_provider,
+    detect_model_provider,
     get_model_by_capability,
     is_model_compatible_with_provider
 )
@@ -135,3 +135,44 @@ def create_provider_from_options(options: ProviderOptions) -> ModelProvider:
         max_tokens=resolved.max_tokens,
         **kwargs
     )
+
+
+def create_provider_from_name(
+    provider_name: str,
+    model_name: Optional[str] = None,
+    capability: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    **kwargs: Any
+) -> ModelProvider:
+    """Create a provider instance from provider name and optional parameters.
+
+    This is a convenience function that creates ProviderOptions and then creates
+    a provider instance from those options.
+
+    Args:
+        provider_name: Name of the provider to create (e.g., "anthropic", "openai")
+        model_name: Optional name of the model to use
+        capability: Optional capability for model selection
+        max_tokens: Optional maximum number of tokens for responses
+        **kwargs: Additional provider-specific parameters
+
+    Returns:
+        Initialized ModelProvider instance
+
+    Raises:
+        ValueError: If provider creation fails
+    """
+    # Create options
+    options = ProviderOptions(
+        provider_name=provider_name,
+        model_name=model_name,
+        capability=capability,
+        max_tokens=max_tokens
+    )
+
+    # Add extra parameters
+    if kwargs:
+        options.extra_params.update(kwargs)
+
+    # Create provider from options
+    return create_provider_from_options(options)

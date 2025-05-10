@@ -331,7 +331,7 @@ def print_example_footer() -> None:
     print("="*50 + "\n")
 
 
-def handle_example_error(logger, error: Exception, message: str, user_message: str = None, exit_code: int = None) -> None:
+def handle_example_error(error: Exception, message: str = None, user_message: str = None, exit_code: int = None) -> None:
     """Handle errors in examples consistently.
 
     This function:
@@ -340,19 +340,25 @@ def handle_example_error(logger, error: Exception, message: str, user_message: s
     3. Optionally exits with specified code
 
     Args:
-        logger: The logger instance to use
         error: The exception that occurred
-        message: Error message for the log
+        message: Error message for the log (defaults to error string)
         user_message: Optional additional message to display to the user
         exit_code: If provided, call sys.exit with this code
     """
     import sys
+    import logging
+    import traceback
+
+    # Use provided message or default to error string
+    error_message = message or str(error)
+    logger = logging.getLogger(__name__)
 
     # Log the error with full traceback
-    logger.exception(f"{message}: {error}")
+    logger.error(f"{error_message}: {error}")
+    logger.debug(traceback.format_exc())
 
     # Print user-facing error message
-    print(f"Error: {message}: {error}")
+    print(f"Error: {error_message}: {error}")
 
     # Print additional information if provided
     if user_message:
@@ -361,6 +367,44 @@ def handle_example_error(logger, error: Exception, message: str, user_message: s
     # Exit if requested
     if exit_code is not None:
         sys.exit(exit_code)
+
+
+def setup_logger(level: str = "INFO") -> None:
+    """Configure logging for examples.
+
+    Args:
+        level: Logging level (DEBUG, INFO, WARNING, ERROR)
+    """
+    import logging
+
+    # Set up basic logging
+    logging.basicConfig(
+        level=getattr(logging, level),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Quiet noisy loggers
+    for logger_name in ["chromadb", "httpx", "httpcore", "openai", "anthropic"]:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+
+def format_response(response: str, max_length: int = 500) -> str:
+    """Format an agent response for display.
+
+    Args:
+        response: The response text
+        max_length: Maximum length to display
+
+    Returns:
+        Formatted response string
+    """
+    # Simplify long responses for readability
+    if len(response) > max_length:
+        preview = response[:max_length].strip()
+        return f"{preview}...\n[Response truncated, total length: {len(response)} chars]"
+
+    return response
 
 
 def print_section(title: str) -> None:
