@@ -44,15 +44,15 @@ custom_config = AtlasConfig(
 
 The `AtlasConfig` constructor accepts the following parameters:
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `anthropic_api_key` | `Optional[str]` | API key for Anthropic | From `ANTHROPIC_API_KEY` env var |
-| `collection_name` | `Optional[str]` | Name of ChromaDB collection | From `ATLAS_COLLECTION_NAME` env var or `"atlas_knowledge_base"` |
-| `db_path` | `Optional[str]` | Path to ChromaDB storage | From `ATLAS_DB_PATH` env var or `~/atlas_chroma_db` |
-| `model_name` | `Optional[str]` | Name of the model to use | From `ATLAS_DEFAULT_MODEL` env var or provider-specific default |
-| `max_tokens` | `Optional[int]` | Maximum tokens in responses | From `ATLAS_MAX_TOKENS` env var or `2000` |
-| `parallel_enabled` | `bool` | Enable parallel processing | `False` |
-| `worker_count` | `int` | Number of worker agents | `3` |
+| Parameter           | Type            | Description                 | Default                                                          |
+| ------------------- | --------------- | --------------------------- | ---------------------------------------------------------------- |
+| `anthropic_api_key` | `Optional[str]` | API key for Anthropic       | From `ANTHROPIC_API_KEY` env var                                 |
+| `collection_name`   | `Optional[str]` | Name of ChromaDB collection | From `ATLAS_COLLECTION_NAME` env var or `"atlas_knowledge_base"` |
+| `db_path`           | `Optional[str]` | Path to ChromaDB storage    | From `ATLAS_DB_PATH` env var or `~/atlas_chroma_db`              |
+| `model_name`        | `Optional[str]` | Name of the model to use    | From `ATLAS_DEFAULT_MODEL` env var or provider-specific default  |
+| `max_tokens`        | `Optional[int]` | Maximum tokens in responses | From `ATLAS_MAX_TOKENS` env var or `2000`                        |
+| `parallel_enabled`  | `bool`          | Enable parallel processing  | `False`                                                          |
+| `worker_count`      | `int`           | Number of worker agents     | `3`                                                              |
 
 ### Properties and Methods
 
@@ -188,9 +188,9 @@ config = AtlasConfig(
 # Convert to dictionary (excluding sensitive values)
 config_dict = config.to_dict()
 print(config_dict)
-# {'collection_name': 'my_collection', 'db_path': '/home/user/atlas_chroma_db', 
-#  'model_name': 'claude-3-5-sonnet-20240620', 'max_tokens': 3000, 
-#  'parallel_enabled': False, 'worker_count': 3, 'dev_mode': False, 
+# {'collection_name': 'my_collection', 'db_path': '/home/user/atlas_chroma_db',
+#  'model_name': 'claude-3-5-sonnet-20240620', 'max_tokens': 3000,
+#  'parallel_enabled': False, 'worker_count': 3, 'dev_mode': False,
 #  'mock_api': False, 'log_level': 'INFO'}
 
 # Later, recreate configuration from values
@@ -244,7 +244,7 @@ except ValidationError as e:
         print("Critical validation error:")
     else:
         print("Warning:")
-        
+
     for field, errors in e.field_errors.items():
         print(f"  {field}: {', '.join(errors)}")
 ```
@@ -347,7 +347,7 @@ kb = KnowledgeBase(
    ```python
    # Bad - hardcoded API key
    config = AtlasConfig(anthropic_api_key="sk-ant-api123...")
-   
+
    # Good - loaded from environment
    config = AtlasConfig()  # Automatically loads from ANTHROPIC_API_KEY
    ```

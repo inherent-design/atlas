@@ -441,4 +441,4 @@ Atlas is designed to support continuous integration workflows:
 - [Query Workflow](../workflows/query.md) - How the query process works
 - [Retrieval Workflow](../workflows/retrieval.md) - Details on the retrieval process
 - [Getting Started Guide](./getting_started.md) - Basic usage tutorial
-- [Example Usage](./examples/) - Example code for common tasks
+- [Example Usage](https://github.com/inherent-design/atlas/tree/main/examples) - Example code for common tasks

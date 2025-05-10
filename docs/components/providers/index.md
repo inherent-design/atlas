@@ -269,7 +269,7 @@ The Provider System can be configured through environment variables:
 | ATLAS_MAX_TOKENS       | Maximum tokens to generate | 2000                       |
 | ANTHROPIC_API_KEY      | Anthropic API key          | -                          |
 | OPENAI_API_KEY         | OpenAI API key             | -                          |
-| OLLAMA_BASE_URL        | Ollama API base URL        | http://localhost:11434     |
+| OLLAMA_BASE_URL        | Ollama API base URL        | <a href="http://localhost:11434" target="_blank">http://localhost:11434</a>     |
 
 ## Error Handling
 

@@ -327,5 +327,5 @@ This approach allows each agent to have specialized instructions while maintaini
 
 - [Agents Documentation](../../components/agents/controller.md) - Information about agent types and interactions
 - [Configuration System](config.md) - Documentation for the configuration system
-- [Model Providers](../models/) - Documentation for model providers
+- [Model Providers](../providers/index.md) - Documentation for model providers
 - [Error System](errors.md) - Information about error handling

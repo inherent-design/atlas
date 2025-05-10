@@ -1,4 +1,5 @@
 ---
+title: Home
 layout: home
 
 hero:
@@ -76,12 +77,12 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 - **[Configuration](./guides/configuration.md)**: Configuring Atlas for your needs
 - **[Testing](./guides/testing.md)** 🚧: Testing strategies and tools (planned architecture)
 - **[Type Checking](./guides/type_checking.md)**: Type safety and validation
-- **[Examples](./guides/examples/)**: Practical demonstrations of Atlas functionality
+- **[Examples](https://github.com/inherent-design/atlas/tree/main/examples)**: Practical demonstrations of Atlas functionality
 
 #### Project Management
 - **[MVP Strategy](./project-management/roadmap/mvp_strategy.md)**: Implementation approach for MVP
 - **[Progress Tracking](./project-management/tracking/todo.md)**: Current implementation status
-- **[Documentation Planning](./project-management/planning/docs_planning.md)**: Documentation plans
+- **[Documentation Planning](./project-management/planning/implementation_planning.md)**: Implementation and documentation plans
 
 #### Reference
 - **[API Reference](./reference/api.md)**: Core API documentation

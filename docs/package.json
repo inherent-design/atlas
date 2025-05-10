@@ -9,7 +9,8 @@
     "markdown-it-task-lists": "^2.1.1",
     "vitepress": "^1.6.3",
     "vitepress-markdown-timeline": "^1.2.2",
-    "vitepress-plugin-mermaid": "^2.0.17"
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "vitepress-sidebar": "^1.31.1"
   },
   "keywords": [],
   "license": "MIT",

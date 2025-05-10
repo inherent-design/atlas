@@ -192,4 +192,4 @@ stateDiagram-v2
 
 - See [Workflows](../workflows/query.md) for detailed workflow documentation
 - See [Getting Started Guide](../guides/getting_started.md) for usage instructions
-- See [Examples](../guides/examples/) for code examples of different flows
+- See [Examples](https://github.com/inherent-design/atlas/tree/main/examples) for code examples of different flows

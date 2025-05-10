@@ -391,4 +391,4 @@ This will attempt to initialize each provider and report its status.
 - [CLI Reference](cli.md): Command-line interface options
 - [Getting Started Guide](../guides/getting_started.md): Introduction to Atlas
 - [Testing Guide](../guides/testing.md): Testing Atlas components
-- [Examples](../guides/examples/): Code examples and use cases
+- [Examples](https://github.com/inherent-design/atlas/tree/main/examples): Code examples and use cases

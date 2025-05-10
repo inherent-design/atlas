@@ -146,13 +146,13 @@ class MyAgent(TracedClass):
 
 The telemetry module includes predefined metrics for common operations, which are lazily initialized when accessed:
 
-| Metric                        | Type      | Description                       | Accessor Function               |
-| ----------------------------- | --------- | --------------------------------- | ------------------------------- |
-| `atlas.api.requests`          | Counter   | Count of API requests made        | `get_api_request_counter()`     |
-| `atlas.api.tokens`            | Counter   | Count of API tokens used          | `get_api_token_counter()`       |
-| `atlas.api.cost`              | Counter   | Cost of API usage in USD          | `get_api_cost_counter()`        |
+| Metric                        | Type      | Description                       | Accessor Function                    |
+| ----------------------------- | --------- | --------------------------------- | ------------------------------------ |
+| `atlas.api.requests`          | Counter   | Count of API requests made        | `get_api_request_counter()`          |
+| `atlas.api.tokens`            | Counter   | Count of API tokens used          | `get_api_token_counter()`            |
+| `atlas.api.cost`              | Counter   | Cost of API usage in USD          | `get_api_cost_counter()`             |
 | `atlas.retrieval.duration`    | Histogram | Time taken for document retrieval | `get_document_retrieval_histogram()` |
-| `atlas.agent.processing_time` | Histogram | Agent request processing time     | `get_agent_processing_histogram()` |
+| `atlas.agent.processing_time` | Histogram | Agent request processing time     | `get_agent_processing_histogram()`   |
 
 These metrics are lazily initialized when first accessed, preventing initialization errors when telemetry is disabled.
 
@@ -184,7 +184,7 @@ with self._get_tracer().start_as_current_span(
     # Record token usage and cost
     token_counter = get_api_token_counter()
     cost_counter = get_api_cost_counter()
-    
+
     if token_counter and cost_counter:
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
@@ -332,7 +332,7 @@ api_request_counter = get_api_request_counter()
 def process_user_query(query: str) -> str:
     # Record request using custom metric
     app_requests.add(1, {"query_type": "user"})
-    
+
     # Also record using built-in counter
     if api_request_counter:
         api_request_counter.add(1, {"source": "user_query"})
@@ -346,7 +346,7 @@ def process_user_query(query: str) -> str:
 
 ### Complete Example
 
-See the full example in the codebase: [`examples/telemetry_example.py`](../../guides/examples/streaming_example.md)
+See the full example in the codebase: [`examples/02_query_streaming.py`](https://github.com/inherent-design/atlas/blob/main/examples/02_query_streaming.py)
 
 ## Recipes and Patterns
 
@@ -465,4 +465,4 @@ To debug telemetry issues:
 
 - [Advanced Configuration Guide](../../guides/configuration.md)
 - [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
-- [Model Provider Integration](../models/)
+- [Model Provider Integration](../providers/index.md)
