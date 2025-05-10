@@ -1,4 +1,8 @@
-# Atlas Documentation Audit
+# Atlas Documentation Audit (ARCHIVED)
+
+> **Archived on May 9, 2025, 22:49 PT**
+> This document has been archived as part of the Enhanced Provider System implementation.
+> It is maintained for historical reference but is no longer actively updated.
 
 This audit identifies documentation issues, outdated content, and areas for improvement in the Atlas project documentation.
 
