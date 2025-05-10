@@ -1,4 +1,8 @@
-# Agent System Update Audit
+# Agent System Update Audit (ARCHIVED)
+
+> **Archived on May 10, 2025, 10:53 PT**
+> This document has been archived as part of the Agent System Provider Integration implementation.
+> It is maintained for historical reference but is no longer actively updated.
 
 ## Completed Implementation (May 2024)
 
