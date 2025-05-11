@@ -2,7 +2,14 @@
 
 This file contains essential instructions and guidelines for Claude Code when working on the Atlas project. These instructions serve as a reference for both human developers and Claude to ensure consistent development practices.
 
-## Project Status 2024 Update
+## Project Status 2025 Update
+
+### Project Timeline
+
+- **Project Start**: Late April 2025
+- **Current Date**: May 10, 2025
+- **Completion Deadline**: June 30, 2025
+- **Commercial Launch**: July 2025
 
 ### Completed Milestones
 
@@ -11,42 +18,43 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - ✅ **Documentation System**: Complete VitePress-based documentation with comprehensive coverage of all components, workflows, and APIs
 - ✅ **Core Component Design**: Established architecture patterns, module structure, and interaction protocols
 - ✅ **Robust Provider Implementation**: Added retry mechanism with exponential backoff and circuit breaker pattern
+- ✅ **Enhanced Provider System**: Implemented Provider Registry with capability-based selection and ProviderGroup with fallback strategies
 
-### Current Focus
+### Current Focus (May 10-17, 2025)
 
-1. **Knowledge System Enhancements**:
-   - Improving document chunking and content boundary detection
-   - Enhancing metadata handling for better document retrieval
-   - Implementing more sophisticated relevance scoring algorithms
-   - Adding filtering capabilities to narrow search results
+Per the [Accelerated Implementation Plan](./docs/project-management/planning/accelerated_implementation_plan.md), we are currently in Phase 1 focused on Provider System Finalization:
 
-2. **Provider Implementation Refinement**:
-   - Implementing connection timeout handling with configurable parameters
-   - Creating client-side rate limiting to prevent API blocks
-   - Implementing graceful fallback between providers
-   - Optimizing streaming implementations
+1. **Enhanced Streaming Infrastructure**:
+   - Updating BaseStreamHandler with standardized StreamControl interface
+   - Implementing stream control capabilities (pause, resume, cancel)
+   - Adding performance metrics tracking during streaming
+   - Ensuring proper resource cleanup and consistent error handling
 
-3. **Example-Driven Development**:
-   - Creating comprehensive example applications
-   - Developing functional demonstrations for key features
-   - Building example workflows for common use cases
-   - Enhancing example documentation with explanatory comments
+2. **Provider Lifecycle Management**:
+   - Adding connection pooling for providers
+   - Implementing connection reuse mechanisms
+   - Adding health checking and circuit breaking
+   - Enhancing error handling with detailed categorization
 
-### Next Steps (Immediate)
+See the [current TODO list](./docs/project-management/tracking/todo.md) for specific implementation tasks.
 
-1. **Core Architecture Rework**:
-   - Implement ProviderGroup class for graceful fallback and provider aggregation
-   - Streamline streaming interfaces across all providers
-   - Create clear separation of concerns between providers, agents, and orchestration
-   - Refine agent-toolkit interfacing for more complex workflows
-   - Update state management for multi-step orchestration patterns
+### Next Steps (May 18-31, 2025)
 
-2. **Task Planning and Implementation**:
-   - Update project-management/tracking/todo.md with granular step-wise implementation plan
-   - Reorganize file structure as needed to support enhanced workflows
-   - Create detailed checklist of architecture tasks with clear dependencies
-   - Execute the architectural improvements systematically
-   - Document architectural decisions and their rationale
+Following our [Product Roadmap](./docs/project-management/roadmap/product_roadmap.md), upcoming phases include:
+
+1. **Agent-Provider Integration (May 18-24)**:
+   - Enhancing agent-provider interface with streaming controls
+   - Optimizing provider capability utilization in agents
+   - Updating controller-worker communication for streaming
+   - Creating enhanced streaming examples
+
+2. **Knowledge System Enhancements (May 25-31)**:
+   - Implementing hybrid retrieval combining semantic and keyword search
+   - Enhancing document chunking strategies with semantic boundaries
+   - Adding advanced metadata filtering and extraction
+   - Implementing knowledge caching system
+
+The complete implementation timeline is detailed in our [Accelerated Implementation Plan](./docs/project-management/planning/accelerated_implementation_plan.md), with corresponding business strategies in the [Commercialization Timeline](./docs/project-management/business/commercialization_timeline.md).
 
 ## Core Development Principles
 
@@ -105,6 +113,9 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - Include docstrings with parameters, return values, and examples.
 - Add inline comments for complex logic or algorithms.
 - Use Mermaid diagrams for visualizing workflows and architecture but avoid inline styling.
+- Follow the [documentation standards](./docs/contributing/documentation-standards.md) and [style guide](./docs/contributing/style-guide.md).
+- Use [custom containers](./docs/contributing/content-containers.md) appropriately to highlight important information.
+- Create [timeline components](./docs/contributing/timelines.md) for critical chronological processes (limit to 5-7 across all documentation).
 
 ## Working with LangGraph
 
@@ -236,6 +247,25 @@ uv run python examples/streaming_example.py --provider openai
 4. When working with documentation and implementation:
    - Use a documentation-driven implementation approach
    - Start by reviewing existing documentation to understand the design intent
+   - Follow the established documentation standards in docs/contributing/
+   - Use custom containers (info, tip, warning, danger, details) to highlight important information:
+     - Info: For neutral information and general notes
+     - Tip: For best practices and helpful advice
+     - Warning: For potential pitfalls and important cautions
+     - Danger: For critical warnings about breaking changes or security risks
+     - Details: For collapsible content with additional information
+   - Use code groups for alternative implementations or language versions:
+     - Present parallel code examples using `::: code-group` with labeled tabs
+     - Format labels as `[label]` after the language identifier
+     - Use for different programming languages, alternative approaches, or configuration variations
+   - Use colored diffs for showing code changes:
+     - Use language-appropriate comment syntax with `[!code --]` or `[!code ++]` markers
+     - Python: `# [!code --]`, JavaScript: `// [!code --]`, HTML: `<!-- [!code --] -->`
+     - Use to highlight API changes, improvements, bug fixes, or subtle differences
+   - Create timeline components only for critical chronological processes (max 5-7 across all docs)
+     - Each `::: timeline` block represents one event in a complete timeline
+     - Sequential timeline blocks automatically combine to form a single timeline
+     - Use for development roadmaps, process workflows, and version histories
    - When finding discrepancies between documentation and implementation needs:
      - Evaluate which approach provides better API design, performance, and maintainability
      - Update documentation to match implementation when technical requirements necessitate changes
@@ -243,6 +273,7 @@ uv run python examples/streaming_example.py --provider openai
    - Keep both implementation and documentation in sync throughout development
    - Use documentation as a design tool to clarify requirements before implementation
    - Document any implementation decisions that deviate from original specifications
+   - Ensure code examples follow the standards in docs/contributing/code-examples.md
 
 5. When implementing examples:
    - Create self-contained, runnable examples for each feature
@@ -298,14 +329,31 @@ The following areas represent the most important development directions for adva
 
 ### 4. Interactive Documentation & Examples
 
-- **Priority**: Medium
-- **Status**: Planning
+- **Priority**: High
+- **Status**: In Progress
 - **Goals**:
   - Create interactive code examples in documentation
   - Build more comprehensive example applications
   - Develop tutorials for common usage patterns
   - Add troubleshooting guides and problem-solving trees
   - Create visual explanations of key concepts
+  - Implement VitePress custom containers following our guidelines:
+    - Use info/tip/warning/danger/details containers strategically
+    - Follow container-specific usage guidance in docs/contributing/content-containers.md
+    - Limit containers to 2-3 per page to prevent visual overload
+  - Use code groups for presenting alternative implementations:
+    - Create tabbed interfaces with `::: code-group` syntax
+    - Label tabs appropriately with `[label]` after the language specifier
+    - See docs/contributing/code-examples.md for implementation patterns
+  - Use colored diffs to highlight code changes:
+    - Use language-appropriate comment syntax with `[!code --]` and `[!code ++]` markers
+    - Apply to API changes, improvements, or subtle differences
+    - See docs/contributing/code-diffs.md for implementation details
+  - Add timeline components for selected workflows and processes:
+    - Follow the syntax with multiple `::: timeline` blocks for sequential events
+    - Implement in 5-7 key documents maximum (roadmaps, implementation plans, etc.)
+    - See docs/contributing/timelines.md for correct implementation patterns
+  - Ensure consistent style and formatting across all documentation
 
 ## Development Environment
 
@@ -399,12 +447,24 @@ ATLAS_LOG_LEVEL=DEBUG uv run python examples/my_new_feature_example.py
 
 ## Future Vision
 
-Atlas is evolving toward a fully distributed multi-agent framework that implements:
+As outlined in our [Product Roadmap](./docs/project-management/roadmap/product_roadmap.md) and [Commercialization Timeline](./docs/project-management/business/commercialization_timeline.md), Atlas will evolve through these key phases:
 
-1. **Quantum-Inspired Knowledge Partitioning**: Multi-perspective knowledge representation
-2. **Self-Organizing Agent Topology**: Dynamic agent relationships and specialization
-3. **Context-Aware Relevance**: Adaptive information retrieval based on user needs
-4. **Emergent Pattern Recognition**: Identifying reusable patterns across domains
-5. **Transparent Reasoning**: Making agent decision processes understandable
+1. **Atlas 1.0 Final (June 30, 2025)**
+   - Feature-complete release with all MVP components
+   - Comprehensive documentation and examples
+   - Enterprise-ready security and compliance features
+   - Cloud service foundations with multi-tenant architecture
 
-By following these guidelines and principles, we will continue to build Atlas into a powerful framework that combines flexibility, robustness, and extensibility.
+2. **Commercial Launch (July 2025)**
+   - Open-source public launch with Apache 2.0 license
+   - Enterprise features release with tiered licensing model
+   - Cloud service beta with usage-based pricing
+   - Strategic partnerships with technology providers
+
+3. **Post-Launch Features**
+   - Advanced knowledge graph integration with pattern recognition
+   - Self-organizing agent topology with dynamic specialization
+   - Context-aware relevance with adaptive retrieval
+   - Transparent reasoning with explainable decision processes
+
+By following these guidelines and the detailed implementation plan, we will transform Atlas into a powerful, commercial-ready framework that combines flexibility, robustness, and extensibility, while delivering a clear go-to-market strategy upon completion.

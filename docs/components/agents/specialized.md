@@ -1,4 +1,4 @@
-# Specialized Agent Types
+# Specialized
 
 Atlas provides specialized agent types that extend the core agent capabilities with additional features and behaviors tailored to specific use cases. This document covers the specialized agent types available in the framework.
 
@@ -194,14 +194,14 @@ def _add_tool_instructions_to_prompt(self) -> None:
     """Add tool usage instructions to the system prompt."""
     # Get tool descriptions the agent has access to
     tool_descriptions = self.toolkit.get_tool_descriptions(self.worker_id)
-    
+
     if not tool_descriptions:
         # No tools available, no need to modify prompt
         return
-        
+
     # Format tool schemas for the prompt
     tool_schemas_str = json.dumps(tool_descriptions, indent=2)
-    
+
     # Create tool instructions
     tool_instructions = f"""
 ## Available Tools
@@ -227,7 +227,7 @@ To use a tool, include a tool call in your response with the following format:
 
 Multiple tool calls can be included in a single response. Include your reasoning before and after the tool call.
 """
-    
+
     # Add to system prompt
     self.system_prompt = self.system_prompt + tool_instructions
 ```
@@ -243,11 +243,11 @@ def _extract_tool_calls_from_content(self, content: str) -> List[Dict[str, Any]]
     """Extract tool calls from response content."""
     # Look for tool call JSON blocks in the content
     tool_calls = []
-    
+
     # Simple JSON block extraction (could be enhanced with regex)
     start_marker = '```json'
     end_marker = '```'
-    
+
     # Find all JSON blocks
     start_pos = 0
     while True:
@@ -255,30 +255,30 @@ def _extract_tool_calls_from_content(self, content: str) -> List[Dict[str, Any]]
         start_idx = content.find(start_marker, start_pos)
         if start_idx == -1:
             break
-            
+
         # Find the end of the block
         start_json = start_idx + len(start_marker)
         end_idx = content.find(end_marker, start_json)
         if end_idx == -1:
             break
-            
+
         # Extract the JSON content
         json_text = content[start_json:end_idx].strip()
-        
+
         try:
             # Parse the JSON
             json_obj = json.loads(json_text)
-            
+
             # Extract tool calls if present
             if "tool_calls" in json_obj:
                 tool_calls.extend(json_obj["tool_calls"])
         except json.JSONDecodeError as e:
             # Log error but continue processing
             logger.warning(f"Failed to parse JSON block: {str(e)}")
-        
+
         # Move to the next position
         start_pos = end_idx + len(end_marker)
-    
+
     return tool_calls
 ```
 

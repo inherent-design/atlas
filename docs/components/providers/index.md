@@ -1,8 +1,4 @@
----
-title: Overview
----
-
-# Provider System
+# Provider System Overview
 
 The Provider System is a crucial component of Atlas that abstracts interactions with different language model APIs. It provides a unified interface for working with various model providers, enabling seamless switching between providers and models.
 

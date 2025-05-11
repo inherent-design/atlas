@@ -1,4 +1,4 @@
-# Worker Agents
+# Workers
 
 This document describes the Worker Agents in Atlas, which are specialized agents that perform specific tasks as part of the multi-agent architecture.
 
@@ -20,21 +20,21 @@ classDiagram
         +provider
         +process_message()
     }
-    
+
     class WorkerAgent {
         +worker_id
         +specialization
         +process_task()
     }
-    
+
     class RetrievalWorker {
         +specialization: "Information Retrieval and Document Summarization"
     }
-    
+
     class AnalysisWorker {
         +specialization: "Query Analysis and Information Needs Identification"
     }
-    
+
     class DraftWorker {
         +specialization: "Response Generation and Content Creation"
     }
@@ -288,19 +288,19 @@ class FactCheckingWorker(WorkerAgent):
         super().__init__(
             worker_id, specialization, system_prompt_file, collection_name, config
         )
-    
+
     def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Process a fact checking task with enhanced verification."""
         # Standard task processing
         result = super().process_task(task)
-        
+
         # Add confidence score to the result
         if result["status"] == "completed":
             # Add a simple confidence score based on document count
             documents = task.get("context", {}).get("documents", [])
             confidence = min(0.5 + 0.1 * len(documents), 1.0)
             result["confidence"] = confidence
-            
+
         return result
 ```
 
@@ -377,30 +377,30 @@ class StatefulWorker(WorkerAgent):
         super().__init__(*args, **kwargs)
         self.task_history = []
         self.entity_memory = {}
-    
+
     def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Process a task with state awareness."""
         # Record task in history
         self.task_history.append(task)
-        
+
         # Extract entities from the query
         query = task.get("query", "")
         entities = self._extract_entities(query)
-        
+
         # Update entity memory
         for entity in entities:
             if entity not in self.entity_memory:
                 self.entity_memory[entity] = 0
             self.entity_memory[entity] += 1
-        
+
         # Process the task with enhanced context
         result = super().process_task(task)
-        
+
         # Add state information to result
         result["known_entities"] = list(self.entity_memory.keys())
-        
+
         return result
-    
+
     def _extract_entities(self, text: str) -> List[str]:
         """Extract entities from text (simplified example)."""
         # In a real implementation, this would use NLP techniques
@@ -421,7 +421,7 @@ class CodeReviewWorker(WorkerAgent):
         worker_id = kwargs.get("worker_id", "code_review_worker")
         specialization = "Code Review and Analysis"
         super().__init__(worker_id, specialization, **kwargs)
-        
+
         # Add specialized instructions to system prompt
         code_review_addendum = """
 ## Code Review Guidelines
@@ -440,4 +440,4 @@ When reviewing code:
 
 - [Multi-Agent Workflow](../../workflows/multi_agent.md) - Detailed information about the multi-agent workflow
 - [Controller Agent](./controller.md) - Documentation on the controller agent
-- [Base Agent](../agents/controller.md) - Documentation on the base agent implementation
+- [🚧 Base Agent](#) - Documentation on the base agent implementation

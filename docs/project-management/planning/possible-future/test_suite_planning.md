@@ -1,4 +1,4 @@
-# Atlas Test Suite Planning 🚧
+# Test Suite Planning
 
 > **Current Development Status:** Atlas is currently focusing on example-driven development rather than comprehensive test-driven development. The testing infrastructure described in this document represents the planned testing architecture and strategy, but is not the current implementation priority. We are maintaining this document as a reference for future test implementation while focusing on robust examples and functional demonstrations.
 

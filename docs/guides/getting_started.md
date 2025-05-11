@@ -1,4 +1,4 @@
-# Getting Started with Atlas
+# Getting Started
 
 This guide will help you get started with the Atlas framework, from installation to basic usage patterns.
 

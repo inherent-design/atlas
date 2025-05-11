@@ -1,4 +1,4 @@
-# Environment Variables Module
+# Environment Variables
 
 This document describes the environment variables handling system in Atlas, which provides a centralized way to load, access, validate, and manage environment variables.
 
@@ -214,10 +214,10 @@ azure_key = env.get_api_key("azure_openai")
 
 The `get_bool` function supports various boolean formats:
 
-| Value | Interpreted As |
-|-------|---------------|
-| "1", "true", "yes", "on", "enable", "enabled" | `True` |
-| "0", "false", "no", "off", "disable", "disabled" | `False` |
+| Value                                            | Interpreted As |
+| ------------------------------------------------ | -------------- |
+| "1", "true", "yes", "on", "enable", "enabled"    | `True`         |
+| "0", "false", "no", "off", "disable", "disabled" | `False`        |
 
 Example:
 
@@ -251,42 +251,42 @@ Atlas recognizes a wide range of environment variables:
 
 ### Core Configuration
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `ATLAS_COLLECTION_NAME` | String | `"atlas_knowledge_base"` | ChromaDB collection name |
-| `ATLAS_DB_PATH` | String | `~/atlas_chroma_db` | Path to ChromaDB database |
-| `ATLAS_DEFAULT_PROVIDER` | String | `"anthropic"` | Default model provider |
-| `ATLAS_DEFAULT_MODEL` | String | Provider-specific | Default model name |
-| `ATLAS_MAX_TOKENS` | Integer | `2000` | Maximum tokens in responses |
-| `ATLAS_LOG_LEVEL` | String | `"INFO"` | Logging level |
-| `ATLAS_ENV_PATH` | String | `".env"` | Path to .env file |
+| Variable                 | Type    | Default                  | Description                 |
+| ------------------------ | ------- | ------------------------ | --------------------------- |
+| `ATLAS_COLLECTION_NAME`  | String  | `"atlas_knowledge_base"` | ChromaDB collection name    |
+| `ATLAS_DB_PATH`          | String  | `~/atlas_chroma_db`      | Path to ChromaDB database   |
+| `ATLAS_DEFAULT_PROVIDER` | String  | `"anthropic"`            | Default model provider      |
+| `ATLAS_DEFAULT_MODEL`    | String  | Provider-specific        | Default model name          |
+| `ATLAS_MAX_TOKENS`       | Integer | `2000`                   | Maximum tokens in responses |
+| `ATLAS_LOG_LEVEL`        | String  | `"INFO"`                 | Logging level               |
+| `ATLAS_ENV_PATH`         | String  | `".env"`                 | Path to .env file           |
 
 ### Provider-Specific
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `ANTHROPIC_API_KEY` | String | API key for Anthropic |
-| `OPENAI_API_KEY` | String | API key for OpenAI |
-| `OPENAI_ORGANIZATION` | String | Organization ID for OpenAI |
-| `ATLAS_ANTHROPIC_DEFAULT_MODEL` | String | Default Anthropic model |
-| `ATLAS_OPENAI_DEFAULT_MODEL` | String | Default OpenAI model |
-| `ATLAS_OLLAMA_DEFAULT_MODEL` | String | Default Ollama model |
+| Variable                        | Type   | Description                |
+| ------------------------------- | ------ | -------------------------- |
+| `ANTHROPIC_API_KEY`             | String | API key for Anthropic      |
+| `OPENAI_API_KEY`                | String | API key for OpenAI         |
+| `OPENAI_ORGANIZATION`           | String | Organization ID for OpenAI |
+| `ATLAS_ANTHROPIC_DEFAULT_MODEL` | String | Default Anthropic model    |
+| `ATLAS_OPENAI_DEFAULT_MODEL`    | String | Default OpenAI model       |
+| `ATLAS_OLLAMA_DEFAULT_MODEL`    | String | Default Ollama model       |
 
 ### Development and Testing
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `ATLAS_DEV_MODE` | Boolean | `false` | Enable development mode |
-| `ATLAS_MOCK_API` | Boolean | `false` | Use mock API responses |
+| Variable             | Type    | Default | Description             |
+| -------------------- | ------- | ------- | ----------------------- |
+| `ATLAS_DEV_MODE`     | Boolean | `false` | Enable development mode |
+| `ATLAS_MOCK_API`     | Boolean | `false` | Use mock API responses  |
 | `SKIP_API_KEY_CHECK` | Boolean | `false` | Skip API key validation |
 
 ### Telemetry
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `ATLAS_ENABLE_TELEMETRY` | Boolean | `true` | Enable telemetry |
-| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Boolean | `true` | Enable console telemetry export |
-| `ATLAS_TELEMETRY_LOG_LEVEL` | String | `"INFO"` | Telemetry log level |
+| Variable                         | Type    | Default  | Description                     |
+| -------------------------------- | ------- | -------- | ------------------------------- |
+| `ATLAS_ENABLE_TELEMETRY`         | Boolean | `true`   | Enable telemetry                |
+| `ATLAS_TELEMETRY_CONSOLE_EXPORT` | Boolean | `true`   | Enable console telemetry export |
+| `ATLAS_TELEMETRY_LOG_LEVEL`      | String  | `"INFO"` | Telemetry log level             |
 
 ## Common Usage Patterns
 
@@ -432,7 +432,7 @@ for path in env_paths:
    ```python
    # Good
    max_tokens = env.get_int("ATLAS_MAX_TOKENS", 2000)
-   
+
    # Bad - might get a string instead of an int
    max_tokens = env.get_string("ATLAS_MAX_TOKENS", "2000")
    ```
@@ -441,7 +441,7 @@ for path in env_paths:
    ```python
    # With default
    log_level = env.get_string("ATLAS_LOG_LEVEL", "INFO")
-   
+
    # Without default - could be None
    log_level = env.get_string("ATLAS_LOG_LEVEL")
    ```

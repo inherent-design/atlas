@@ -1,4 +1,4 @@
-# Atlas CLI Planning
+# CLI Planning
 
 This document outlines the planning and tracking system for Atlas CLI improvements, including the architecture, logging enhancements, and command-line interface upgrades.
 
@@ -33,7 +33,7 @@ atlas/
 └── bin/                      # NEW - Executable entry points
     ├── atlas                 # NEW - Main CLI entry point
     ├── atlas-query           # NEW - Direct query tool
-    ├── atlas-ingest          # NEW - Direct ingest tool 
+    ├── atlas-ingest          # NEW - Direct ingest tool
     └── atlas-serve           # NEW - API server launcher
 ```
 
@@ -163,7 +163,7 @@ def configure_logging(
     component_levels: Optional[Dict[str, int]] = None,
 ):
     """Configure Atlas logging system with appropriate verbosity level.
-    
+
     Args:
         verbosity: 0-3, where 0 is minimal and 3 is debug-level output
         log_format: "text", "json", or "colored" for output formatting
@@ -175,13 +175,13 @@ def configure_logging(
     level = {
         0: logging.WARNING,  # Default: warnings and errors only
         1: logging.INFO,     # -v: info level
-        2: logging.DEBUG,    # -vv: debug level 
+        2: logging.DEBUG,    # -vv: debug level
         3: logging.NOTSET,   # -vvv: everything
     }.get(verbosity, logging.INFO)
-    
+
     if quiet:
         level = logging.ERROR  # Override with quiet mode
-    
+
     # Configure structlog processors
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -192,7 +192,7 @@ def configure_logging(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
-    
+
     # Add formatter based on format
     if log_format == "json":
         processors.append(structlog.processors.JSONRenderer())
@@ -200,7 +200,7 @@ def configure_logging(
         processors.append(structlog.dev.ConsoleRenderer(colors=True))
     else:
         processors.append(structlog.dev.ConsoleRenderer(colors=False))
-    
+
     # Configure structlog
     structlog.configure(
         processors=processors,
@@ -208,14 +208,14 @@ def configure_logging(
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure standard library logging
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         level=level,
         stream=sys.stderr,
     )
-    
+
     # Configure file logging if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
@@ -225,36 +225,36 @@ def configure_logging(
         )
         file_handler.setFormatter(file_formatter)
         logging.getLogger().addHandler(file_handler)
-    
+
     # Configure component-specific log levels
     if component_levels:
         for component, component_level in component_levels.items():
             logging.getLogger(component).setLevel(component_level)
-    
+
     # Configure third-party libraries (always more restrictive)
     configure_library_loggers(level, verbosity)
-    
+
     # Configure OpenTelemetry based on verbosity
     configure_otel_logging(verbosity)
-    
+
     # Return a logger for the caller
     return structlog.get_logger()
 
 
 def configure_library_loggers(level: int, verbosity: int) -> None:
     """Control third-party library logging.
-    
+
     Args:
         level: Base log level for the application
         verbosity: Verbosity level (0-3)
     """
     # Make third-party logging more restrictive unless high verbosity
     third_party_level = level if verbosity >= 2 else logging.WARNING
-    
+
     # ChromaDB logging (very verbose)
     chroma_level = level if verbosity >= 3 else logging.WARNING
     logging.getLogger("chromadb").setLevel(chroma_level)
-    
+
     # Other libraries
     logging.getLogger("httpx").setLevel(third_party_level)
     logging.getLogger("httpcore").setLevel(third_party_level)
@@ -265,7 +265,7 @@ def configure_library_loggers(level: int, verbosity: int) -> None:
 
 def configure_otel_logging(verbosity: int) -> None:
     """Configure OpenTelemetry based on verbosity level.
-    
+
     Args:
         verbosity: Verbosity level (0-3)
     """
@@ -291,83 +291,83 @@ from atlas.core.logging import configure_logging
 
 class Command(abc.ABC):
     """Base class for Atlas CLI commands."""
-    
+
     name: str = ""
     help: str = ""
     description: str = ""
-    
+
     def __init__(self) -> None:
         """Initialize the command."""
         self.parser: Optional[argparse.ArgumentParser] = None
         self.subparsers: Optional[argparse._SubParsersAction] = None
         self.logger = configure_logging()
-    
+
     @abc.abstractmethod
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         """Configure the argument parser for this command.
-        
+
         Args:
             parser: The argument parser to configure
         """
         pass
-    
+
     @abc.abstractmethod
     def run(self, args: argparse.Namespace) -> int:
         """Run the command with the parsed arguments.
-        
+
         Args:
             args: The parsed command-line arguments
-            
+
         Returns:
             Exit code (0 for success, non-zero for errors)
         """
         pass
-    
+
     def add_common_options(self, parser: argparse.ArgumentParser) -> None:
         """Add common options to the parser.
-        
+
         Args:
             parser: The argument parser to configure
         """
         # Verbosity controls
         verbosity_group = parser.add_mutually_exclusive_group()
         verbosity_group.add_argument(
-            "-v", "--verbose", 
-            action="count", 
+            "-v", "--verbose",
+            action="count",
             default=0,
             help="Increase verbosity (can be used multiple times)"
         )
         verbosity_group.add_argument(
-            "-q", "--quiet", 
+            "-q", "--quiet",
             action="store_true",
             help="Suppress non-essential output"
         )
-        
+
         # Logging options
         parser.add_argument(
-            "--log-format", 
-            choices=["text", "json", "colored"], 
-            default="text", 
+            "--log-format",
+            choices=["text", "json", "colored"],
+            default="text",
             help="Log format (default: text)"
         )
         parser.add_argument(
-            "--log-file", 
-            type=str, 
+            "--log-file",
+            type=str,
             help="Write logs to file"
         )
-        
+
         # Telemetry options
         parser.add_argument(
-            "--telemetry", 
+            "--telemetry",
             choices=["none", "console", "file"],
-            default="none", 
+            default="none",
             help="Telemetry output mode"
         )
-        
+
         # Config file
         parser.add_argument(
-            "--config", 
-            type=str, 
+            "--config",
+            type=str,
             help="Path to configuration file"
         )
 ```
@@ -391,7 +391,7 @@ from atlas.core.logging import configure_logging
 
 def main() -> int:
     """Main entry point for the Atlas CLI.
-    
+
     Returns:
         Exit code (0 for success, non-zero for errors)
     """
@@ -400,7 +400,7 @@ def main() -> int:
         description="Atlas AI Framework",
         prog="atlas"
     )
-    
+
     # Register commands
     commands: Dict[str, Type[Command]] = {
         "query": QueryCommand,
@@ -408,24 +408,24 @@ def main() -> int:
         "tool": ToolCommand,
         "serve": ServeCommand,
     }
-    
+
     # Add version argument
     parser.add_argument(
-        "--version", 
+        "--version",
         action="store_true",
         help="Show version information and exit"
     )
-    
+
     # Create subparsers
     subparsers = parser.add_subparsers(
         title="commands",
         dest="command",
         help="Command to execute"
     )
-    
+
     # Add common options to main parser
     Command().add_common_options(parser)
-    
+
     # Register all commands
     for cmd_name, cmd_class in commands.items():
         cmd = cmd_class()
@@ -435,10 +435,10 @@ def main() -> int:
             description=cmd.description
         )
         cmd.configure_parser(cmd_parser)
-    
+
     # Parse arguments
     args = parser.parse_args()
-    
+
     # Configure logging based on arguments
     logger = configure_logging(
         verbosity=args.verbose,
@@ -446,18 +446,18 @@ def main() -> int:
         log_file=args.log_file,
         quiet=args.quiet
     )
-    
+
     # Show version if requested
     if args.version:
         from atlas import __version__
         print(f"Atlas {__version__}")
         return 0
-    
+
     # Execute the requested command
     if args.command is None:
         parser.print_help()
         return 1
-    
+
     # Create and run the command
     cmd = commands[args.command]()
     return cmd.run(args)

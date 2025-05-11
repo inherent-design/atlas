@@ -90,3 +90,9 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 - **[CLI Options](./reference/cli.md)**: Command-line interface guide
 - **[Environment Variables](./reference/env_variables.md)**: Available configuration options
 - **[FAQ](./reference/faq.md)**: Frequently asked questions
+
+#### Contributing
+- **[Contribution Guide](./contributing/)**: Guidelines for contributing to Atlas
+- **[Documentation Standards](./contributing/documentation-standards.md)**: Standards for writing documentation
+- **[Content Containers](./contributing/content-containers.md)**: Guidelines for using custom containers
+- **[Code Examples](./contributing/code-examples.md)**: Standards for code samples and examples

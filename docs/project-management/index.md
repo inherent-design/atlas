@@ -50,6 +50,7 @@ When creating or updating project management documents:
 3. Ensure consistency across related documents
 4. Archive superseded documents rather than deleting them
 5. Update status indicators in tracking documents
+6. Adhere to the [documentation standards](../contributing/documentation-standards.md) and [style guide](../contributing/style-guide.md)
 
 ## Critical Dates
 

@@ -1,4 +1,4 @@
-# Enhanced Provider System Documentation Alignment Audit (ARCHIVED)
+# Enhanced Provider Documentation Audit
 
 > **Archived on May 9, 2025, 22:49 PT**
 > This document has been archived as part of the Enhanced Provider System implementation.
@@ -10,17 +10,17 @@ This document analyzes the consistency and alignment between the proposed Enhanc
 
 ### Core Components Comparison
 
-| Component | Current Implementation | Proposed Enhancement | Alignment Notes |
-|-----------|------------------------|----------------------|-----------------|
-| Provider Interface | ✅ Complete | ✅ Compatible | Enhanced system maintains the same BaseProvider interface |
-| Provider Implementation | ✅ Complete | ✅ Compatible | Individual provider implementations remain unchanged |
-| Provider Factory | ✅ Complete | 🔄 Update Needed | Factory needs updates to support registry and group creation |
-| Provider Options | ✅ Complete | 🔄 Update Needed | ProviderOptions needs to support capabilities and task type |
-| Provider Auto-Detection | 🚧 Basic | 🔄 Replace | Registry-based approach replaces pattern matching |
-| Capability System | 🚧 Basic | 🆕 Enhance | Current basic capabilities will be expanded significantly |
-| Provider Registry | ❌ Missing | 🆕 New Component | New component, but follows existing design patterns |
-| Provider Group | ❌ Missing | 🆕 New Component | New component, but implements BaseProvider interface |
-| Task-Aware Selection | ❌ Missing | 🆕 New Component | New functionality, but builds on existing capability system |
+| Component               | Current Implementation | Proposed Enhancement | Alignment Notes                                              |
+| ----------------------- | ---------------------- | -------------------- | ------------------------------------------------------------ |
+| Provider Interface      | ✅ Complete             | ✅ Compatible         | Enhanced system maintains the same BaseProvider interface    |
+| Provider Implementation | ✅ Complete             | ✅ Compatible         | Individual provider implementations remain unchanged         |
+| Provider Factory        | ✅ Complete             | 🔄 Update Needed      | Factory needs updates to support registry and group creation |
+| Provider Options        | ✅ Complete             | 🔄 Update Needed      | ProviderOptions needs to support capabilities and task type  |
+| Provider Auto-Detection | 🚧 Basic                | 🔄 Replace            | Registry-based approach replaces pattern matching            |
+| Capability System       | 🚧 Basic                | 🆕 Enhance            | Current basic capabilities will be expanded significantly    |
+| Provider Registry       | ❌ Missing              | 🆕 New Component      | New component, but follows existing design patterns          |
+| Provider Group          | ❌ Missing              | 🆕 New Component      | New component, but implements BaseProvider interface         |
+| Task-Aware Selection    | ❌ Missing              | 🆕 New Component      | New functionality, but builds on existing capability system  |
 
 ### Interface Compatibility
 
@@ -36,7 +36,7 @@ The Enhanced Provider System maintains compatibility with existing interfaces:
 ### 1. Provider Interface Descriptions
 
 **Current Documentation:**
-```markdown
+````markdown
 ## Provider Interface
 
 All model providers implement a common interface defined in `providers/base.py`:
@@ -67,7 +67,7 @@ class Provider:
         """Validate the API key for this provider."""
         raise NotImplementedError()
 ```
-```
+````
 
 **Alignment Issue:**
 - The proposed BaseProvider interface needs a new method `get_capability_strength` for task-aware selection
@@ -84,7 +84,7 @@ def get_capability_strength(self, capability: str) -> int:
 ### 2. Provider Selection Description
 
 **Current Documentation:**
-```markdown
+````markdown
 ## Provider Selection
 
 Atlas uses a sophisticated provider selection architecture:
@@ -101,7 +101,7 @@ options = ProviderOptions(
 # Create provider from options
 provider = create_provider_from_options(options)
 ```
-```
+````
 
 **Alignment Issue:**
 - The current documentation describes a factory function `create_provider_from_options`
@@ -126,7 +126,7 @@ provider_group = create_provider_group(
 ### 3. ProviderOptions Class Description
 
 **Current Documentation:**
-```markdown
+````markdown
 ## Provider Options
 
 The `ProviderOptions` class centralizes all parameters used for provider selection, creation, and configuration:
@@ -135,22 +135,22 @@ The `ProviderOptions` class centralizes all parameters used for provider selecti
 @dataclass
 class ProviderOptions:
     """Options for creating and configuring model providers."""
-    
+
     # Core provider and model selection
     provider_name: Optional[str] = None
     model_name: Optional[str] = None
     capability: Optional[str] = None
-    
+
     # Performance and resource limits
     max_tokens: Optional[int] = None
-    
+
     # Connection parameters
     base_url: Optional[str] = None
-    
+
     # Additional provider-specific parameters
     extra_params: Dict[str, Any] = field(default_factory=dict)
 ```
-```
+````
 
 **Alignment Issue:**
 - The current ProviderOptions doesn't include fields for:
@@ -165,23 +165,23 @@ class ProviderOptions:
 @dataclass
 class ProviderOptions:
     """Options for creating and configuring model providers."""
-    
+
     # Core provider and model selection
     provider_name: Optional[str] = None
     model_name: Optional[str] = None
     capability: Optional[str] = None
-    
+
     # Provider group options
     provider_names: Optional[List[str]] = None
     provider_strategy: str = "failover"
-    
+
     # Task-aware selection options
     task_type: Optional[str] = None
     capabilities: Optional[Dict[str, CapabilityStrength]] = None
-    
+
     # Performance and resource limits
     max_tokens: Optional[int] = None
-    
+
     # Additional provider-specific parameters
     extra_params: Dict[str, Any] = field(default_factory=dict)
 ```
@@ -192,17 +192,17 @@ class ProviderOptions:
 ```markdown
 ## Implementation Status
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Basic provider interface | ✅ Implemented | Core provider interface is stable |
-| Anthropic provider | ✅ Implemented | Full support for Claude models |
-| OpenAI provider | ✅ Implemented | Support for GPT models |
-| Ollama provider | ✅ Implemented | Support for local models |
-| Provider options | ✅ Implemented | Core options framework is available |
-| Provider auto-detection | 🚧 In Progress | Basic model name detection works |
+| Feature                    | Status        | Notes                                  |
+| -------------------------- | ------------- | -------------------------------------- |
+| Basic provider interface   | ✅ Implemented | Core provider interface is stable      |
+| Anthropic provider         | ✅ Implemented | Full support for Claude models         |
+| OpenAI provider            | ✅ Implemented | Support for GPT models                 |
+| Ollama provider            | ✅ Implemented | Support for local models               |
+| Provider options           | ✅ Implemented | Core options framework is available    |
+| Provider auto-detection    | 🚧 In Progress | Basic model name detection works       |
 | Capability-based selection | 🚧 In Progress | Basic capability selection implemented |
-| Provider fallback | ⏱️ Planned | Not yet implemented |
-| Provider groups | ⏱️ Planned | Not yet implemented |
+| Provider fallback          | ⏱️ Planned     | Not yet implemented                    |
+| Provider groups            | ⏱️ Planned     | Not yet implemented                    |
 ```
 
 **Alignment Issue:**
@@ -214,24 +214,24 @@ class ProviderOptions:
 ```markdown
 ## Implementation Status
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Basic provider interface | ✅ Implemented | Core provider interface is stable |
-| Provider implementations | ✅ Implemented | Anthropic, OpenAI, Ollama supported |
-| Provider options | ✅ Implemented | Core options framework is available |
-| Provider auto-detection | 🚧 In Progress | Being replaced with registry approach |
+| Feature                    | Status        | Notes                                 |
+| -------------------------- | ------------- | ------------------------------------- |
+| Basic provider interface   | ✅ Implemented | Core provider interface is stable     |
+| Provider implementations   | ✅ Implemented | Anthropic, OpenAI, Ollama supported   |
+| Provider options           | ✅ Implemented | Core options framework is available   |
+| Provider auto-detection    | 🚧 In Progress | Being replaced with registry approach |
 | Capability-based selection | 🚧 In Progress | Being enhanced with task capabilities |
-| Provider Registry | 🚧 In Progress | Implementation in active development |
-| Enhanced Capability System | 🚧 In Progress | Implementation in active development |
-| Provider Group | 🚧 In Progress | Implementation in active development |
-| Task-Aware Selection | 🚧 In Progress | Implementation in active development |
+| Provider Registry          | 🚧 In Progress | Implementation in active development  |
+| Enhanced Capability System | 🚧 In Progress | Implementation in active development  |
+| Provider Group             | 🚧 In Progress | Implementation in active development  |
+| Task-Aware Selection       | 🚧 In Progress | Implementation in active development  |
 ```
 
 ## CLI Documentation Alignment
 
 ### Current CLI Documentation
 
-```markdown
+````markdown
 ### Model Provider Options
 
 Options for selecting model providers and configurations:
@@ -247,11 +247,11 @@ Options for selecting model providers and configurations:
                       Maximum tokens in model responses (default: 2000)
 --base-url BASE_URL   Base URL for API (used primarily with Ollama, default: http://localhost:11434)
 ```
-```
+````
 
 ### Proposed CLI Documentation
 
-```markdown
+````markdown
 ### Provider Selection Options
 
 Options for selecting model providers and configurations:
@@ -285,7 +285,7 @@ Options for task-aware provider selection:
 --task-type TYPE      Task type for automatic capability selection (e.g., code_generation, creative_writing)
 --capabilities LIST   Specific capability requirements (e.g., --capabilities code:strong reasoning:moderate)
 ```
-```
+````
 
 ## Environment Variables Alignment
 
@@ -294,13 +294,13 @@ Options for task-aware provider selection:
 ```markdown
 ### Model Settings
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ATLAS_DEFAULT_PROVIDER` | Default model provider | `anthropic` |
-| `ATLAS_DEFAULT_MODEL` | Default model to use | `claude-3-7-sonnet-20250219` |
-| `ATLAS_DEFAULT_CAPABILITY` | Default capability when selecting models | `inexpensive` |
-| `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | `2000` |
-| `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default |
+| Variable                         | Description                                                     | Default                      |
+| -------------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `ATLAS_DEFAULT_PROVIDER`         | Default model provider                                          | `anthropic`                  |
+| `ATLAS_DEFAULT_MODEL`            | Default model to use                                            | `claude-3-7-sonnet-20250219` |
+| `ATLAS_DEFAULT_CAPABILITY`       | Default capability when selecting models                        | `inexpensive`                |
+| `ATLAS_MAX_TOKENS`               | Maximum tokens for model responses                              | `2000`                       |
+| `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default    |
 ```
 
 ### Proposed Environment Variables Documentation
@@ -308,28 +308,28 @@ Options for task-aware provider selection:
 ```markdown
 ### Provider Settings
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ATLAS_DEFAULT_PROVIDER` | Default model provider | `anthropic` |
-| `ATLAS_DEFAULT_MODEL` | Default model to use | `claude-3-7-sonnet-20250219` |
-| `ATLAS_DEFAULT_CAPABILITY` | Default capability when selecting models | `inexpensive` |
-| `ATLAS_MAX_TOKENS` | Maximum tokens for model responses | `2000` |
-| `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default |
+| Variable                         | Description                                                     | Default                      |
+| -------------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `ATLAS_DEFAULT_PROVIDER`         | Default model provider                                          | `anthropic`                  |
+| `ATLAS_DEFAULT_MODEL`            | Default model to use                                            | `claude-3-7-sonnet-20250219` |
+| `ATLAS_DEFAULT_CAPABILITY`       | Default capability when selecting models                        | `inexpensive`                |
+| `ATLAS_MAX_TOKENS`               | Maximum tokens for model responses                              | `2000`                       |
+| `ATLAS_{PROVIDER}_DEFAULT_MODEL` | Provider-specific model (e.g., `ATLAS_ANTHROPIC_DEFAULT_MODEL`) | Provider-specific default    |
 
 ### Provider Group Settings
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ATLAS_PROVIDER_GROUP_ENABLED` | Enable provider group functionality | `false` |
+| Variable                         | Description                                     | Default            |
+| -------------------------------- | ----------------------------------------------- | ------------------ |
+| `ATLAS_PROVIDER_GROUP_ENABLED`   | Enable provider group functionality             | `false`            |
 | `ATLAS_PROVIDER_GROUP_PROVIDERS` | Comma-separated list of providers for the group | `anthropic,openai` |
-| `ATLAS_PROVIDER_GROUP_STRATEGY` | Provider selection strategy | `failover` |
+| `ATLAS_PROVIDER_GROUP_STRATEGY`  | Provider selection strategy                     | `failover`         |
 
 ### Task-Aware Selection Settings
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ATLAS_TASK_AWARE_SELECTION` | Enable task-aware selection | `false` |
-| `ATLAS_DEFAULT_TASK_TYPE` | Default task type for selection | `conversational` |
+| Variable                     | Description                     | Default          |
+| ---------------------------- | ------------------------------- | ---------------- |
+| `ATLAS_TASK_AWARE_SELECTION` | Enable task-aware selection     | `false`          |
+| `ATLAS_DEFAULT_TASK_TYPE`    | Default task type for selection | `conversational` |
 ```
 
 ## Examples Alignment

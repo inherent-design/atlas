@@ -1,7 +1,3 @@
----
-title: Provider Registry
----
-
 # Provider Registry
 
 The Provider Registry is a central component of the Atlas provider system that manages relationships between providers, models, and capabilities. It enables intelligent model selection based on task requirements and capability matching.
@@ -77,17 +73,17 @@ def register_provider(self, name: str, provider_class: Type[BaseProvider], model
 ### Capability Registration
 
 ```python
-def register_model_capability(self, model: str, capability: str, 
+def register_model_capability(self, model: str, capability: str,
                              strength: CapabilityStrength = CapabilityStrength.MODERATE):
     """Register a capability for a model with optional strength."""
     if model not in self._model_capabilities:
         self._model_capabilities[model] = {}
     self._model_capabilities[model][capability] = strength
-    
+
     if capability not in self._capability_models:
         self._capability_models[capability] = set()
     self._capability_models[capability].add(model)
-    
+
     return self  # Enable chaining
 ```
 
@@ -112,28 +108,28 @@ def get_capabilities_for_model(self, model: str) -> Dict[str, CapabilityStrength
 ### Advanced Queries
 
 ```python
-def get_models_by_capability(self, capability: str, 
+def get_models_by_capability(self, capability: str,
                             min_strength: CapabilityStrength = CapabilityStrength.BASIC) -> Set[str]:
     """Get all models with the specified capability at minimum strength."""
     if capability not in self._capability_models:
         return set()
-        
+
     models = set()
     for model in self._capability_models[capability]:
         if self._model_capabilities[model][capability] >= min_strength:
             models.add(model)
-            
+
     return models
 
-def find_models_with_capabilities(self, 
+def find_models_with_capabilities(self,
                                 capabilities: Dict[str, CapabilityStrength]) -> Dict[str, List[str]]:
     """Find models that have all the specified capabilities at minimum strengths."""
     if not capabilities:
         return {}
-    
+
     # Start with all models
     result_models = set(self._model_providers.keys())
-    
+
     # Filter by capabilities and strengths
     for capability, min_strength in capabilities.items():
         qualified_models = set()
@@ -141,11 +137,11 @@ def find_models_with_capabilities(self,
             model_caps = self._model_capabilities.get(model, {})
             if capability in model_caps and model_caps[capability] >= min_strength:
                 qualified_models.add(model)
-        
+
         result_models = qualified_models
         if not result_models:
             return {}  # No models match all criteria
-    
+
     # Group by provider
     result = {}
     for model in result_models:
@@ -153,7 +149,7 @@ def find_models_with_capabilities(self,
         if provider not in result:
             result[provider] = []
         result[provider].append(model)
-    
+
     return result
 ```
 
@@ -174,11 +170,11 @@ def create_provider(self, provider_name: str, **kwargs) -> BaseProvider:
 def get_all_providers(self) -> List[str]:
     """Get all registered provider names."""
     return list(self._providers.keys())
-    
+
 def get_all_models(self) -> List[str]:
     """Get all registered model names."""
     return list(self._model_providers.keys())
-    
+
 def get_all_capabilities(self) -> List[str]:
     """Get all registered capabilities."""
     return list(self._capability_models.keys())
@@ -193,16 +189,16 @@ from atlas.providers.registry import registry
 from atlas.providers.capabilities import CapabilityStrength
 
 # Register providers with models
-registry.register_provider("anthropic", AnthropicProvider, 
+registry.register_provider("anthropic", AnthropicProvider,
                           ["claude-3-opus-20240229", "claude-3-sonnet-20240229"])
 
-registry.register_provider("openai", OpenAIProvider, 
+registry.register_provider("openai", OpenAIProvider,
                           ["gpt-4", "gpt-3.5-turbo"])
 
 # Register capabilities with strengths
-registry.register_model_capability("claude-3-opus-20240229", "reasoning", 
+registry.register_model_capability("claude-3-opus-20240229", "reasoning",
                                   CapabilityStrength.EXCEPTIONAL)
-registry.register_model_capability("gpt-4", "code", 
+registry.register_model_capability("gpt-4", "code",
                                   CapabilityStrength.EXCEPTIONAL)
 ```
 
@@ -240,7 +236,7 @@ provider_name = registry.get_provider_for_model("gpt-4")
 provider = registry.create_provider(provider_name, model_name="gpt-4")
 
 # Create provider directly
-anthropic_provider = registry.create_provider("anthropic", 
+anthropic_provider = registry.create_provider("anthropic",
                                             model_name="claude-3-opus-20240229")
 ```
 

@@ -1,4 +1,4 @@
-# Atlas Pitch Deck Outline
+# Pitch Deck Outline
 
 This document outlines the structure and key content for an Atlas pitch deck. Use this as a guide to create presentation slides for investors, partners, or enterprise customers.
 

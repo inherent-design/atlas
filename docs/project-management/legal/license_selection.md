@@ -1,4 +1,4 @@
-# License Selection Analysis for Atlas
+# License Selection Analysis
 
 This document provides a comprehensive analysis of the license selection process for Atlas, explaining the rationale behind choosing the Apache License 2.0 for the open source component and implementing a dual licensing strategy for enterprise features.
 
@@ -109,15 +109,15 @@ The dual licensing strategy was evaluated based on the following considerations:
 
 We examined licenses used by similar AI/ML frameworks to understand industry norms:
 
-| Project | License | Business Model |
-|---------|---------|----------------|
-| LangChain | MIT | Venture-backed, SaaS/API |
-| LlamaIndex | MIT | Venture-backed, SaaS/API |
-| Haystack | Apache 2.0 | Open core, enterprise features |
-| Hugging Face | Apache 2.0 / MIT | Open core, SaaS, enterprise |
-| Ray | Apache 2.0 | Open core, managed service |
-| PyTorch | BSD-style | Foundation-backed, hardware integration |
-| TensorFlow | Apache 2.0 | Product-led (Google) |
+| Project      | License          | Business Model                          |
+| ------------ | ---------------- | --------------------------------------- |
+| LangChain    | MIT              | Venture-backed, SaaS/API                |
+| LlamaIndex   | MIT              | Venture-backed, SaaS/API                |
+| Haystack     | Apache 2.0       | Open core, enterprise features          |
+| Hugging Face | Apache 2.0 / MIT | Open core, SaaS, enterprise             |
+| Ray          | Apache 2.0       | Open core, managed service              |
+| PyTorch      | BSD-style        | Foundation-backed, hardware integration |
+| TensorFlow   | Apache 2.0       | Product-led (Google)                    |
 
 The trend indicates that permissive licenses are standard in this space, with Apache 2.0 being common for projects with commercial offerings.
 

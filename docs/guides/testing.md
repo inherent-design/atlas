@@ -1,4 +1,4 @@
-# Testing Guide 🚧
+# Testing Guide
 
 > **Current Development Status:** Atlas is currently focusing on example-driven development rather than comprehensive test-driven development. The testing infrastructure described in this document represents the planned testing architecture, but is not fully implemented at this time. We are prioritizing functional examples and usage demonstrations as the primary verification method while the codebase is actively evolving.
 

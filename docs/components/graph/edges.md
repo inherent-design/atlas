@@ -1,4 +1,4 @@
-# Graph Edges
+# Edges
 
 This document explains the edge routing system in Atlas, which provides conditional flow control in LangGraph workflows.
 
@@ -322,8 +322,8 @@ In workflow definitions, conditional edges control the flow:
 ```python
 # Basic RAG workflow
 builder.add_conditional_edges(
-    "generate_response", 
-    should_end, 
+    "generate_response",
+    should_end,
     {True: END, False: "retrieve_knowledge"}
 )
 
@@ -348,7 +348,7 @@ builder.add_conditional_edges(
 
 ```python
 from atlas.graph.edges import (
-    Edge, ConditionalEdge, FallbackEdge, 
+    Edge, ConditionalEdge, FallbackEdge,
     EdgeType, create_edge, is_error_condition
 )
 
@@ -432,11 +432,11 @@ def has_relevant_documents(state: Union[AgentState, ControllerState]) -> bool:
     """Check if the state has relevant documents with high scores."""
     if not state.context or not state.context.get("documents"):
         return False
-    
+
     # Check if any document has relevance score above threshold
     threshold = 0.8
     return any(
-        doc["relevance_score"] > threshold 
+        doc["relevance_score"] > threshold
         for doc in state.context["documents"]
     )
 
@@ -445,19 +445,19 @@ def needs_clarification(state: AgentState) -> bool:
     """Check if the query needs clarification based on context."""
     if not state.context:
         return False
-    
+
     # Check if query is too short
     query = state.context.get("query", "")
     if len(query.split()) < 3:
         return True
-    
+
     # Check if we have low relevance documents
     if state.context.get("documents"):
         avg_score = sum(
             doc["relevance_score"] for doc in state.context["documents"]
         ) / len(state.context["documents"])
         return avg_score < 0.5
-    
+
     return False
 ```
 
@@ -471,83 +471,83 @@ from atlas.graph.edges import create_conditional_edge, create_fallback_edge
 def create_advanced_workflow() -> StateGraph:
     """Create a workflow with complex routing."""
     builder = StateGraph(AgentState)
-    
+
     # Add nodes
     builder.add_node("retrieve_knowledge", retrieve_knowledge_function)
     builder.add_node("analyze_query", analyze_query_function)
     builder.add_node("clarify_query", clarify_query_function)
     builder.add_node("generate_response", generate_response_function)
     builder.add_node("handle_error", handle_error_function)
-    
+
     # Define edges as list for clarity
     edges = [
         # First check for errors
         create_conditional_edge(
-            "retrieve_knowledge", 
+            "retrieve_knowledge",
             "handle_error",
             is_error_condition,
             description="Handle retrieval errors"
         ),
-        
+
         # If we have relevant documents, generate response
         create_conditional_edge(
-            "retrieve_knowledge", 
+            "retrieve_knowledge",
             "generate_response",
             has_relevant_documents,
             description="Direct response when documents are relevant"
         ),
-        
+
         # If we need clarification, go to clarify
         create_conditional_edge(
-            "retrieve_knowledge", 
+            "retrieve_knowledge",
             "clarify_query",
             needs_clarification,
             description="Request clarification for ambiguous queries"
         ),
-        
+
         # Default path is to analyze
         create_fallback_edge(
-            "retrieve_knowledge", 
+            "retrieve_knowledge",
             "analyze_query",
             description="Default path to analyze query"
         ),
-        
+
         # From analysis to response
         create_edge(
-            "analyze_query", 
+            "analyze_query",
             "generate_response",
             description="Generate response after analysis"
         ),
-        
+
         # From clarification back to retrieval
         create_edge(
-            "clarify_query", 
+            "clarify_query",
             "retrieve_knowledge",
             description="Retry retrieval after clarification"
         ),
-        
+
         # Error handling path
         create_edge(
-            "handle_error", 
+            "handle_error",
             END,
             description="End workflow after error handling"
         ),
-        
+
         # End workflow after response
         create_conditional_edge(
-            "generate_response", 
+            "generate_response",
             END,
             lambda state: True,  # Always end after response
             description="End workflow after response"
         ),
     ]
-    
+
     # Add all edges to graph
     add_edges_to_graph(builder, edges)
-    
+
     # Set entry point
     builder.set_entry_point("retrieve_knowledge")
-    
+
     return builder.compile()
 ```
 
@@ -560,7 +560,7 @@ For advanced workflows, you can create edges with dynamic targets:
 ```python
 class DynamicTargetEdge(Edge[StateType]):
     """Edge that can dynamically determine its target node."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -577,11 +577,11 @@ class DynamicTargetEdge(Edge[StateType]):
             description=description,
         )
         self.target_selector = target_selector
-    
+
     def get_target(self, state: StateType) -> str:
         """Dynamically determine the target node."""
         return self.target_selector(state)
-    
+
     def should_follow(self, state: StateType) -> bool:
         """Always follow this edge if selected."""
         return True
@@ -610,7 +610,7 @@ For probabilistic workflows, you can implement weighted edge selection:
 ```python
 class WeightedEdge(ConditionalEdge[StateType]):
     """Edge with a weight for probabilistic routing."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -633,36 +633,36 @@ class WeightedEdge(ConditionalEdge[StateType]):
 # WeightedRouter to use with weighted edges
 class WeightedRouter:
     """Router that selects edges based on weights."""
-    
+
     def __init__(self, edges: List[WeightedEdge]):
         """Initialize with a list of weighted edges."""
         self.edges = edges
-    
+
     def select_edge(self, state: StateType) -> Optional[Edge]:
         """Select an edge based on weights."""
         import random
-        
+
         # Filter edges that should be followed based on their conditions
         eligible_edges = [
             edge for edge in self.edges if edge.should_follow(state)
         ]
-        
+
         if not eligible_edges:
             return None
-        
+
         # Calculate total weight
         total_weight = sum(edge.weight for edge in eligible_edges)
-        
+
         # Select a random value in [0, total_weight)
         random_value = random.uniform(0, total_weight)
-        
+
         # Find the selected edge
         current_weight = 0
         for edge in eligible_edges:
             current_weight += edge.weight
             if random_value <= current_weight:
                 return edge
-        
+
         # Should never reach here if weights sum properly
         return eligible_edges[-1]
 ```
@@ -674,7 +674,7 @@ Implement retry logic with conditional edges:
 ```python
 class RetryEdge(ConditionalEdge[AgentState]):
     """Edge that implements retry logic."""
-    
+
     def __init__(
         self,
         source_node: str,
@@ -689,27 +689,27 @@ class RetryEdge(ConditionalEdge[AgentState]):
         self.retry_count = 0
         self.max_retries = max_retries
         self.retry_condition = retry_condition
-        
+
         # Create condition function that tracks retries
         def retry_tracker(state: AgentState) -> bool:
             # Check base condition
             if not self.retry_condition(state):
                 return False
-            
+
             # Check retry count
             if self.retry_count >= self.max_retries:
                 return False
-            
+
             # Increment retry count
             self.retry_count += 1
-            
+
             # Add retry info to state
             if not hasattr(state, "retries"):
                 state.retries = {}
             state.retries[source_node] = self.retry_count
-            
+
             return True
-        
+
         super().__init__(
             source_node=source_node,
             target_node=target_node,

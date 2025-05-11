@@ -1,164 +1,232 @@
-# Atlas Project TODO
+# TODO
 
-## Project Status and Roadmap
+::: tip Current Status (May 10, 2025)
+This file tracks active development tasks for Atlas. For the current sprint (May 10-17), we're focused on finalizing the provider architecture and integrating it with the agent system.
+:::
 
-This file tracks active development tasks for Atlas. For the current sprint, we're focused on finalizing the provider architecture and integrating it with the agent system.
+::: timeline Streaming Interface Design
+- **Monday-Tuesday (May 10-11, 2025)**
+- Complete interface specification
+- Begin implementation of core components
+- Establish testing framework
+:::
+
+::: timeline Provider Lifecycle
+- **Wednesday-Thursday (May 12-13, 2025)**
+- Develop lifecycle management
+- Implement comprehensive error handling
+- Add connection pooling and reuse mechanisms
+:::
+
+::: timeline Health Monitoring
+- **Friday-Saturday (May 14-15, 2025)**
+- Finalize provider health monitoring
+- Implement fallback mechanisms
+- Add performance metrics tracking
+:::
+
+::: timeline Release Preparation
+- **Sunday (May 16, 2025)**
+- Bug fixes and stabilization
+- Final quality assurance
+- Preparation for Atlas 0.5 release
+:::
 
 ## Current Sprint Focus: Provider & Agent System Integration
 
+::: warning Priority Requirements
 Our focus for this sprint is entirely on:
 1. Finalizing the provider architecture, including complex stream controls
 2. Tightly integrating the agent system with our new provider system
 3. Maintaining a clean break perspective for future developments
+:::
+
+::: tip Component Focus
+- Providers: Streaming infrastructure, lifecycle management
+- Agents: Controller-worker improvements, capability integration
+- Examples: Updated streaming examples and documentation
+:::
 
 ## Provider System Enhancement Tasks
 
 ### 1. Enhanced Streaming Infrastructure
 
-- [ ] Update BaseStreamHandler in providers/base.py
-  - [ ] Design a standardized StreamControl interface
-  - [ ] Add stream control capabilities (pause, resume, cancel)
-  - [ ] Implement buffering mechanisms for stream manipulation
-  - [ ] Add performance metrics tracking during streaming
-  - [ ] Implement proper resource cleanup for all streams
-  - [ ] Ensure consistent error handling across providers
+**Base Streaming Interface** (Target: May 12, 2025)
+- [ ] Design standardized StreamControl interface
+- [ ] Add stream control capabilities (pause, resume, cancel)
+- [ ] Implement buffering mechanisms for manipulation
+- [ ] Add performance metrics tracking
+- [ ] Implement proper resource cleanup
+- [ ] Ensure consistent error handling
 
-- [ ] Update provider implementations
-  - [ ] Update streaming in AnthropicProvider for compatibility
-  - [ ] Update streaming in OpenAIProvider for compatibility
-  - [ ] Update streaming in OllamaProvider for compatibility
-  - [ ] Update MockProvider to simulate streaming controls
-  - [ ] Verify streaming token accounting across all providers
+**Provider Implementations** (Target: May 14, 2025)
+- [ ] Update AnthropicProvider streaming
+- [ ] Update OpenAIProvider streaming
+- [ ] Update OllamaProvider streaming
+- [ ] Update MockProvider simulation
+- [ ] Verify token accounting across providers
 
-- [ ] Enhance ProviderGroup streaming capabilities
-  - [ ] Improve streaming fallback between providers
-  - [ ] Add reliability tracking during streaming
-  - [ ] Implement adaptive provider selection during streaming
-  - [ ] Add token budget enforcement during streaming
+**ProviderGroup Features** (Target: May 15, 2025)
+- [ ] Improve streaming fallback mechanism
+- [ ] Add reliability tracking during streaming
+- [ ] Implement adaptive provider selection
+- [ ] Add token budget enforcement
 
-**Files to Modify:**
-- `atlas/providers/base.py`: Add StreamControl interface and enhanced base handlers
-- `atlas/providers/group.py`: Enhance stream handling with fallback mechanisms
-- `atlas/providers/anthropic.py`: Update streaming implementation with new interface
-- `atlas/providers/openai.py`: Update streaming implementation with new interface
-- `atlas/providers/ollama.py`: Update streaming implementation with new interface
-- `atlas/providers/mock.py`: Update mock streaming for testing
+::: tip Core Files
+- `atlas/providers/base.py`: StreamControl interface and base handlers
+- `atlas/providers/group.py`: Stream handling with fallback mechanisms
+- `atlas/providers/*{anthropic,openai,ollama,mock}.py`: Provider implementation updates
+:::
 
 ### 2. Provider Integration Optimization
 
-- [ ] Create provider lifecycle management
-  - [ ] Add connection pooling for providers
-  - [ ] Implement connection reuse mechanisms
-  - [ ] Add health checking and circuit breaking
-  - [ ] Ensure proper cleanup of resources
+**Lifecycle Management** (Target: May 15, 2025)
+- [ ] Add connection pooling for providers
+- [ ] Implement connection reuse mechanisms
+- [ ] Add health checking and circuit breaking
+- [ ] Ensure proper cleanup of resources
 
-- [ ] Improve provider error handling
-  - [ ] Add detailed error categorization
-  - [ ] Create common error types across providers
-  - [ ] Implement structured error responses
-  - [ ] Add retry policies based on error types
+**Error Handling** (Target: May 16, 2025)
+- [ ] Add detailed error categorization
+- [ ] Create common error types
+- [ ] Implement structured error responses
+- [ ] Add retry policies based on error types
 
-**Files to Modify:**
-- `atlas/providers/base.py`: Add enhanced error handling
-- `atlas/core/errors.py`: Add provider-specific error types
-- `atlas/providers/capabilities.py`: Add reliability metadata
+::: tip Core Files
+- `atlas/providers/base.py`: Enhanced error handling
+- `atlas/core/errors.py`: Provider-specific error types
+- `atlas/providers/capabilities.py`: Reliability metadata
+:::
 
 ## Agent System Integration Tasks
 
-### 1. Agent-Provider Integration
+### 1. Agent-Provider Interface
 
-- [ ] Enhance agent-provider interface
-  - [ ] Create a clean agent-provider interface protocol
-  - [ ] Add provider capability utilization in agents
-  - [ ] Improve agent configuration with provider options
-  - [ ] Add streaming controls to agent interfaces
+**Interface Design** (Target: May 20, 2025)
+- [ ] Create agent-provider interface protocol
+- [ ] Add provider capability utilization
+- [ ] Improve configuration with provider options
+- [ ] Add streaming controls to agent interfaces
 
-- [ ] Update agent implementations
-  - [ ] Ensure TaskAwareAgent uses provider capabilities optimally
-  - [ ] Update controller-worker communication for streaming
-  - [ ] Add provider selection feedback mechanisms
-  - [ ] Implement provider performance tracking
+**Agent Implementation Updates** (Target: May 22, 2025)
+- [ ] Optimize TaskAwareAgent capability usage
+- [ ] Update controller-worker communication
+- [ ] Add provider selection feedback
+- [ ] Implement provider performance tracking
 
-**Files to Modify:**
-- `atlas/agents/base.py`: Enhance provider integration
-- `atlas/agents/specialized/task_aware_agent.py`: Optimize provider capability usage
-- `atlas/agents/controller.py`: Update with enhanced provider patterns
-- `atlas/agents/worker.py`: Add provider capability awareness
+::: tip Core Files
+- `atlas/agents/base.py`: Enhanced provider integration
+- `atlas/agents/specialized/task_aware_agent.py`: Capability optimization
+- `atlas/agents/controller.py`: Enhanced provider patterns
+- `atlas/agents/worker.py`: Provider capability awareness
+:::
 
 ### 2. Example Development
 
-- [ ] Create enhanced streaming example
-  - [ ] Demonstrate stream control capabilities
-  - [ ] Show provider fallback during streaming
-  - [ ] Illustrate streaming pause/resume functionality
-  - [ ] Add streaming with multi-provider selection
+**New Streaming Example** (Target: May 22, 2025)
+- [ ] Create streaming control example
+- [ ] Implement provider fallback demo
+- [ ] Add streaming pause/resume examples
+- [ ] Implement multi-provider selection
 
-- [ ] Update existing examples
-  - [ ] Ensure all examples follow consistent patterns
-  - [ ] Verify examples work with the latest provider system
-  - [ ] Add comprehensive error handling in examples
-  - [ ] Update documentation in examples
+**Example Updates** (Target: May 24, 2025)
+- [ ] Standardize example patterns
+- [ ] Verify compatibility with provider system
+- [ ] Add comprehensive error handling
+- [ ] Update example documentation
 
-**Files to Create/Modify:**
-- Create: `examples/07_enhanced_streaming.py`: New streaming controls example
-- Update: `examples/08_multi_agent_providers.py`: Update with latest patterns
-- Update: Other examples as needed for consistency
+::: tip Core Files
+- Create: `examples/07_enhanced_streaming.py`: Streaming controls example
+- Update: `examples/08_multi_agent_providers.py`: Latest patterns
+- Update: Other examples for consistency
+:::
 
 ## Implementation Roadmap
 
+::: warning Sprint Priorities
 This focused sprint prioritizes the provider and agent system integration:
 
-1. First, create the enhanced streaming infrastructure in the provider system
-2. Then, improve the provider integration with robust error handling and lifecycle management
-3. Next, enhance the agent-provider interface for optimal integration
-4. Finally, create examples demonstrating these enhancements
+1. **Week 1 (May 10-17)**: Provider System Enhancement
+   - Enhanced streaming infrastructure implementation
+   - Provider lifecycle management and error handling
+   - Provider health monitoring and fallback mechanisms
 
-After this sprint, we will shift focus to:
-1. Knowledge system enhancements with hybrid retrieval
-2. Tool system implementation
-3. Multi-agent workflow systems
+2. **Week 2 (May 18-24)**: Agent-Provider Integration
+   - Agent-provider interface improvements
+   - Streaming controls in agent system
+   - Example implementation with new capabilities
+:::
 
-## Resource Allocation
+::: timeline Knowledge System Enhancements
+- **May 25-31, 2025**
+- Hybrid retrieval with semantic+keyword search
+- Advanced document chunking strategies
+- Knowledge caching implementation
+:::
 
-- Primary: Provider system enhancements
-- Secondary: Agent system integration
-- On Hold: Knowledge system, tool system, and other components
+::: timeline Multi-Agent Orchestration
+- **June 1-7, 2025**
+- Specialized worker agent implementation
+- Coordination patterns for complex workflows
+- Parallel processing optimization
+:::
+
+::: timeline Enterprise Features
+- **June 8-14, 2025**
+- Security and access control
+- Compliance tools
+- Advanced monitoring and observability
+:::
 
 ## Task Template
 
-```
-### Task Name
+```markdown
+### Task: [Task Title]
 
 **Status:** Not Started/In Progress/Complete
 **Priority:** High/Medium/Low
-**Dependencies:** List any dependent tasks
+**Target Date:** [YYYY-MM-DD]
+**Dependencies:** [List any dependent tasks]
 
 **Description:**
-Brief description of the task
+[Brief description of the task]
 
 **Implementation Steps:**
-1. Step 1
-2. Step 2
-3. Step 3
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
 
-**Files to Modify:**
-- `/path/to/file1.py`
-- `/path/to/file2.py`
+**Files:**
+- `[/path/to/file1.py]`: [What to modify]
+- `[/path/to/file2.py]`: [What to modify]
 
-**Testing Strategy:**
-How this task will be verified
+**Testing:**
+[How this task will be verified]
+
+**Definition of Done:**
+- [ ] Implementation complete
+- [ ] Tests passing
+- [ ] Documentation updated
+- [ ] Code reviewed
 ```
 
 ## Recently Completed Tasks
 
-### Agent System Provider Integration (May 2024)
+::: tip Completed This Week (May 1-9, 2025)
+- ✅ Designed `StreamControl` interface initial specification
+- ✅ Created baseline implementation of provider registry
+- ✅ Updated agent messaging system for provider compatibility
+- ✅ Implemented initial streaming examples in documentation
+:::
+
+### Agent System Provider Integration (May 1-5, 2025)
 - ✅ Updated AtlasAgent with provider group support and task-aware selection
 - ✅ Implemented specialized TaskAwareAgent with prompt enhancements
 - ✅ Updated controller and worker agents with provider group integration
 - ✅ Added task-specific provider selection capabilities
 - ✅ Created examples demonstrating task-aware agents and provider groups
 
-### Enhanced Provider System (May 2024)
+### Enhanced Provider System (April 25-30, 2025)
 - ✅ Implemented comprehensive Provider Registry in `providers/registry.py`
 - ✅ Created Enhanced Capability System with strength levels in `providers/capabilities.py`
 - ✅ Implemented ProviderGroup with multiple selection strategies in `providers/group.py`

@@ -1,4 +1,4 @@
-# Controller Agent
+# Controller
 
 This document describes the Controller Agent in Atlas, which orchestrates multiple specialized worker agents to process complex queries.
 

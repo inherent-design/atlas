@@ -24,7 +24,7 @@
 }
 
 .VPFeature::after {
-  content: "";
+  content: '';
   position: absolute;
   z-index: 2;
 
@@ -87,4 +87,158 @@
 
 .mermaid svg {
   margin: 0 auto;
+}
+
+/* Timeline */
+
+.timeline-dot {
+  padding-left: 2.35rem;
+}
+
+.timeline-dot::after {
+  background-color: var(--vp-c-brand-soft);
+}
+
+:not(.timeline-dot) + .timeline-dot,
+.timeline-dot:first-child {
+  margin-top: 2rem;
+}
+
+.timeline-dot:has(+ :not(.timeline-dot))::after,
+.timeline-dot:last-child::after {
+  display: none;
+}
+
+/* High-quality typesetting enhancements */
+
+/* Improved text rendering */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga', 'kern';
+}
+
+/* Base content improvements */
+.vp-doc {
+  /* Prevent orphaned words */
+  text-wrap: pretty;
+
+  /* Improved hyphenation for better text flow */
+  hyphens: auto;
+
+  /* Better spacing after headings */
+  & h2 {
+    margin-top: 2.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  & h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Proper paragraph spacing */
+  & p {
+    margin-top: 1.2em;
+    margin-bottom: 1.2em;
+  }
+
+  /* Better list spacing */
+  & ul,
+  & ol {
+    padding-left: 1.5em;
+    margin: 1em 0;
+
+    & li {
+      margin: 0.5em 0;
+    }
+
+    & li p {
+      margin: 0.5em 0;
+    }
+  }
+
+  /* Improved blockquote styling */
+  & blockquote {
+    margin-top: 1.8rem;
+    border-left: 3px solid var(--vp-c-brand-1);
+    padding-left: 1.2rem;
+    color: var(--vp-c-text-3);
+    font-style: italic;
+  }
+
+  /* Better table styling */
+  & table {
+    width: 100%;
+    margin: 1.5em 0;
+
+    & th {
+      font-weight: 600;
+      background-color: var(--vp-c-bg-soft);
+    }
+
+    & th,
+    & td {
+      padding: 0.75em 1em;
+    }
+
+    & tr:nth-child(2n) {
+      background-color: var(--vp-c-bg-soft);
+    }
+  }
+}
+
+/* Enhanced readability for content containers */
+.custom-block {
+  margin: 2rem 0;
+  border-radius: 8px;
+
+  & .custom-block-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  &.tip,
+  &.info,
+  &.warning,
+  &.danger {
+    padding: 1.5rem;
+  }
+}
+
+/* Improve code readability */
+div[class*='language-'] {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin: 1.5rem 0;
+
+  & pre,
+  & code {
+    line-height: 1.5;
+    font-variant-ligatures: none;
+  }
+}
+
+/* Enhanced code groups */
+.vp-code-group {
+  margin: 1.5rem 0;
+  border-radius: 8px;
+
+  & .tabs {
+    border-radius: 8px 8px 0 0;
+  }
+
+  & div[class*='language-'] {
+    margin: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+/* Clean text selection */
+::selection {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
 }

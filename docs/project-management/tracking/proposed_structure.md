@@ -1,6 +1,14 @@
-# Proposed Atlas Project Structure
+# Proposed Project Structure
 
 This document outlines the refined structure for the Atlas project, focusing on clean architecture, minimal dependencies, and clear component boundaries. This structure represents a clean-break approach that simplifies the codebase while ensuring all required functionality is maintained.
+
+::: tip Core Principles
+Atlas follows a **clean break philosophy** with a focus on best-in-class API design over backward compatibility. This structure prioritizes modularity, clear interfaces, and maintainable code.
+:::
+
+::: warning Current Focus (May 10-17, 2025)
+We are currently focused on **Provider System Finalization** with enhanced streaming capabilities, provider lifecycle management, and robust error handling. See the [current TODO list](./todo.md) for specific implementation tasks.
+:::
 
 ## Status Legend
 - ✅ Existing and complete
@@ -181,6 +189,13 @@ docs/
 │       ├── core.md                  ✅  🔴  Core tool interfaces
 │       ├── mcp.md                   ✅  🟠  MCP integration
 │       └── standard.md              ✅  🔴  Standard tools
+├── contributing/                    🚧  🔴  Contribution guides and standards
+│   ├── index.md                     🔲  🔴  Overview of contribution process
+│   ├── documentation-standards.md   🔲  🔴  Documentation writing guidelines
+│   ├── content-containers.md        🔲  🔴  Custom container usage guide
+│   ├── timelines.md                 🔲  🔴  Timeline component usage guide
+│   ├── code-examples.md             🔲  🔴  Standards for code examples
+│   └── style-guide.md               🔲  🔴  Writing style and terminology standards
 ├── guides/                          ✅  🔴  User guides
 │   ├── getting_started.md           ✅  🔴  Getting started guide
 │   ├── configuration.md             ✅  🔴  Configuration guide
@@ -196,9 +211,9 @@ docs/
 │   ├── audit/                       ✅  🔴  Audit reports and analysis
 │   │   ├── implementation_audit.md  🔲  🔴  Implementation status audit
 │   │   └── archive/                 ✅  🔴  Historical audit documents
-│   │       ├── agent_system_update.md      ✅  🔴  Agent system audit
-│   │       ├── doc_audit.md                ✅  🔴  Documentation audit
-│   │       └── enhanced_provider_alignment.md ✅  🔴  Provider system audit
+│   │       ├── agent_system_update_2025-05-09.md   ✅  🔴  Agent system audit
+│   │       ├── doc_audit_2025-05-09.md             ✅  🔴  Documentation audit
+│   │       └── enhanced_provider_alignment_2025-05-09.md ✅  🔴  Provider system audit
 │   ├── business/                    ✅  🔴  Business planning and strategy
 │   │   ├── commercialization_timeline.md ✅  🔴  Post-development commercialization plan
 │   │   └── monetization_strategy.md ✅  🔴  Monetization approaches
@@ -232,7 +247,7 @@ docs/
 │       ├── proposed_structure.md    ✅  🔴  Proposed code structure
 │       ├── todo.md                  ✅  🔴  Current implementation tasks
 │       └── archive/                 ✅  🔴  Historical tracking documents
-│           └── enhanced_provider_todo.md ✅  🔴  Provider system tasks
+│           └── enhanced_provider_todo_2025-05-10.md ✅  🔴  Provider system tasks
 ├── reference/                       ✅  🔴  Reference documentation
 │   ├── api.md                       ✅  🔴  API reference
 │   ├── cli.md                       ✅  🔴  CLI options reference
@@ -277,180 +292,153 @@ examples/
 
 ## Key Simplifications and Enhancements
 
-### 1. Core Functionality (MVP) 🔴
+### Core Functionality (MVP) 🔴
 
-#### Provider System Completion
+#### 1. Provider System Completion
 - Standardized provider interface with comprehensive streaming controls (current focus)
 - Robust ProviderGroup with enhanced fallback mechanisms (current focus)
 - Capability-based provider selection (completed)
 - Error handling and lifecycle management improvements (current focus)
 
-#### Knowledge System Enhancement
+#### 2. Knowledge System Enhancement
 - Hybrid retrieval combining semantic and keyword search
 - Improved chunking strategies for better document understanding
 - Streamlined retrieval interface with unified search approach
 
-#### Agent System Refinement
+#### 3. Agent System Refinement
 - Consolidated messaging system into a single file (completed)
 - Clear base class responsibilities (completed)
 - Specialized agent implementations (TaskAwareAgent completed, others in progress)
 - Enhanced provider integration in agent system (current focus)
 - Streaming control propagation to agents (current focus)
 
-#### Tools System Implementation
+#### 4. Tools System Implementation
 - Simplified tool interface with validation
 - Focused on essential tool categories
 - Clear tool registry architecture
 
-#### Graph System Refinement
+#### 5. Graph System Refinement
 - Enhanced state management for workflows
 - Reusable workflow patterns
 - Clean interfaces for new workflows
 
-### 2. Next-Phase Improvements 🟠
+### Next-Phase Improvements 🟠
 
-#### Memory and Session Management
+#### 1. Memory and Session Management
 - Conversation buffer with windowing strategies
 - Long-term conversation storage and retrieval
 - Session management with resumption capabilities
 
-#### Advanced Caching System
+#### 2. Advanced Caching System
 - Abstract cache interface with multiple backends
 - Semantic similarity caching for non-exact matches
 - Configurable policies for cache management
 
-#### Rate Limiting Infrastructure
+#### 3. Rate Limiting Infrastructure
 - Provider-specific rate limit definitions
 - Request throttling and queueing implementation
 - Backpressure mechanisms for overload situations
 
-#### Security Framework
+#### 4. Security Framework
 - Content filtering for inputs and outputs
 - PII detection and redaction capabilities
 - Input sanitization to prevent prompt injection
 
-#### Enhanced Observability
+#### 5. Enhanced Observability
 - Detailed metrics collection across components
 - Distributed tracing for complex operations
 - Cost tracking and optimization features
 
-### 3. Future Capabilities 🟢
+### Future Capabilities 🟢
 
-#### Structured Reasoning Framework
+#### 1. Structured Reasoning Framework
 - Chain-of-thought prompting implementation
 - Self-verification mechanisms
 - Self-critique and reflection capabilities
 
-#### Advanced Knowledge Capabilities
+#### 2. Advanced Knowledge Capabilities
 - Sophisticated reranking strategies
 - Multiple scoring algorithms for relevance
 - Knowledge graph integration
 
-#### Multi-Modal Support
+#### 3. Multi-Modal Support
 - Image handling and embedding
 - Audio processing capabilities
 - Multi-modal prompt construction
 
-#### Evaluation Framework
+#### 4. Evaluation Framework
 - Quality metrics for responses
 - Automatic evaluations against benchmarks
 - Feedback collection and processing
 
-## Implementation Priorities
+## Implementation Roadmap
 
-### Phase 1: Core MVP 🔴
+::: timeline Provider System Finalization
+- **May 10-17, 2025**
+- Enhanced streaming with controls
+- Provider lifecycle management
+- Improved fallback mechanisms
+:::
 
-#### 1. Streaming Infrastructure Enhancement (Current Sprint Focus)
-- Update provider base class with standardized streaming interface
-- Add stream control capabilities (pause, resume, cancel)
-- Implement buffering mechanisms for stream manipulation
-- Add performance metrics tracking during streaming
-- Implement proper resource cleanup for all streams
-- Ensure consistent error handling across streaming operations
-- Enhance ProviderGroup streaming with fallback mechanisms
+::: timeline Agent-Provider Integration
+- **May 18-24, 2025**
+- Agent streaming controls
+- Provider capability utilization
+- Controller-worker improvements
+:::
 
-#### 2. Knowledge System Enhancements
-- Implement hybrid retrieval combining semantic and keyword search
-- Enhance chunking strategies for different document types
-- Develop reusable search patterns across different retrieval approaches
-- Implement configurable search interfaces
+::: timeline Knowledge System Enhancements
+- **May 25-31, 2025**
+- Hybrid retrieval implementation
+- Advanced metadata extraction
+- Document-specific chunkers
+:::
 
-#### 3. Tool System Development
-- Implement base Tool interface with validation
-- Create tool registry for discovery and management
-- Develop core set of knowledge and system tools
-- Establish clear extension points for custom tools
+::: timeline Multi-Agent Orchestration
+- **June 1-7, 2025**
+- Specialized worker agents
+- Coordination patterns
+- Parallel processing
+:::
 
-#### 4. Agent System Refinements (Current Sprint Focus)
-- Update agents to work with enhanced streaming providers
-- Improve controller-worker communication with streaming controls
-- Add provider capability awareness to agent implementations
-- Create clean agent-provider interface protocol
-- Implement provider performance tracking in agents
+::: timeline Enterprise Features
+- **June 8-14, 2025**
+- Security and access control
+- Compliance tools
+- Advanced monitoring
+:::
 
-#### 5. Example Development (Current Sprint Focus)
-- Create enhanced streaming example with controls
-- Update multi-agent examples with provider groups
-- Demonstrate provider fallback during streaming
-- Illustrate provider capability utilization
-- Ensure consistent error handling in examples
+::: timeline Cloud Service Foundations
+- **June 15-22, 2025**
+- Multi-tenant architecture
+- Usage tracking and metering
+- Self-service capabilities
+:::
 
-### Phase 2: Next Immediate Improvements 🟠
+::: timeline Finalization & Documentation
+- **June 23-30, 2025**
+- Bug fixes and stabilization
+- Complete documentation
+- Final examples and testing
+:::
 
-#### 1. Memory System Implementation
-- Create conversation buffer with windowing strategies
-- Implement persistent conversation storage
-- Develop session management with resumption capabilities
-- Integrate with existing agent architecture
+::: warning Backward Compatibility
+Remember that Atlas follows a **clean break philosophy** - we prioritize best-in-class API design over backward compatibility. When implementing new features, focus on creating the best possible developer experience rather than maintaining compatibility with earlier design decisions.
+:::
 
-#### 2. Caching Infrastructure
-- Implement abstract cache interface
-- Develop semantic similarity caching for non-exact matches
-- Create configurable policies for TTL and eviction
-- Integration with knowledge retrieval and providers
+## Key Files for Current Sprint
 
-#### 3. Rate Limiting System
-- Implement provider-specific rate limit definitions
-- Develop request throttling and queueing system
-- Create backpressure mechanisms for overload protection
-- Integrate with provider selection strategies
+| Component                    | Key Files                                                                                | Priority | Owner         |
+| ---------------------------- | ---------------------------------------------------------------------------------------- | -------- | ------------- |
+| **Provider Streaming**       | `atlas/providers/base.py`, `atlas/providers/group.py`                                    | Critical | Provider Team |
+| **Provider Implementations** | `atlas/providers/anthropic.py`, `atlas/providers/openai.py`, `atlas/providers/ollama.py` | High     | Provider Team |
+| **Agent Integration**        | `atlas/agents/controller.py`, `atlas/agents/worker.py`                                   | High     | Agent Team    |
+| **Specialized Agents**       | `atlas/agents/specialized/tool_agent.py`, `atlas/agents/specialized/task_aware_agent.py` | Medium   | Agent Team    |
+| **Examples**                 | `examples/07_enhanced_streaming.py`, `examples/08_multi_agent_providers.py`              | Medium   | Examples Team |
 
-#### 4. Security Framework
-- Implement content filtering for inputs and outputs
-- Develop PII detection and redaction capabilities
-- Create input sanitization to prevent prompt injection
-- Add configuration for security policy settings
+## Resource Allocation
 
-#### 5. Enhanced Observability
-- Expand telemetry to include detailed metrics
-- Implement distributed tracing across components
-- Add token usage and cost tracking features
-- Develop performance monitoring and alerting
-
-### Phase 3: Future Capabilities 🟢
-
-#### 1. Structured Reasoning
-- Implement chain-of-thought prompting patterns
-- Develop self-verification mechanisms
-- Create self-critique and reflection capabilities
-- Integration with knowledge and agent systems
-
-#### 2. Advanced Knowledge Capabilities
-- Implement sophisticated reranking strategies
-- Develop multiple scoring algorithms for relevance
-- Create knowledge graph integration capabilities
-- Support for diverse knowledge representation formats
-
-#### 3. Multi-Modal Support
-- Implement image handling and embedding
-- Develop audio processing capabilities
-- Create multi-modal prompt construction
-- Integration with providers supporting multi-modal inputs
-
-#### 4. Evaluation Framework
-- Develop quality metrics for response evaluation
-- Implement automatic benchmarking against standards
-- Create feedback collection and processing system
-- Integrate with existing components for continuous improvement
-
-This enhanced structure maintains all essential MVP functionality while adding clear pathways for future development. The prioritization ensures that the core user experience is robust and complete before adding advanced capabilities. The implementation strategy allows for incremental adoption of new features while maintaining backward compatibility.
+- **Primary Focus**: Provider system enhancements with streaming controls
+- **Secondary Focus**: Agent-provider integration optimization
+- **On Hold**: Knowledge system, tool system implementation
+- **Team Distribution**: See the [Accelerated Implementation Plan](../planning/accelerated_implementation_plan.md) for detailed team allocations

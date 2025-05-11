@@ -1,4 +1,4 @@
-# Agent Messaging System
+# Messaging System
 
 The Atlas messaging system provides a standardized format for communication between agents, enabling rich interactions, tool usage, and structured data exchange. This system forms the foundation for multi-agent workflows and tool-enabled operations.
 
@@ -32,15 +32,15 @@ StructuredMessage
 
 The `MessageType` class defines standard message types:
 
-| Type | Description |
-|------|-------------|
-| `QUERY` | Initial user query or question |
-| `TASK` | Task assignment from one agent to another |
-| `RESPONSE` | Response to a query or task |
-| `RESULT` | Final or intermediate task result |
-| `ERROR` | Error notification |
-| `STATUS` | Status update or progress report |
-| `TOOL_REQUEST` | Request to use a tool |
+| Type            | Description                                |
+| --------------- | ------------------------------------------ |
+| `QUERY`         | Initial user query or question             |
+| `TASK`          | Task assignment from one agent to another  |
+| `RESPONSE`      | Response to a query or task                |
+| `RESULT`        | Final or intermediate task result          |
+| `ERROR`         | Error notification                         |
+| `STATUS`        | Status update or progress report           |
+| `TOOL_REQUEST`  | Request to use a tool                      |
 | `TOOL_RESPONSE` | Response containing tool execution results |
 
 ## Working with Messages
@@ -220,7 +220,7 @@ Controller → [Task Message] → Worker → [Result Message] → Controller
 Agents can use tools to enhance their capabilities:
 
 ```
-User → [Query Message] → Agent → [Tool Request] → Tools 
+User → [Query Message] → Agent → [Tool Request] → Tools
                                  ↓
 User ← [Response with Tool Results] ← Agent ← [Tool Results]
 ```

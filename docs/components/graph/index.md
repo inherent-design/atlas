@@ -1,7 +1,3 @@
----
-title: Overview
----
-
 # Graph Framework Overview
 
 This document provides an overview of the LangGraph integration in Atlas, which powers the workflow orchestration and agent coordination.

@@ -1,8 +1,4 @@
----
-title: ChromaDB Usage Guide
----
-
-# Working with ChromaDB in Atlas
+# ChromaDB Usage Guide
 
 This guide provides practical instructions and patterns for using ChromaDB effectively within the Atlas framework. ChromaDB serves as the vector database powering Atlas' knowledge retrieval system, enabling semantic search and contextual relevance for agents.
 

@@ -1,4 +1,4 @@
-# Atlas Architecture Planning
+# Architecture Planning
 
 This document outlines the architectural planning for Atlas, including module organization, implementation strategies, and development principles.
 
@@ -80,7 +80,7 @@ Implementation details:
 ```python
 class StructuredMessage:
     """Structured message format for agent communication with tool capability."""
-    
+
     def __init__(self, content, metadata=None, task_id=None, tool_calls=None):
         self.content = content
         self.metadata = metadata or {}
@@ -89,7 +89,7 @@ class StructuredMessage:
         self.tool_calls = tool_calls or []
         self.source_agent = None
         self.target_agent = None
-    
+
     def to_dict(self):
         """Convert to dictionary for serialization."""
         return {
@@ -101,7 +101,7 @@ class StructuredMessage:
             "source_agent": self.source_agent,
             "target_agent": self.target_agent
         }
-        
+
     @classmethod
     def from_dict(cls, data):
         """Create message from dictionary."""
@@ -124,11 +124,11 @@ The tool system provides a standardized way to extend agent capabilities:
 ```python
 class AgentToolkit:
     """Registry for tools that agents can use."""
-    
+
     def __init__(self):
         self.tools = {}
         self.permissions = {}
-    
+
     def register_tool(self, name, function, description, schema):
         """Register a tool function with its schema."""
         self.tools[name] = {
@@ -136,34 +136,34 @@ class AgentToolkit:
             "description": description,
             "schema": schema
         }
-    
+
     def get_tool_descriptions(self, agent_id):
         """Get tool descriptions available to an agent."""
         return {
-            name: tool["description"] 
+            name: tool["description"]
             for name, tool in self.tools.items()
             if self.has_permission(agent_id, name)
         }
-        
+
     def execute_tool(self, agent_id, tool_name, arguments):
         """Execute a tool if agent has permission."""
         if not self.has_permission(agent_id, tool_name):
             raise PermissionError(f"Agent {agent_id} doesn't have permission to use {tool_name}")
-            
+
         if tool_name not in self.tools:
             raise ValueError(f"Tool {tool_name} not found in registry")
-            
+
         tool = self.tools[tool_name]
         return tool["function"](**arguments)
-        
+
     def has_permission(self, agent_id, tool_name):
         """Check if agent has permission to use tool."""
         if agent_id not in self.permissions:
             return False
-            
+
         if "*" in self.permissions[agent_id]:
             return True
-            
+
         return tool_name in self.permissions[agent_id]
 ```
 
@@ -174,21 +174,21 @@ Tool-capable agents extend the base worker agent with tool functionality:
 ```python
 class ToolCapableAgent(WorkerAgent):
     """Worker agent with tool execution capabilities."""
-    
+
     def __init__(self, name, model_provider, toolkit=None):
         super().__init__(name, model_provider)
         self.toolkit = toolkit or AgentToolkit()
         self.capabilities = []
-        
+
     def register_capability(self, capability):
         """Register a capability this agent provides."""
         self.capabilities.append(capability)
-        
+
     def handle_message(self, message):
         """Process incoming message and execute any tool calls."""
         # Handle basic message content
         response_content = self._process_content(message.content)
-        
+
         # Handle any tool calls in the message
         tool_results = []
         for tool_call in message.tool_calls:
@@ -201,7 +201,7 @@ class ToolCapableAgent(WorkerAgent):
                 "name": tool_call["name"],
                 "result": result
             })
-            
+
         # Create response message
         response = StructuredMessage(
             content=response_content,
@@ -211,7 +211,7 @@ class ToolCapableAgent(WorkerAgent):
         )
         response.source_agent = self.id
         response.target_agent = message.source_agent
-        
+
         return response
 ```
 

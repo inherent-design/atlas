@@ -1,7 +1,3 @@
----
-title: Overview
----
-
 # Knowledge System Overview
 
 This document provides a comprehensive overview of the knowledge management system in Atlas, which enables semantic storage and retrieval of information for agent interactions.

@@ -1,4 +1,4 @@
-# Atlas Open Source Strategy
+# Open-Source Strategy
 
 This document outlines the strategic approach for positioning Atlas as a professional open-source project under inherent.design, with a clear path to community adoption, contribution, and future monetization.
 
@@ -43,25 +43,25 @@ The documentation system will be expanded to include:
    - Quick start guide
    - Installation instructions
    - First application tutorial
-   
+
 2. **User Guides**
    - Core concepts
    - Component guides
    - Best practices
-   
+
 3. **API Reference**
    - Comprehensive API documentation
    - Examples for each component
-   
+
 4. **Tutorials**
    - Step-by-step implementation guides
    - Real-world use cases
-   
+
 5. **Contributor Guides**
    - Development setup
    - Contribution workflow
    - Architecture deep-dives
-   
+
 6. **Enterprise Documentation**
    - Security considerations
    - Deployment guides
@@ -175,18 +175,18 @@ Atlas will follow [Semantic Versioning](https://semver.org/):
 
 ### Open Source - Commercial Balance
 
-| Component | Open Source | Commercial |
-|-----------|-------------|------------|
-| Core Framework | ✓ | ✓ |
-| Base Providers | ✓ | ✓ |
-| Basic Knowledge Integration | ✓ | ✓ |
-| Multi-Agent Orchestration | ✓ | ✓ |
-| Advanced Security Controls | - | ✓ |
-| Enterprise Connectors | - | ✓ |
-| Advanced Monitoring | - | ✓ |
-| SLA Support | - | ✓ |
-| Compliance Tools | - | ✓ |
-| Cloud Management | - | ✓ |
+| Component                   | Open Source | Commercial |
+| --------------------------- | ----------- | ---------- |
+| Core Framework              | ✓           | ✓          |
+| Base Providers              | ✓           | ✓          |
+| Basic Knowledge Integration | ✓           | ✓          |
+| Multi-Agent Orchestration   | ✓           | ✓          |
+| Advanced Security Controls  | -           | ✓          |
+| Enterprise Connectors       | -           | ✓          |
+| Advanced Monitoring         | -           | ✓          |
+| SLA Support                 | -           | ✓          |
+| Compliance Tools            | -           | ✓          |
+| Cloud Management            | -           | ✓          |
 
 ### Commercial Offerings
 

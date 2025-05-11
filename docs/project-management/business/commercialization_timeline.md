@@ -1,4 +1,4 @@
-# Atlas Commercialization Timeline
+# Commercialization Timeline
 
 This document outlines the commercialization strategy and timeline for Atlas following the accelerated development phase concluding on June 30, 2025. It details the go-to-market approach, revenue model implementation, and strategic partnerships required to transform Atlas from an open-source project to a sustainable commercial offering.
 
@@ -280,68 +280,68 @@ The accelerated development timeline will deliver a feature-complete Atlas frame
 
 ### 2025 Revenue Forecast (Post-Launch)
 
-| Revenue Stream | Q3 2025 | Q4 2025 | Total 2025 |
-|----------------|---------|---------|------------|
-| Enterprise Licenses | $75K | $225K | $300K |
-| Cloud Services | $0 | $50K | $50K |
-| Professional Services | $50K | $150K | $200K |
-| **Total Revenue** | **$125K** | **$425K** | **$550K** |
+| Revenue Stream        | Q3 2025   | Q4 2025   | Total 2025 |
+| --------------------- | --------- | --------- | ---------- |
+| Enterprise Licenses   | $75K      | $225K     | $300K      |
+| Cloud Services        | $0        | $50K      | $50K       |
+| Professional Services | $50K      | $150K     | $200K      |
+| **Total Revenue**     | **$125K** | **$425K** | **$550K**  |
 
 ### 2026 Revenue Forecast
 
-| Revenue Stream | Q1 2026 | Q2 2026 | Q3 2026 | Q4 2026 | Total 2026 |
-|----------------|---------|---------|---------|---------|------------|
-| Enterprise Licenses | $300K | $375K | $500K | $625K | $1.8M |
-| Cloud Services | $100K | $150K | $225K | $275K | $750K |
-| Professional Services | $200K | $250K | $300K | $350K | $1.1M |
-| **Total Revenue** | **$600K** | **$775K** | **$1.025M** | **$1.25M** | **$3.65M** |
+| Revenue Stream        | Q1 2026   | Q2 2026   | Q3 2026     | Q4 2026    | Total 2026 |
+| --------------------- | --------- | --------- | ----------- | ---------- | ---------- |
+| Enterprise Licenses   | $300K     | $375K     | $500K       | $625K      | $1.8M      |
+| Cloud Services        | $100K     | $150K     | $225K       | $275K      | $750K      |
+| Professional Services | $200K     | $250K     | $300K       | $350K      | $1.1M      |
+| **Total Revenue**     | **$600K** | **$775K** | **$1.025M** | **$1.25M** | **$3.65M** |
 
 ### Key Financial Metrics Targets
 
-| Metric | Q4 2025 | Q2 2026 | Q4 2026 |
-|--------|---------|---------|---------|
-| Monthly Recurring Revenue (MRR) | $125K | $250K | $400K |
-| Average Contract Value (ACV) | $35K | $40K | $50K |
-| Customer Acquisition Cost (CAC) | $45K | $40K | $35K |
-| CAC Payback Period | 15 months | 12 months | 9 months |
-| Gross Margin | 70% | 72% | 75% |
-| Net Revenue Retention | 110% | 115% | 120% |
+| Metric                          | Q4 2025   | Q2 2026   | Q4 2026  |
+| ------------------------------- | --------- | --------- | -------- |
+| Monthly Recurring Revenue (MRR) | $125K     | $250K     | $400K    |
+| Average Contract Value (ACV)    | $35K      | $40K      | $50K     |
+| Customer Acquisition Cost (CAC) | $45K      | $40K      | $35K     |
+| CAC Payback Period              | 15 months | 12 months | 9 months |
+| Gross Margin                    | 70%       | 72%       | 75%      |
+| Net Revenue Retention           | 110%      | 115%      | 120%     |
 
 ## Resource Requirements
 
 ### Headcount Plan
 
-| Department | July 2025 | Sep 2025 | Dec 2025 |
-|------------|-----------|----------|----------|
-| Engineering | 5 | 7 | 10 |
-| Sales & Marketing | 2 | 4 | 6 |
-| Customer Success | 1 | 2 | 4 |
-| Professional Services | 2 | 3 | 5 |
-| G&A | 1 | 2 | 3 |
-| **Total** | **11** | **18** | **28** |
+| Department            | July 2025 | Sep 2025 | Dec 2025 |
+| --------------------- | --------- | -------- | -------- |
+| Engineering           | 5         | 7        | 10       |
+| Sales & Marketing     | 2         | 4        | 6        |
+| Customer Success      | 1         | 2        | 4        |
+| Professional Services | 2         | 3        | 5        |
+| G&A                   | 1         | 2        | 3        |
+| **Total**             | **11**    | **18**   | **28**   |
 
 ### Budget Allocation (H2 2025)
 
-| Department | Q3 2025 | Q4 2025 | Total H2 2025 |
-|------------|---------|---------|---------------|
-| Engineering | $350K | $500K | $850K |
-| Sales & Marketing | $200K | $300K | $500K |
-| Customer Success | $75K | $150K | $225K |
-| Professional Services | $125K | $200K | $325K |
-| G&A | $100K | $150K | $250K |
-| **Total** | **$850K** | **$1.3M** | **$2.15M** |
+| Department            | Q3 2025   | Q4 2025   | Total H2 2025 |
+| --------------------- | --------- | --------- | ------------- |
+| Engineering           | $350K     | $500K     | $850K         |
+| Sales & Marketing     | $200K     | $300K     | $500K         |
+| Customer Success      | $75K      | $150K     | $225K         |
+| Professional Services | $125K     | $200K     | $325K         |
+| G&A                   | $100K     | $150K     | $250K         |
+| **Total**             | **$850K** | **$1.3M** | **$2.15M**    |
 
 ## Risk Assessment and Mitigation
 
 ### Commercial Risks
 
-| Risk | Probability | Impact | Mitigation Strategy |
-|------|-------------|--------|---------------------|
-| Slow enterprise adoption | Medium | High | Develop proof-of-concept program; focus on reference customers |
-| Community vs. commercial tensions | High | Medium | Clear communication about model; maintain robust open-source core |
-| Pricing resistance | Medium | High | Value-based pricing with clear ROI; offer flexible entry points |
-| Competitive pressure | High | Medium | Focus on differentiation; accelerate partner integrations |
-| Cloud service operational challenges | Medium | High | Robust testing; gradual scaling; operational excellence focus |
+| Risk                                 | Probability | Impact | Mitigation Strategy                                               |
+| ------------------------------------ | ----------- | ------ | ----------------------------------------------------------------- |
+| Slow enterprise adoption             | Medium      | High   | Develop proof-of-concept program; focus on reference customers    |
+| Community vs. commercial tensions    | High        | Medium | Clear communication about model; maintain robust open-source core |
+| Pricing resistance                   | Medium      | High   | Value-based pricing with clear ROI; offer flexible entry points   |
+| Competitive pressure                 | High        | Medium | Focus on differentiation; accelerate partner integrations         |
+| Cloud service operational challenges | Medium      | High   | Robust testing; gradual scaling; operational excellence focus     |
 
 ### Mitigation Actions Timeline
 

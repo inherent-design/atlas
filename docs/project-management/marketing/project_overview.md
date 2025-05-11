@@ -1,4 +1,4 @@
-# Atlas Project Overview
+# Project Overview
 
 ## Tagline
 

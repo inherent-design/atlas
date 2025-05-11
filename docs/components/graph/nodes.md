@@ -1,4 +1,4 @@
-# Graph Nodes
+# Nodes
 
 This document explains the graph node functions in Atlas, which form the building blocks of LangGraph workflows.
 

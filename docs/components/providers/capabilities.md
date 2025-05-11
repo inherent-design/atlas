@@ -1,7 +1,3 @@
----
-title: Capability System
----
-
 # Capability System
 
 The Capability System is a core component of the Atlas provider architecture that enables intelligent, task-aware model selection. It defines a structured approach to categorizing model abilities and mapping task requirements to specific capabilities.
@@ -163,12 +159,12 @@ def get_capabilities_for_task(task_type: str) -> Dict[str, CapabilityStrength]:
 ```python
 def detect_task_type_from_prompt(prompt: str) -> str:
     """Attempt to detect the task type from a prompt.
-    
+
     This is a simple heuristic-based approach. In production, this could
     be replaced with a more sophisticated ML-based classifier.
     """
     prompt_lower = prompt.lower()
-    
+
     # Simple keyword-based heuristics
     if any(kw in prompt_lower for kw in ["code", "function", "program", "algorithm", "implement"]):
         return "code_generation"

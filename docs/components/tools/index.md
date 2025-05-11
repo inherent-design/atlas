@@ -1,4 +1,4 @@
-# Atlas Tool System
+# Tool System Overview
 
 The Atlas tool system enables agents to extend their capabilities beyond basic language processing by interacting with external systems and performing specialized tasks. This section covers the tool system architecture, available tools, and how to create and use custom tools.
 
@@ -59,7 +59,7 @@ Tools can be used in several ways:
    # Create a message with tool calls
    message = StructuredMessage(content="Process this query")
    message.add_tool_call("tool_name", {"param1": "value1"})
-   
+
    # Process message
    response = agent.process_structured_message(message)
    ```
@@ -75,7 +75,7 @@ You can create custom tools in two ways:
        """Calculate the distance between two coordinates."""
        # Implementation...
        return distance
-   
+
    # Register it
    toolkit.register_tool(calculate_distance)
    ```
@@ -86,10 +86,10 @@ You can create custom tools in two ways:
        @property
        def schema(self) -> ToolSchema:
            # Define schema...
-       
+
        def execute(self, location: str, units: str = "celsius") -> Dict[str, Any]:
            # Implementation...
-   
+
    # Register it
    toolkit.register_tool(WeatherTool())
    ```

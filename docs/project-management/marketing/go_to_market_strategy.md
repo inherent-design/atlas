@@ -1,4 +1,4 @@
-# Atlas Go-to-Market Strategy
+# Go-to-Market Strategy
 
 This document outlines the comprehensive go-to-market strategy for Atlas following its accelerated development phase concluding on June 30, 2025. It details how we will position, promote, and sell Atlas to achieve market penetration and build sustainable commercial success.
 
@@ -539,65 +539,65 @@ To accelerate adoption in key industries, we'll develop vertical solution packag
 
 ### Marketing Budget (H2 2025)
 
-| Category | Q3 2025 | Q4 2025 | Total H2 2025 |
-|----------|---------|---------|---------------|
-| Content Creation | $60K | $80K | $140K |
-| Digital Marketing | $40K | $60K | $100K |
-| Events and Sponsorships | $50K | $70K | $120K |
-| Partner Marketing | $30K | $50K | $80K |
-| PR and Analyst Relations | $20K | $30K | $50K |
-| **Total** | **$200K** | **$290K** | **$490K** |
+| Category                 | Q3 2025   | Q4 2025   | Total H2 2025 |
+| ------------------------ | --------- | --------- | ------------- |
+| Content Creation         | $60K      | $80K      | $140K         |
+| Digital Marketing        | $40K      | $60K      | $100K         |
+| Events and Sponsorships  | $50K      | $70K      | $120K         |
+| Partner Marketing        | $30K      | $50K      | $80K          |
+| PR and Analyst Relations | $20K      | $30K      | $50K          |
+| **Total**                | **$200K** | **$290K** | **$490K**     |
 
 ### Sales Resources (H2 2025)
 
-| Role | Q3 2025 | Q4 2025 |
-|------|---------|---------|
-| Enterprise Account Executives | 2 | 4 |
-| Solutions Engineers | 1 | 2 |
-| Customer Success Managers | 1 | 2 |
-| Partner Account Managers | 1 | 1 |
-| Sales Operations | 1 | 1 |
+| Role                          | Q3 2025 | Q4 2025 |
+| ----------------------------- | ------- | ------- |
+| Enterprise Account Executives | 2       | 4       |
+| Solutions Engineers           | 1       | 2       |
+| Customer Success Managers     | 1       | 2       |
+| Partner Account Managers      | 1       | 1       |
+| Sales Operations              | 1       | 1       |
 
 ## Success Metrics and KPIs
 
 ### Open Source Metrics
 
-| Metric | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
-|--------|----------------|----------------|-----------------|
-| GitHub Stars | 2,000 | 5,000 | 5,000+ |
-| Active Contributors | 20 | 50 | 50+ |
-| Documentation Site Traffic | 20K/month | 50K/month | 50K+/month |
-| Community Members | 1,000 | 2,500 | 2,500+ |
+| Metric                     | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
+| -------------------------- | -------------- | -------------- | --------------- |
+| GitHub Stars               | 2,000          | 5,000          | 5,000+          |
+| Active Contributors        | 20             | 50             | 50+             |
+| Documentation Site Traffic | 20K/month      | 50K/month      | 50K+/month      |
+| Community Members          | 1,000          | 2,500          | 2,500+          |
 
 ### Commercial Metrics
 
-| Metric | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
-|--------|----------------|----------------|-----------------|
-| Enterprise Customers | 3 | 10 | 10+ |
-| Cloud Service Customers | 0 | 25 | 25+ |
-| Annual Recurring Revenue | $150K | $500K | $500K+ |
-| Average Contract Value | $40K | $50K | $50K |
-| Customer Acquisition Cost | $50K | $45K | $45K |
+| Metric                    | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
+| ------------------------- | -------------- | -------------- | --------------- |
+| Enterprise Customers      | 3              | 10             | 10+             |
+| Cloud Service Customers   | 0              | 25             | 25+             |
+| Annual Recurring Revenue  | $150K          | $500K          | $500K+          |
+| Average Contract Value    | $40K           | $50K           | $50K            |
+| Customer Acquisition Cost | $50K           | $45K           | $45K            |
 
 ### Marketing Performance Metrics
 
-| Metric | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
-|--------|----------------|----------------|-----------------|
-| Website Visitors | 30K/month | 60K/month | 60K+/month |
-| Marketing Qualified Leads | 100 | 250 | 350+ |
-| Sales Qualified Leads | 25 | 50 | 75+ |
-| Marketing Influenced Pipeline | $500K | $1.5M | $2M+ |
-| Marketing ROI | 2:1 | 3:1 | 3:1 |
+| Metric                        | Q3 2025 Target | Q4 2025 Target | EOY 2025 Target |
+| ----------------------------- | -------------- | -------------- | --------------- |
+| Website Visitors              | 30K/month      | 60K/month      | 60K+/month      |
+| Marketing Qualified Leads     | 100            | 250            | 350+            |
+| Sales Qualified Leads         | 25             | 50             | 75+             |
+| Marketing Influenced Pipeline | $500K          | $1.5M          | $2M+            |
+| Marketing ROI                 | 2:1            | 3:1            | 3:1             |
 
 ## Go-to-Market Risks and Mitigation
 
-| Risk | Probability | Impact | Mitigation Strategy |
-|------|-------------|--------|---------------------|
-| Slow enterprise adoption | Medium | High | Focus on reference customers; develop proof-of-concept program |
-| Community vs. commercial tensions | High | Medium | Clear communication about model; maintain robust open-source core |
-| Competitive pressure | High | Medium | Accelerate differentiating features; emphasize unique capabilities |
-| Vertical solution readiness | Medium | High | Prioritize one vertical initially; establish clear requirements |
-| Sales cycle longer than expected | Medium | High | Develop shorter-term wins; create land-and-expand strategy |
+| Risk                              | Probability | Impact | Mitigation Strategy                                                |
+| --------------------------------- | ----------- | ------ | ------------------------------------------------------------------ |
+| Slow enterprise adoption          | Medium      | High   | Focus on reference customers; develop proof-of-concept program     |
+| Community vs. commercial tensions | High        | Medium | Clear communication about model; maintain robust open-source core  |
+| Competitive pressure              | High        | Medium | Accelerate differentiating features; emphasize unique capabilities |
+| Vertical solution readiness       | Medium      | High   | Prioritize one vertical initially; establish clear requirements    |
+| Sales cycle longer than expected  | Medium      | High   | Develop shorter-term wins; create land-and-expand strategy         |
 
 ## Conclusion
 

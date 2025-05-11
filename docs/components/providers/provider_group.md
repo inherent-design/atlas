@@ -1,7 +1,3 @@
----
-title: Provider Group
----
-
 # Provider Group
 
 The ProviderGroup is a component of the Atlas provider system that enables aggregation and fallback between multiple providers. It implements the standard BaseProvider interface while wrapping multiple provider instances, allowing for advanced selection strategies and improving system resilience.
@@ -20,7 +16,7 @@ classDiagram
         +generate_stream(request)
         +validate_api_key()
     }
-    
+
     class ProviderGroup {
         -providers: List[BaseProvider]
         -selection_strategy: Callable
@@ -33,19 +29,19 @@ classDiagram
         +validate_api_key()
         -_reset_health_status()
     }
-    
+
     class ProviderSelectionStrategy {
         <<static>>
         +failover(providers, context)
         +round_robin(providers, context)
         +cost_optimized(providers, context)
     }
-    
+
     class TaskAwareSelectionStrategy {
         <<static>>
         +select(providers, context)
     }
-    
+
     BaseProvider <|.. ProviderGroup
     ProviderGroup --> BaseProvider : contains
     ProviderGroup --> ProviderSelectionStrategy : uses
@@ -61,7 +57,7 @@ The ProviderGroup class implements the BaseProvider interface while managing mul
 ```python
 class ProviderGroup(BaseProvider):
     """A provider that encapsulates multiple providers with fallback capabilities."""
-    
+
     def __init__(
         self,
         providers: List[BaseProvider],
@@ -69,7 +65,7 @@ class ProviderGroup(BaseProvider):
         name: str = "provider_group",
     ):
         """Initialize a provider group with a list of providers.
-        
+
         Args:
             providers: A list of provider instances to use
             selection_strategy: A function that determines the order to try providers
@@ -77,7 +73,7 @@ class ProviderGroup(BaseProvider):
         """
         if not providers:
             raise ValueError("ProviderGroup requires at least one provider")
-            
+
         self.providers = providers
         self.selection_strategy = selection_strategy
         self._name = name
@@ -94,14 +90,14 @@ The ProviderGroup uses a strategy pattern to determine the order in which to try
 ```python
 class ProviderSelectionStrategy:
     """Strategy for selecting providers from a group."""
-    
+
     @staticmethod
     def failover(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
         """Returns providers in order, for failover purposes."""
         # Simple implementation - just return providers in the original order
         # This is ideal for reliability as it tries the most reliable provider first
         return providers
-        
+
     @staticmethod
     def round_robin(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
         """Rotates through providers in sequence."""
@@ -110,17 +106,17 @@ class ProviderSelectionStrategy:
             last_index = 0
         else:
             last_index = context.get("last_index", 0)
-            
+
         # Rotate and update for next call
         rotated = providers[last_index:] + providers[:last_index]
-        
+
         # Update context for next call (if mutable)
         if context is not None:
             next_index = (last_index + 1) % len(providers)
             context["last_index"] = next_index
-            
+
         return rotated
-        
+
     @staticmethod
     def cost_optimized(providers: List[BaseProvider], context: Dict[str, Any] = None) -> List[BaseProvider]:
         """Sorts providers by estimated cost."""
@@ -134,7 +130,7 @@ class ProviderSelectionStrategy:
                 "anthropic": 3, # Higher cost
             }
             return cost_ranks.get(provider.name.lower(), 99)
-            
+
         # Sort by cost rank (lowest first)
         return sorted(providers, key=get_cost_rank)
 ```
@@ -144,61 +140,61 @@ class ProviderSelectionStrategy:
 ```python
 class TaskAwareSelectionStrategy:
     """Selects models based on task requirements and capability strengths."""
-    
+
     @staticmethod
     def select(providers, context=None):
         """Select providers optimized for specific task types.
-        
+
         Args:
             providers: List of provider instances
             context: Dictionary containing at least 'task_type' or 'prompt'
-        
+
         Returns:
             Ordered list of providers
         """
         if not providers:
             return []
-            
+
         if not context:
             # Fallback to default ordering if no context
             return providers
-            
+
         # Get task type from context
         task_type = context.get("task_type")
         if not task_type and "prompt" in context:
             # Try to detect task type from prompt
             task_type = detect_task_type_from_prompt(context["prompt"])
-        
+
         if not task_type:
             # No task type available, use default ordering
             return providers
-            
+
         # Get required capabilities for this task
         required_capabilities = get_capabilities_for_task(task_type)
-        
+
         if not required_capabilities:
             # No specific requirements, use default ordering
             return providers
-            
+
         # Score each provider based on capability match
         scored_providers = []
         for provider in providers:
             # Calculate average capability match score
             total_score = 0
             matches = 0
-            
+
             for capability, min_strength in required_capabilities.items():
                 provider_strength = provider.get_capability_strength(capability)
                 if provider_strength >= min_strength:
                     # Provider meets minimum requirement
                     total_score += provider_strength / min_strength  # Relative score
                     matches += 1
-            
+
             # Only include providers with some capability match
             if matches > 0:
                 avg_score = total_score / len(required_capabilities)
                 scored_providers.append((provider, avg_score))
-                
+
         # Sort by score (highest first)
         return [p for p, s in sorted(scored_providers, key=lambda x: x[1], reverse=True)] or providers
 ```
@@ -216,10 +212,10 @@ def generate(self, request):
         [p for p in self.providers if self._health_status[p]],
         context=self._context
     )
-    
+
     if not ordered_providers:
         raise Exception("No healthy providers available")
-    
+
     last_error = None
     for provider in ordered_providers:
         try:
@@ -232,7 +228,7 @@ def generate(self, request):
             self._health_status[provider] = False
             # Continue to next provider
             continue
-            
+
     # If we get here, all providers failed
     raise Exception(f"All providers failed to generate. Last error: {last_error}")
 ```
@@ -248,10 +244,10 @@ def generate_stream(self, request):
         [p for p in self.providers if self._health_status[p]],
         context=self._context
     )
-    
+
     if not ordered_providers:
         raise Exception("No healthy providers available")
-    
+
     last_error = None
     for provider in ordered_providers:
         try:
@@ -264,7 +260,7 @@ def generate_stream(self, request):
             self._health_status[provider] = False
             # Continue to next provider
             continue
-            
+
     # If we get here, all providers failed
     raise Exception(f"All providers failed to stream. Last error: {last_error}")
 ```
@@ -276,7 +272,7 @@ The ProviderGroup tracks the health status of each provider and can reset it to 
 ```python
 def _reset_health_status(self):
     """Reset health status for all providers.
-    
+
     This is useful to periodically try providers that previously failed.
     """
     self._health_status = {provider: True for provider in self.providers}
@@ -294,23 +290,23 @@ def create_provider_group(
     options: Optional[ProviderOptions] = None,
 ) -> ProviderGroup:
     """Create a provider group with multiple providers.
-    
+
     Args:
         providers: List of provider names to include
         models: List of specific models to include (providers will be auto-detected)
         strategy: Selection strategy ('failover', 'round_robin', 'cost_optimized')
         options: Common provider options to apply
-        
+
     Returns:
         A ProviderGroup instance
     """
     provider_instances = []
-    
+
     # Add providers by name
     if providers:
         for provider_name in providers:
             provider_instances.append(create_provider(provider_name, options=options))
-    
+
     # Add providers by model
     if models:
         for model in models:
@@ -319,7 +315,7 @@ def create_provider_group(
                 model_options = options.copy() if options else ProviderOptions()
                 model_options.model_name = model
                 provider_instances.append(create_provider(provider_name, options=model_options))
-    
+
     # Select strategy
     strategy_func = {
         "failover": ProviderSelectionStrategy.failover,
@@ -327,7 +323,7 @@ def create_provider_group(
         "cost_optimized": ProviderSelectionStrategy.cost_optimized,
         "task_aware": TaskAwareSelectionStrategy.select,
     }.get(strategy, ProviderSelectionStrategy.failover)
-    
+
     # Create and return provider group
     return ProviderGroup(provider_instances, selection_strategy=strategy_func)
 ```
