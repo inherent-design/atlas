@@ -18,7 +18,7 @@ The timeline component creates visually appealing, sequential representations of
 ## When to Use Timelines
 
 ::: warning Limited Application
-Timelines should be used sparingly throughout the documentation (5-7 timelines maximum across all docs) as they add significant visual weight and computational overhead.
+Timelines should be used sparingly throughout the documentation as they add significant visual weight and computational overhead.
 :::
 
 ### Appropriate Use Cases
@@ -319,7 +319,7 @@ This creates a single timeline with seven version events, showing the API's evol
 Based on our documentation structure, these are the optimal places for timeline implementation:
 
 1. **docs/project-management/roadmap/product_roadmap.md**
-   - Replace the tabular "Accelerated Delivery Timeline" section 
+   - Replace the tabular "Accelerated Delivery Timeline" section
    - Focus on phase transitions and key deliverables
 
 2. **docs/project-management/planning/accelerated_implementation_plan.md**

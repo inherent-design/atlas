@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Registry of provider implementations
 _PROVIDER_REGISTRY: Dict[str, str] = {
-    "anthropic": "atlas.providers.anthropic.AnthropicProvider",
-    "openai": "atlas.providers.openai.OpenAIProvider",
-    "ollama": "atlas.providers.ollama.OllamaProvider",
-    "mock": "atlas.providers.mock.MockProvider",
+    "anthropic": "atlas.providers.implementations.anthropic.AnthropicProvider",
+    "openai": "atlas.providers.implementations.openai.OpenAIProvider",
+    "ollama": "atlas.providers.implementations.ollama.OllamaProvider",
+    "mock": "atlas.providers.implementations.mock.MockProvider",
 }
 
 # Provider model configuration - centralized model information

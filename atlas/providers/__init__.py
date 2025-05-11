@@ -7,8 +7,8 @@ API for the rest of the framework.
 """
 
 # Core interface classes
-from atlas.providers.base import (
-    ModelProvider,
+from atlas.providers.base import ModelProvider
+from atlas.providers.messages import (
     ModelRequest,
     ModelResponse,
     ModelMessage,
@@ -46,34 +46,43 @@ from atlas.providers.capabilities import (
     CAPABILITY_FORMATTING
 )
 
+# Streaming interfaces
+from atlas.providers.streaming.control import StreamControl, StreamState
+from atlas.providers.streaming.base import StreamHandler
+
+# Error classes
+from atlas.providers.errors import (
+    ProviderError,
+    ProviderAuthenticationError,
+    ProviderRateLimitError,
+    ProviderServerError,
+    ProviderTimeoutError,
+    ProviderQuotaExceededError,
+    ProviderValidationError,
+    ProviderNetworkError,
+    ProviderUnavailableError
+)
+
 # Provider implementations
-try:
-    from atlas.providers.anthropic import AnthropicProvider
+from atlas.providers.implementations import (
+    ANTHROPIC_AVAILABLE,
+    OPENAI_AVAILABLE,
+    OLLAMA_AVAILABLE,
+    MOCK_AVAILABLE
+)
 
-    ANTHROPIC_AVAILABLE = True
-except ImportError:
-    ANTHROPIC_AVAILABLE = False
+# Import provider classes when available
+if ANTHROPIC_AVAILABLE:
+    from atlas.providers.implementations.anthropic import AnthropicProvider
 
-try:
-    from atlas.providers.openai import OpenAIProvider
+if OPENAI_AVAILABLE:
+    from atlas.providers.implementations.openai import OpenAIProvider
 
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
+if OLLAMA_AVAILABLE:
+    from atlas.providers.implementations.ollama import OllamaProvider
 
-try:
-    from atlas.providers.ollama import OllamaProvider
-
-    OLLAMA_AVAILABLE = True
-except ImportError:
-    OLLAMA_AVAILABLE = False
-
-try:
-    from atlas.providers.mock import MockProvider
-
-    MOCK_AVAILABLE = True
-except ImportError:
-    MOCK_AVAILABLE = False
+# Mock is always available
+from atlas.providers.implementations.mock import MockProvider
 
 # Import logging for registry initialization
 import logging

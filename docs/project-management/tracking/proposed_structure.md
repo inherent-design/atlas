@@ -50,6 +50,14 @@ atlas/
 │   ├── prompts.py                   ✅  🔴  System prompt management
 │   ├── retry.py                     ✅  🔴  Retry mechanisms
 │   ├── telemetry.py                 ✅  🔴  Telemetry and metrics
+│   ├── services/                    🔲  🔴  Service architecture components
+│   │   ├── __init__.py              🔲  🔴  Module initialization
+│   │   ├── base.py                  🔲  🔴  Base service interfaces
+│   │   ├── buffer.py                🔲  🔴  Thread-safe buffer implementations
+│   │   ├── state.py                 🔲  🔴  State management utilities
+│   │   ├── commands.py              🔲  🔴  Command pattern implementation
+│   │   ├── concurrency.py           🔲  🔴  Thread safety utilities
+│   │   └── resources.py             🔲  🔴  Resource lifecycle management
 │   └── caching/                     🔲  🟠  Response caching system
 │       ├── __init__.py              🔲  🟠  Module initialization
 │       ├── cache.py                 🔲  🟠  Abstract cache interface
@@ -78,22 +86,31 @@ atlas/
 │   └── session.py                   🔲  🟠  Session management with resumption
 ├── providers/                       🚧  🔴  Model provider system
 │   ├── __init__.py                  ✅  🔴  Module initialization and exports
-│   ├── base.py                      🚧  🔴  Base provider with streaming interface (needs enhancement)
-│   ├── factory.py                   ✅  🔴  Provider factory and instantiation
+│   ├── base.py                      ✅  🔴  Core provider interface only
+│   ├── messages.py                  ✅  🔴  Message and request modeling
+│   ├── errors.py                    ✅  🔴  Provider-specific error classes
+│   ├── reliability.py               ✅  🔴  Retry and circuit breaker
+│   ├── streaming/                   ✅  🔴  Enhanced streaming infrastructure
+│   │   ├── __init__.py              ✅  🔴  Module initialization
+│   │   ├── base.py                  ✅  🔴  Base streaming interfaces
+│   │   ├── control.py               ✅  🔴  Stream control implementation
+│   │   └── buffer.py                ✅  🔴  Stream buffer management
+│   ├── implementations/             🚧  🔴  Provider implementations
+│   │   ├── __init__.py              ✅  🔴  Module initialization
+│   │   ├── anthropic.py             ✅  🔴  Anthropic provider
+│   │   ├── openai.py                🔲  🔴  OpenAI provider
+│   │   ├── ollama.py                🔲  🔴  Ollama provider
+│   │   └── mock.py                  ✅  🔴  Mock provider for testing
+│   ├── group.py                     ✅  🔴  Provider group implementation
+│   ├── registry.py                  ✅  🔴  Provider registry
+│   ├── factory.py                   ✅  🔴  Provider factory
+│   ├── resolver.py                  ✅  🔴  Provider auto-resolution
+│   ├── capabilities.py              ✅  🔴  Provider capabilities
 │   ├── options.py                   ✅  🔴  Provider options and configuration
-│   ├── capabilities.py              ✅  🔴  Provider capability framework
-│   ├── registry.py                  ✅  🔴  Provider registry with capability tracking
-│   ├── group.py                     ✅  🔴  ProviderGroup with selection strategies
-│   ├── resolver.py                  ✅  🔴  Provider resolution system
-│   ├── rate_limiting/               🔲  🟠  Rate limiting infrastructure
-│   │   ├── __init__.py              🔲  🟠  Module initialization
-│   │   ├── limits.py                🔲  🟠  Rate limit definitions
-│   │   ├── governor.py              🔲  🟠  Request throttling implementation
-│   │   └── backpressure.py          🔲  🟠  Backpressure mechanisms
-│   ├── anthropic.py                 ✅  🔴  Anthropic provider
-│   ├── openai.py                    ✅  🔴  OpenAI provider
-│   ├── ollama.py                    ✅  🔴  Ollama provider
-│   └── mock.py                      ✅  🔴  Mock provider for testing
+│   ├── anthropic.py                 🗑️  🔴  Legacy Anthropic provider (moved to implementations)
+│   ├── openai.py                    🗑️  🔴  Legacy OpenAI provider (to be moved)
+│   ├── ollama.py                    🗑️  🔴  Legacy Ollama provider (to be moved)
+│   └── mock.py                      🗑️  🔴  Legacy Mock provider (moved to implementations)
 ├── query.py                         ✅  🔴  Query client interface
 ├── reasoning/                       🔲  🟢  Structured reasoning frameworks
 │   ├── __init__.py                  🔲  🟢  Module initialization
@@ -167,14 +184,21 @@ docs/
 │   │   └── session.md               🔲  🟠  Session management
 │   ├── providers/                   ✅  🔴  Provider system documentation
 │   │   ├── index.md                 ✅  🔴  Provider system overview
-│   │   ├── anthropic.md             ✅  🔴  Anthropic provider
+│   │   ├── implementations/         🔲  🔴  Provider implementations documentation
+│   │   │   ├── anthropic.md         ✅  🔴  Anthropic provider
+│   │   │   ├── openai.md            ✅  🔴  OpenAI provider
+│   │   │   ├── ollama.md            ✅  🔴  Ollama provider
+│   │   │   └── mock.md              ✅  🔴  Mock provider
+│   │   ├── streaming/               🚧  🔴  Streaming documentation
+│   │   │   ├── index.md             🔲  🔴  Streaming overview
+│   │   │   ├── control.md           🔲  🔴  Stream control interface
+│   │   │   └── buffer.md            🔲  🔴  Stream buffering
 │   │   ├── capabilities.md          ✅  🔴  Provider capabilities
-│   │   ├── mock.md                  ✅  🔴  Mock provider
-│   │   ├── ollama.md                ✅  🔴  Ollama provider
-│   │   ├── openai.md                ✅  🔴  OpenAI provider
-│   │   ├── provider_group.md        ✅  🔴  Provider group
-│   │   ├── provider_selection.md    ✅  🔴  Provider selection
-│   │   ├── rate_limiting.md         🔲  🟠  Rate limiting system
+│   │   ├── group.md                 ✅  🔴  Provider group implementation
+│   │   ├── messages.md              ✅  🔴  Message and request modeling
+│   │   ├── errors.md                ✅  🔴  Error handling and categorization
+│   │   ├── reliability.md           ✅  🔴  Retry and circuit breaker patterns
+│   │   ├── selection.md             ✅  🔴  Provider selection strategies
 │   │   └── registry.md              ✅  🔴  Provider registry
 │   ├── reasoning/                   🔲  🟢  Reasoning framework documentation
 │   │   ├── index.md                 🔲  🟢  Reasoning system overview

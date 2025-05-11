@@ -16,14 +16,16 @@ from typing import List, Dict, Any, Callable, Optional, Union, Tuple, Set, Type
 from atlas.core.retry import RetryState, RetryPolicy, calculate_retry_delay
 from atlas.core.logging import get_logger
 from atlas.core.telemetry import traced
-from atlas.providers.base import (
-    ModelProvider,
+from atlas.providers.base import ModelProvider
+from atlas.providers.messages import (
     ModelRequest,
     ModelResponse,
     ModelMessage,
     TokenUsage,
-    CostEstimate,
-    StreamHandler,
+    CostEstimate
+)
+from atlas.providers.streaming.base import StreamHandler
+from atlas.providers.errors import (
     ProviderError,
     ProviderAuthenticationError,
     ProviderRateLimitError,

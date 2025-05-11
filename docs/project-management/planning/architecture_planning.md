@@ -66,7 +66,30 @@ atlas/
 
 ## Implementation Approach
 
-### 1. Multi-Agent System Architecture
+### 1. Unified Streaming Architecture
+
+The unified streaming architecture is a key architectural pattern that will be used throughout Atlas:
+
+- **Thread-Safe Buffer System**: Provides controlled flow with pause/resume/cancel capabilities
+- **Standardized State Management**: Consistent state transitions and event notifications
+- **Resource Lifecycle Management**: Proper initialization, operation, and cleanup patterns
+- **Control Interfaces**: Standardized interfaces for controlling components
+
+This architecture enables:
+
+- **Controlled Data Flow**: Fine-grained control over asynchronous data streams
+- **Backpressure Management**: Prevention of memory issues with fast producers and slow consumers
+- **Interruptible Processing**: Ability to pause, redirect, or cancel ongoing operations
+- **Progressive Results**: Streaming partial results as they become available
+
+The streaming architecture will be used for:
+
+- **Provider Communication**: Control over model generation streams
+- **Agent-to-Agent Communication**: Controlled flow between agents
+- **Knowledge Base Streaming**: Progressive loading of context
+- **Graph Node Communication**: Streaming data through workflow nodes
+
+### 2. Multi-Agent System Architecture
 
 The multi-agent system follows a controller-worker pattern where:
 
@@ -463,6 +486,80 @@ task_group.add_argument(
 ```
 
 This enhanced provider system architecture provides a comprehensive framework for provider management, capability-based selection, and resilient operations through provider groups with fallback capabilities.
+
+## Core Architecture Standardization
+
+### Unified Core Service Module
+
+To standardize architectural patterns across Atlas, we'll create a comprehensive `atlas.core.services` module structure:
+
+```
+atlas/core/services/
+  ├── __init__.py       # Module exports
+  ├── base.py           # Base service interfaces
+  ├── state.py          # State management patterns
+  ├── buffer.py         # Thread-safe buffer implementations
+  ├── commands.py       # Command pattern implementation
+  ├── concurrency.py    # Thread safety utilities
+  └── resources.py      # Resource lifecycle management
+```
+
+### Command Pattern Architecture
+
+The command pattern will provide complete observability into system operations:
+
+```python
+# Command pattern interface
+class Command[S, R]:
+    def execute(state: S) -> R      # Execute with state, return result
+    def can_execute(state: S) -> bool  # Check if executable in current state
+    def is_undoable() -> bool       # Whether command can be undone
+    def undo(state: S) -> None      # Undo the command if possible
+
+# Command processor for execution and tracking
+class CommandProcessor[S]:
+    def execute(command: Command) -> Any  # Execute and track command
+    def undo_last() -> Optional[Command]  # Undo last command
+    def get_history() -> List[Command]    # Get execution history
+```
+
+This will provide a foundation for all services in Atlas, not just providers. This standardization will ensure consistency across components and reduce duplicated patterns.
+
+### Thread Safety Standardization
+
+We'll standardize thread safety with a consistent approach across the codebase:
+
+1. A core `atlas.core.concurrency` module with standard patterns
+2. Consistent use of locks, events, and threading primitives
+3. Standardized thread naming and management
+4. Unified patterns for cancellation and interrupt handling
+
+### Interface-First Design
+
+The successful interface-driven approach used in the streaming system will be formalized:
+
+1. Clear interfaces in appropriate core modules
+2. Consistent use of abstract base classes
+3. Thorough documentation of interface contracts
+4. Base implementations for common requirements
+
+### Error System Extensions
+
+We'll extend our error system to support domain-specific errors in a standardized way:
+
+1. Create extension points in core.errors for domain-specific error types
+2. Define consistent error hierarchies across modules
+3. Standardize error handling with utilities like safe_execute
+4. Ensure consistent telemetry for error tracking
+
+### Streaming Architecture Applications
+
+The streaming architecture pattern will be extracted to core modules and applied across:
+
+1. **Agent-to-Agent Communication**: Controlled messaging between agents
+2. **Knowledge Base Integration**: Progressive document loading and retrieval
+3. **Graph Execution**: Streaming data through LangGraph nodes
+4. **Tool Integration**: Controlled streaming for long-running tool operations
 
 ## Development Principles
 

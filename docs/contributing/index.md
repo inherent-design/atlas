@@ -37,7 +37,6 @@ These guides provide detailed standards and best practices for specific aspects 
 3. **[Timelines](./timelines.md)**: Guidelines for creating timeline components
    - Chronological process visualization
    - Implementation syntax and examples
-   - Limited to 5-7 instances across documentation
 4. **[Code Examples](./code-examples.md)**: Standards for code samples and snippets
 5. **[Style Guide](./style-guide.md)**: Writing style, terminology, and voice guidelines
 

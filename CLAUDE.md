@@ -115,7 +115,7 @@ The complete implementation timeline is detailed in our [Accelerated Implementat
 - Use Mermaid diagrams for visualizing workflows and architecture but avoid inline styling.
 - Follow the [documentation standards](./docs/contributing/documentation-standards.md) and [style guide](./docs/contributing/style-guide.md).
 - Use [custom containers](./docs/contributing/content-containers.md) appropriately to highlight important information.
-- Create [timeline components](./docs/contributing/timelines.md) for critical chronological processes (limit to 5-7 across all documentation).
+- Create [timeline components](./docs/contributing/timelines.md) for critical chronological processes.
 
 ## Working with LangGraph
 
@@ -262,7 +262,7 @@ uv run python examples/streaming_example.py --provider openai
      - Use language-appropriate comment syntax with `[!code --]` or `[!code ++]` markers
      - Python: `# [!code --]`, JavaScript: `// [!code --]`, HTML: `<!-- [!code --] -->`
      - Use to highlight API changes, improvements, bug fixes, or subtle differences
-   - Create timeline components only for critical chronological processes (max 5-7 across all docs)
+   - Create timeline components only for critical chronological processes
      - Each `::: timeline` block represents one event in a complete timeline
      - Sequential timeline blocks automatically combine to form a single timeline
      - Use for development roadmaps, process workflows, and version histories
@@ -351,7 +351,7 @@ The following areas represent the most important development directions for adva
     - See docs/contributing/code-diffs.md for implementation details
   - Add timeline components for selected workflows and processes:
     - Follow the syntax with multiple `::: timeline` blocks for sequential events
-    - Implement in 5-7 key documents maximum (roadmaps, implementation plans, etc.)
+    - Implement in key documents (roadmaps, implementation plans, etc.)
     - See docs/contributing/timelines.md for correct implementation patterns
   - Ensure consistent style and formatting across all documentation
 
@@ -389,7 +389,7 @@ uv run python main.py query --provider openai --models
 # Run Atlas with document ingestion
 uv run python main.py ingest -d /path/to/docs/
 
-# Run example scripts 
+# Run example scripts
 uv run python examples/query_example.py
 uv run python examples/retrieval_example.py
 uv run python examples/streaming_example.py
