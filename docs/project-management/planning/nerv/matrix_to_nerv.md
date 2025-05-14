@@ -45,12 +45,6 @@ graph TD
     
     M_Theory -.-> N_Theory
     M_Patterns -.-> N_Patterns
-    
-    classDef matrix fill:#f9f,stroke:#333,stroke-width:1px
-    classDef nerv fill:#dfd,stroke:#333,stroke-width:1px
-    
-    class M_Theory,M_Patterns,M_Implementation,M_Boundaries matrix
-    class N_Theory,N_EmergentDesign,N_Patterns,N_Libraries,N_IntegrationZones nerv
 ```
 
 ### Principles Preserved

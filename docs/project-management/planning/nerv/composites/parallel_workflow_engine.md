@@ -113,9 +113,6 @@ graph TD
 
     StateView -->|12. State Updates| Client2[Client & Observers]
     EventBus -->|13. Task Events| Client2
-
-    classDef libraryNode fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    class QuantumPartitioner,EventBus,StateProjector,Container libraryNode;
 ```
 
 ## Workflow Description

@@ -53,16 +53,6 @@ graph TD
     EventBus ===== EventDriven[Event-Driven Architecture]
     QuantumPartitioner ===== ParallelWorkflow[Parallel Workflow Engine]
     TemporalStore ===== AdaptiveState[Adaptive State Management]
-
-    class EventDriven,ParallelWorkflow,AdaptiveState composite
-    classDef composite fill:#f96,stroke:#333,stroke-width:2px
-
-    style EventBus fill:#f9f
-    style TemporalStore fill:#9ff
-    style PerspectiveAware fill:#ff9
-    style StateProjector fill:#9f9
-    style EffectMonad fill:#f99
-    style QuantumPartitioner fill:#99f
 ```
 
 ## Composite System Benefits

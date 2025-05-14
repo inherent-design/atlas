@@ -276,20 +276,6 @@ graph TD
     CT --> QP
     CT --> AW
     CT --> DS
-
-    classDef blinker fill:#f9f,stroke:#333
-    classDef eventsourcing fill:#fdf,stroke:#333
-    classDef marshmallow fill:#dff,stroke:#333
-    classDef pyrsistent fill:#ffd,stroke:#333
-    classDef effect fill:#dfd,stroke:#333
-    classDef taskmap fill:#fdd,stroke:#333
-
-    class EB blinker
-    class TS eventsourcing
-    class PA marshmallow
-    class SP pyrsistent
-    class EM effect
-    class QP taskmap
 ```
 
 ## Performance Considerations

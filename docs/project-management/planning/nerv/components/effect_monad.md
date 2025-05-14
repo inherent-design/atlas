@@ -216,9 +216,6 @@ graph TD
     KS --> DB[Database Operations]
     AS --> Models[Model Calls]
     FS --> Files[File Operations]
-    
-    classDef core fill:#f9f,stroke:#333
-    class EM core
 ```
 
 ### Cross-Component Integration

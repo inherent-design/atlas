@@ -63,9 +63,6 @@ graph TD
 
     Perspectives -->|13. View-Specific State| Client
     Subscribers -->|14. React to Changes| OtherComponents[Other Components]
-
-    classDef libraryNode fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    class StateProjector,TemporalStore,PerspectiveAware,EventBus,DiffSynchronizer libraryNode;
 ```
 
 ## Workflow Description

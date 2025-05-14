@@ -70,9 +70,6 @@ graph TD
         EffectSystem
         QuantumPartitioning
     end
-
-    class ReactiveEventMesh,TemporalVersioning,StateProjection,PerspectiveShifting,EffectSystem,QuantumPartitioning pattern
-    classDef pattern fill:#f9f,stroke:#333,stroke-width:1px
 ```
 
 ## Key Benefits
@@ -129,20 +126,6 @@ graph TD
 
     EffectMonad --> QuantumPartitioner["QuantumPartitioner (TaskMap)"]
     StateProjector --> QuantumPartitioner
-
-    classDef blinker fill:#f9f,stroke:#333
-    classDef eventsourcing fill:#fdf,stroke:#333
-    classDef marshmallow fill:#dff,stroke:#333
-    classDef pyrsistent fill:#ffd,stroke:#333
-    classDef effect fill:#dfd,stroke:#333
-    classDef taskmap fill:#fdd,stroke:#333
-
-    class EventBus blinker
-    class TemporalStore eventsourcing
-    class PerspectiveAware marshmallow
-    class StateProjector pyrsistent
-    class EffectMonad effect
-    class QuantumPartitioner taskmap
 ```
 
 ## Learn More

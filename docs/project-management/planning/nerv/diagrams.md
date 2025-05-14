@@ -62,8 +62,6 @@ graph TD
     Effectful --> EffectSystem
     QuantumUnit --> ExecutionSystem
     Boundary --> BoundarySystem
-
-    class CoreTypes,Implementations,TypeVars,Aliases,Enums,DataClasses,Protocols,ErrorTypes headline
 ```
 
 ## Core Protocols and Implementations
@@ -359,8 +357,6 @@ flowchart TD
     StateProjector -.-> EventBus
     QuantumPartitioner -.-> EventBus
     PerspectiveAware -.-> StateProjector
-
-    class ReactiveEventMesh,TemporalVersioning,PerspectiveShifting,StateProjection,EffectSystem,QuantumPartitioning pattern
 ```
 
 ## Functional Systems
@@ -462,8 +458,6 @@ flowchart TD
     EventBus ===== EventDriven[Event-Driven Architecture]
     QuantumPartitioner ===== ParallelWorkflow[Parallel Workflow Engine]
     TemporalStore ===== AdaptiveState[Adaptive State Management]
-
-    class EventDriven,ParallelWorkflow,AdaptiveState composite
 ```
 
 ## Temporal Versioning + State Projection Integration
@@ -516,9 +510,6 @@ flowchart TD
     %% Versioned relationships
     InitialState --> VersionV1
     CurrentState --> VersionV2
-
-    class Delta1,Delta2,Delta3,Delta4 command
-    class VersionV1,VersionV2 milestone
 ```
 
 ## NERV Integration with Atlas Architecture
@@ -567,8 +558,6 @@ flowchart TD
 
     QuantumPartitioner <--> |"Parallel Execution"| AgentWorkers
     QuantumPartitioner <--> |"Optimized Provider Dispatch"| ProviderSystem
-
-    class EventBus,TemporalStore emphasis
 ```
 
 ## Document Publishing Workflow
@@ -722,6 +711,4 @@ flowchart LR
     ProviderManager <--> EffectHandler
     Orchestrator <--> QuantumPartitioner
     AgentController <--> QuantumPartitioner
-
-    class User,EventBus,KnowledgeEngine,Orchestrator,NervEventBus,TemporalStore emphasis
 ```
