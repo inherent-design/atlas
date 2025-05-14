@@ -50,7 +50,7 @@ export default defineConfig(
       vite: {
         build: {
           // Increase warning limit to prevent build errors while maintaining performance
-          chunkSizeWarningLimit: 1500,
+          chunkSizeWarningLimit: 3200,
         },
         // Optimize dependency pre-bundling
         optimizeDeps: {

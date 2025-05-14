@@ -18,6 +18,15 @@ dependencies = [
     "watchdog>=6.0.0",
     "structlog>=25.3.0",
     "rich>=14.0.0",
+    "blinker>=1.9.0",
+    "taskmap>=0.0.6",
+    "effect>=1.1.0",
+    "marshmallow>=4.0.0",
+    "diffsync>=2.1.0",
+    "eventsourcing>=9.4.4",
+    "aspectlib>=2.0.0",
+    "dependency-injector>=4.46.0",
+    "pyrsistent>=0.20.0",
 ]
 
 [project.scripts]

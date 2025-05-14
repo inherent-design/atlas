@@ -57,56 +57,56 @@ The Provider System enhancements are on the critical path for all subsequent dev
 :::
 
 ::: timeline Agent Interface Architecture
-- **Monday-Tuesday (May 18-19, 2025)**
+- **Wednesday-Thursday (May 19-20, 2025)**
 - Design capability-aware agent-provider interface protocol
 - Prototype streaming control propagation through agent layers
 - Develop capability matching algorithms with scoring system
 :::
 
 ::: timeline Agent Communication Enhancement
-- **Wednesday-Thursday (May 20-21, 2025)**
+- **Friday-Saturday (May 21-22, 2025)**
 - Implement bidirectional controller-worker messaging
 - Build adaptive provider selection with fallback chains
 - Create comprehensive agent-provider interaction test suite
 :::
 
 ::: timeline Feature Integration & Validation
-- **Friday-Saturday (May 22-23, 2025)**
+- **Sunday-Monday (May 23-24, 2025)**
 - Complete streaming controls in all agent implementations
 - Implement capability-based provider routing system
 - Develop demonstrative examples with realistic scenarios
 :::
 
 ::: timeline System Verification & Optimization
-- **Sunday (May 24, 2025)**
+- **Tuesday (May 25, 2025)**
 - Execute end-to-end agent-provider integration tests
 - Finalize developer documentation with integration patterns
 - Optimize performance bottlenecks with 30% latency reduction
 :::
 
 ::: timeline Knowledge Foundation
-- **Monday-Tuesday (May 25-26, 2025)**
+- **Wednesday-Thursday (May 26-27, 2025)**
 - Implement semantic boundary detection
 - Develop enhanced metadata extraction
 - Begin hybrid retrieval system implementation
 :::
 
 ::: timeline Retrieval Capabilities
-- **Wednesday-Thursday (May 27-28, 2025)**
+- **Friday-Saturday (May 28-29, 2025)**
 - Complete hybrid retrieval implementation
 - Develop result reranking capabilities
 - Implement knowledge caching system
 :::
 
 ::: timeline Document Processing
-- **Friday-Saturday (May 29-30, 2025)**
+- **Sunday-Monday (May 30-31, 2025)**
 - Implement document-type specific chunkers
 - Integrate knowledge system with provider enhancements
 - Create comprehensive retrieval examples
 :::
 
 ::: timeline Knowledge System Validation
-- **Sunday (May 31, 2025)**
+- **Tuesday (June 1, 2025)**
 - End-to-end testing of knowledge system
 - Performance optimization for large knowledge bases
 - Documentation and example finalization
@@ -114,7 +114,7 @@ The Provider System enhancements are on the critical path for all subsequent dev
 :::
 
 ::: timeline Agent Communication
-- **Monday-Tuesday (June 1-2, 2025)**
+- **Wednesday-Thursday (June 2-3, 2025)**
 - Implement structured message formats
 - Begin specialized worker agent development
 - Design coordination patterns for workflows
