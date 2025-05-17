@@ -63,15 +63,11 @@ The following guides provide information about Atlas's type system and schema va
    - Static typing with Protocol and TypedDict
    - Generic typing and type narrowing
    - Best practices for type safety
-2. **[Schema Validation](./schema_validation.md)**: How to use Marshmallow schema validation
+2. **[Schema Validation](./schema-validation.md)**: How to use Marshmallow schema validation
    - Basic schema usage and examples
    - Validation decorators and patterns
    - Migration notes for Marshmallow 4.0.0
-3. **[Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md)**: Detailed plan for migrating from TypedDict to schema validation
-   - Migration plan and priorities
-   - Implementation guidelines and circular import resolution
-   - Example implementations
-4. **[Type Mapping Guide](./type-mappings.md)**: Handling type conversions between systems
+3. **[Type Mapping Guide](./type-mappings.md)**: Handling type conversions between systems
    - Type conversion patterns and strategies
    - Serialization and deserialization techniques
    - System boundary handling

@@ -42,7 +42,7 @@ class MessageDict(TypedDict):
 class ProcessedMessageDict(TypedDict):
     content: str
     processed: bool
-    
+
 def process_message(message: MessageDict) -> ProcessedMessageDict:
     # Type-safe dictionary access and creation
     return {"content": message["content"], "processed": True}
@@ -89,7 +89,7 @@ Type variables enable generic programming for flexible, reusable code.
 class Container:
     def __init__(self, value: Any):
         self.value = value
-        
+
     def get(self) -> Any:
         return self.value
 ```
@@ -100,10 +100,10 @@ T = TypeVar('T')
 class Container(Generic[T]):
     def __init__(self, value: T):
         self.value = value
-        
+
     def get(self) -> T:
         return self.value
-        
+
 # Usage with explicit type
 string_container: Container[str] = Container("hello")
 value: str = string_container.get()  # Type-safe
@@ -184,7 +184,7 @@ Use proper collection types for consistent type checking.
 ```python [❌ Avoid]
 def get_models() -> list:
     return ["model1", "model2"]
-    
+
 def process_models(models):
     for model in models:
         print(model.upper())  # No type checking
@@ -193,7 +193,7 @@ def process_models(models):
 ```python [✅ Preferred]
 def get_models() -> List[str]:
     return ["model1", "model2"]
-    
+
 def process_models(models: List[str]) -> None:
     for model in models:
         print(model.upper())  # Type-safe
@@ -206,7 +206,7 @@ Use TypedDict for complex data structures with optional fields.
 
 ::: code-group
 ```python [❌ Avoid]
-def create_request(model: str, messages: List[Dict[str, Any]], 
+def create_request(model: str, messages: List[Dict[str, Any]],
                   temperature: float = 0.7) -> Dict[str, Any]:
     request = {"model": model, "messages": messages}
     if temperature != 0.7:
@@ -286,7 +286,7 @@ def _update_metrics(self, delta: str) -> None:
     with self._metrics_lock:
         if self._metrics["start_time"] is None:
             self._metrics["start_time"] = time.time()
-            
+
         # Unsafe operations on potentially None values
         self._metrics["chunks_processed"] += 1
 ```
@@ -298,16 +298,16 @@ def _update_metrics(self, delta: str) -> None:
         # Initialize metrics with default values if they're None
         if self._metrics["start_time"] is None:
             self._metrics["start_time"] = time.time()
-        
+
         if self._metrics["chunks_processed"] is None:
             self._metrics["chunks_processed"] = 0
-            
+
         # Get the current values
         chunks_processed = self._metrics["chunks_processed"]
-        
+
         # Perform operations on local variables
         chunks_processed += 1
-        
+
         # Store updated values back
         self._metrics["chunks_processed"] = chunks_processed
 ```
@@ -322,7 +322,7 @@ Use Protocol for interface definitions with better flexibility.
 # From streaming/control.py (mixed approach)
 class StreamControl(abc.ABC, StreamControlProtocol):
     """Interface for controlling a streaming response."""
-    
+
     @property
     @abc.abstractmethod
     def state(self) -> StreamState:
@@ -334,12 +334,12 @@ class StreamControl(abc.ABC, StreamControlProtocol):
 # Better approach with pure Protocol
 class StreamControlProtocol(Protocol):
     """Protocol for controlling streaming responses."""
-    
+
     @property
     def state(self) -> StreamState:
         """Get the current state of the stream."""
         ...
-    
+
     @property
     def can_pause(self) -> bool:
         """Whether this stream supports pausing."""
@@ -361,15 +361,15 @@ def call_provider(provider: Any, request: Dict[str, Any]) -> str:
 ```python [✅ Preferred]
 def call_provider(provider: ModelProvider, request: ModelRequestDict) -> str:
     response = provider.generate(request)
-    
+
     # Ensure content exists and is a string
     if not isinstance(response, dict) or "content" not in response:
         raise ValueError("Invalid response structure")
-        
+
     content = response["content"]
     if not isinstance(content, str):
         raise ValueError(f"Expected string content, got {type(content)}")
-        
+
     return content
 ```
 :::
@@ -391,9 +391,8 @@ def call_provider(provider: ModelProvider, request: ModelRequestDict) -> str:
 
 Atlas is migrating from static typing with TypedDict to runtime validation with Marshmallow schemas. For detailed information about schema validation and type mappings in Atlas, see these guides:
 
-1. [Schema Validation Guide](./schema_validation.md) - How to use schema validation with examples
-2. [Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md) - Detailed plan for migrating from TypedDict to schema validation
-3. [Type Mapping Guide](./type-mappings.md) - Handling type conversions between different systems
+1. [Schema Validation Guide](./schema-validation.md) - How to use schema validation with examples
+2. [Type Mapping Guide](./type-mappings.md) - Handling type conversions between different systems
 
 ### Key Benefits of Schema Validation
 
@@ -476,7 +475,7 @@ def get_status(status_str: str) -> Status:
         return Status(status_str)  # Try to convert string to enum
     except ValueError:
         return Status.UNKNOWN  # Default fallback
-        
+
 process(get_status(status))
 ```
 
@@ -486,7 +485,7 @@ process(get_status(status))
 # Error: List item 0 has incompatible type "str"; expected "int"
 def add_numbers(numbers: List[int]) -> int:
     return sum(numbers)
-    
+
 add_numbers(["1", "2", "3"])  # Type error
 ```
 
@@ -495,7 +494,7 @@ add_numbers(["1", "2", "3"])  # Type error
 ```python
 def add_numbers(numbers: List[int]) -> int:
     return sum(numbers)
-    
+
 string_values = ["1", "2", "3"]
 add_numbers([int(val) for val in string_values])  # Convert to proper type
 ```
@@ -528,7 +527,6 @@ uv tool run mypy --show-error-codes atlas/
 ## References
 
 ### Static Typing Resources
-- [Core Types Module](../atlas/core/types.py)
 - [Python Type Hints Documentation](https://docs.python.org/3/library/typing.html)
 - [mypy Documentation](https://mypy.readthedocs.io/en/stable/)
 - [TypedDict Documentation](https://mypy.readthedocs.io/en/stable/typed_dict.html)
@@ -536,11 +534,8 @@ uv tool run mypy --show-error-codes atlas/
 
 ### Schema Validation Resources
 - [Schema Validation Guide](./schema-validation.md)
-- [Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md)
 - [Type Mapping Guide](./type-mappings.md)
 - [Marshmallow Documentation](https://marshmallow.readthedocs.io/)
-- [Atlas Schema Example](../examples/16_schema_validation.py)
-- [Schema Architecture](../atlas/schemas/)
 
 ### System Integration Resources
 - [NERV-Inner Universe Type Mappings](../v2/inner-universe/type_mappings.md)

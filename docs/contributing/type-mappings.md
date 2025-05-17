@@ -145,7 +145,6 @@ class TypeRegistry:
 For detailed guidance on mapping between Atlas's Python types and other systems like NERV/Inner Universe, see:
 
 - [NERV-Inner Universe Type Mappings](../v2/inner-universe/type_mappings.md): Comprehensive mapping between Python types and Rust/SpacetimeDB types
-- [Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md): Migration strategies for evolving type systems
 
 ## Validation During Type Mapping
 
@@ -240,8 +239,7 @@ def convert_event_data(event):
 
 ## References
 
-- [Schema Validation Guide](./schema_validation.md)
+- [Schema Validation Guide](./schema-validation.md)
 - [Type System Guide](./types.md)
-- [Type System Migration](./typing-issues.md)
 - [NERV-Inner Universe Type Mappings](../v2/inner-universe/type_mappings.md)
 - [Marshmallow Documentation](https://marshmallow.readthedocs.io/)

@@ -24,7 +24,7 @@ from atlas.schemas.messages import text_content_schema
 
 # Validate text content
 content = {
-    "type": "text", 
+    "type": "text",
     "text": "This is a sample message"
 }
 validated_content = text_content_schema.load(content)
@@ -38,11 +38,11 @@ from marshmallow import fields
 
 class MyCustomSchema(AtlasSchema):
     """Schema for my custom data structure."""
-    
+
     id = fields.String(required=True)
     name = fields.String(required=True)
     value = fields.Integer(required=False, load_default=0)
-    
+
 my_schema = MyCustomSchema()
 ```
 
@@ -139,5 +139,4 @@ For a complete example of schema validation, see the `examples/16_schema_validat
 
 ## Migration from TypedDict
 
-Atlas is in the process of migrating from TypedDict-based type annotations to schema-based validation. 
-For details on this migration, see the [Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md).
+Atlas is in the process of migrating from TypedDict-based type annotations to schema-based validation.
