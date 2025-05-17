@@ -136,7 +136,7 @@ Atlas follows a standardized testing approach with formal tests located in the `
 The testing framework includes:
 
 1. **Unit Tests** (`atlas/tests/test_*.py`):
-   - Tests for specific modules (e.g., `test_models.py`, `test_env.py`)
+   - Tests for specific modules (e.g., `test_models.py`, `test_env.py`, `test_schema_message_validation.py`)
    - Uses Python's unittest framework 
    - Includes mocked components to avoid external dependencies
 
@@ -145,7 +145,12 @@ The testing framework includes:
    - Very fast execution with zero API costs
    - Suitable for continuous integration
 
-3. **Integration Tests** (`atlas/tests/test_api.py`):
+3. **Schema Validation Tests** (`atlas/tests/test_schema_*.py`):
+   - Validates schema-based validation for messages, requests, and responses
+   - Ensures proper serialization and deserialization of data structures
+   - Tests schema compatibility across components
+
+4. **Integration Tests** (`atlas/tests/test_api.py`):
    - Tests full system integration with real components
    - Makes real API calls (requires API key)
    - Provides cost tracking information

@@ -6,13 +6,13 @@ description = "Advanced Multi-Modal Learning & Guidance Framework"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "langgraph==0.4.2",
-    "chromadb>=1.0.8",
-    "anthropic>=0.50.0",
+    "langgraph==0.4.3",
+    "chromadb>=1.0.9",
+    "anthropic>=0.51.0",
     "pydantic>=2.11.4",
     "pathspec>=0.12.1",
     "python-dotenv>=1.1.0",
-    "openai>=1.77.0",
+    "openai>=1.78.1",
     "ollama>=0.4.8",
     "mypy-extensions>=1.1.0",
     "watchdog>=6.0.0",
@@ -23,10 +23,11 @@ dependencies = [
     "effect>=1.1.0",
     "marshmallow>=4.0.0",
     "diffsync>=2.1.0",
-    "eventsourcing>=9.4.4",
+    "eventsourcing>=9.4.5",
     "aspectlib>=2.0.0",
     "dependency-injector>=4.46.0",
     "pyrsistent>=0.20.0",
+    "textual>=3.2.0",
 ]
 
 [project.scripts]

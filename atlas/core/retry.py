@@ -44,12 +44,14 @@ class RetryState:
     """
     attempt: int = 0
     max_retries: int = 3
-    retry_policy: RetryPolicy = None
-    last_error: Exception = None
+    retry_policy: Optional[RetryPolicy] = None
+    last_error: Optional[Exception] = None
     
     def __post_init__(self):
         if self.retry_policy is None:
             self.retry_policy = RetryPolicy()
+        # Ensure self.retry_policy is not None after initialization
+        assert self.retry_policy is not None
 
 
 class RetryConfig:
@@ -174,7 +176,9 @@ def calculate_retry_delay(state: RetryState) -> float:
     Returns:
         Delay time in seconds
     """
+    # We know policy is not None because of the __post_init__ assert
     policy = state.retry_policy
+    assert policy is not None, "RetryPolicy should not be None after initialization"
     
     if not policy.enabled or state.attempt > state.max_retries:
         return 0
@@ -374,9 +378,10 @@ def with_circuit_breaker(
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             if not circuit_breaker.allow_request():
+                from atlas.core.errors import ErrorSeverity
                 raise APIError(
                     message="Circuit breaker open, request blocked",
-                    severity="WARNING",
+                    severity=ErrorSeverity.WARNING,
                     retry_possible=False,
                 )
             

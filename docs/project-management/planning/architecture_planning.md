@@ -1,3 +1,10 @@
+---
+
+title: Architecture Planning
+
+---
+
+
 # Architecture Planning
 
 This document outlines the architectural planning for Atlas, including module organization, implementation strategies, and development principles.

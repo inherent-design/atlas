@@ -9,14 +9,21 @@ import abc
 import enum
 import logging
 import threading
-from typing import Callable, Dict, Any, Optional
+from typing import Callable, Dict, Any, Optional, Protocol, Union, cast, List, TypeVar, Generic, Iterator, Tuple
 
-from atlas.providers.errors import ProviderStreamError
+from atlas.providers.errors import ProviderStreamError, ProviderConfigError
 from atlas.core.errors import ErrorSeverity
+from atlas.schemas.streaming import (
+    stream_state_schema,
+    stream_metrics_schema,
+    validate_streaming_config
+)
 
-# Import ModelResponse when moving implementation to its own file
-# for now, we'll use a forward reference
-# from atlas.providers.messages import ModelResponse
+# Import types
+from atlas.providers.messages import ModelResponse
+from atlas.core.types import (
+    ModelProvider, StreamControlProtocol, ModelResponseDict
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +39,7 @@ class StreamState(str, enum.Enum):
     ERROR = "error"                # Stream encountered an error
 
 
-class StreamControl(abc.ABC):
+class StreamControl(abc.ABC, StreamControlProtocol):
     """Interface for controlling a streaming response.
     
     This interface provides methods for controlling streaming response flow,
@@ -114,7 +121,7 @@ class StreamControl(abc.ABC):
         pass
     
     @abc.abstractmethod
-    def register_content_callback(self, callback: Callable[[str, "ModelResponse"], None]) -> None:
+    def register_content_callback(self, callback: Callable[[str, Any], None]) -> None:
         """
         Register a callback to be called when new content is available.
         
@@ -142,22 +149,93 @@ class StreamControlBase(StreamControl):
     capabilities with state management and callback registration.
     """
     
-    def __init__(self):
-        """Initialize the stream control base."""
+    @validate_streaming_config
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize the stream control base.
+        
+        Args:
+            config: Optional configuration dictionary that will be validated using schema.
+        """
+        from atlas.schemas.streaming import (
+            stream_state_schema, 
+            stream_metrics_schema, 
+            stream_control_schema
+        )
+        
         self._state_lock = threading.RLock()
+        
+        # Default initialization
         self._state = StreamState.INITIALIZING
         self._state_callbacks = []
         self._content_callbacks = []
-        self._metrics = {
+        self._metrics: Dict[str, Any] = {
             "start_time": None,
             "end_time": None,
             "tokens_processed": 0,
             "chars_processed": 0,
             "chunks_processed": 0,
-            "avg_token_per_sec": 0,
+            "avg_token_per_sec": 0.0,
             "total_tokens": 0,
         }
         self._metrics_lock = threading.Lock()
+        
+        # Convert to a config dict if None
+        if config is None:
+            config = {
+                "state": self._state.value,
+                "can_pause": False,
+                "can_resume": False,
+                "can_cancel": False,
+                "metrics": dict(self._metrics)
+            }
+        
+        # Validate the config if not already validated
+        if not getattr(config, "_validated", False):
+            try:
+                # Validate config using control schema
+                control_config = {
+                    "state": config.get("state", self._state.value),
+                    "can_pause": config.get("can_pause", False),
+                    "can_resume": config.get("can_resume", False),
+                    "can_cancel": config.get("can_cancel", False)
+                }
+                validated_control = stream_control_schema.load(control_config)
+                # Mark as validated
+                validated_control._validated = True
+                
+                # Update config with validated control values
+                config.update(validated_control)
+            except Exception as e:
+                logger.warning(f"Invalid control configuration: {e}")
+                # Continue with default values
+        
+        # Apply configuration if provided
+        if config is not None:
+            # Set initial state if specified
+            if "state" in config:
+                state_value = config["state"]
+                # If already a StreamState enum, use it directly
+                if isinstance(state_value, StreamState):
+                    self._state = state_value
+                else:
+                    # Validate and convert state
+                    try:
+                        # Use schema to convert and validate
+                        validated_state = stream_state_schema.load({"value": state_value})
+                        self._state = validated_state
+                    except Exception as e:
+                        # Default to initializing if invalid
+                        logger.warning(f"Invalid initial state: {state_value}, using default. Error: {e}")
+            
+            # Set initial metrics if specified
+            if "metrics" in config:
+                try:
+                    # Validate metrics using schema
+                    validated_metrics = stream_metrics_schema.load(config["metrics"])
+                    self._metrics.update(validated_metrics)
+                except Exception as e:
+                    logger.warning(f"Invalid metrics configuration: {e}")
+                    # Continue with default metrics
     
     @property
     def state(self) -> StreamState:
@@ -193,11 +271,59 @@ class StreamControlBase(StreamControl):
         Args:
             new_state: The new state.
         """
+        from atlas.schemas.streaming import stream_state_transition_schema, validate_stream_transition
+        
         with self._state_lock:
             if self._state == new_state:
                 return
             
             old_state = self._state
+            
+            # Determine trigger based on state transition
+            trigger = None
+            if old_state == StreamState.INITIALIZING and new_state == StreamState.ACTIVE:
+                trigger = "start"
+            elif old_state == StreamState.ACTIVE and new_state == StreamState.PAUSED:
+                trigger = "pause"
+            elif old_state == StreamState.PAUSED and new_state == StreamState.ACTIVE:
+                trigger = "resume"
+            elif old_state == StreamState.ACTIVE and new_state == StreamState.CANCELLED:
+                trigger = "cancel"
+            elif old_state == StreamState.PAUSED and new_state == StreamState.CANCELLED:
+                trigger = "cancel"
+            elif old_state == StreamState.ACTIVE and new_state == StreamState.COMPLETED:
+                trigger = "complete"
+            elif old_state == StreamState.ACTIVE and new_state == StreamState.ERROR:
+                trigger = "error"
+            elif old_state == StreamState.PAUSED and new_state == StreamState.ERROR:
+                trigger = "error"
+            elif old_state == StreamState.INITIALIZING and new_state == StreamState.ERROR:
+                trigger = "error"
+            elif (old_state in [StreamState.CANCELLED, StreamState.COMPLETED, StreamState.ERROR] and 
+                  new_state == StreamState.INITIALIZING):
+                trigger = "reset"
+            else:
+                # Log a warning for invalid transitions but allow them anyway for compatibility
+                logger.warning(f"Invalid state transition: {old_state} -> {new_state}")
+                trigger = "unknown"
+            
+            # Validate the transition if we found a trigger
+            if trigger and trigger != "unknown":
+                try:
+                    # Create transition data
+                    transition = {
+                        "from_state": old_state.value,
+                        "to_state": new_state.value,
+                        "trigger": trigger
+                    }
+                    
+                    # Validate transition
+                    stream_state_transition_schema.load(transition)
+                except Exception as e:
+                    logger.warning(f"Invalid state transition: {old_state} -> {new_state}. Error: {e}")
+                    # Continue with the transition anyway for compatibility
+            
+            # Update state
             self._state = new_state
         
         # Notify callbacks outside the lock to prevent deadlocks
@@ -226,7 +352,7 @@ class StreamControlBase(StreamControl):
         except Exception as e:
             logger.error(f"Error in initial state callback: {e}", exc_info=True)
     
-    def register_content_callback(self, callback: Callable[[str, "ModelResponse"], None]) -> None:
+    def register_content_callback(self, callback: Callable[[str, Any], None]) -> None:
         """
         Register a callback to be called when new content is available.
         
@@ -245,13 +371,34 @@ class StreamControlBase(StreamControl):
         Raises:
             ProviderStreamError: If the pause operation fails.
         """
+        from atlas.schemas.streaming import validate_pause_operation, stream_operation_result_schema
+        
         with self._state_lock:
+            current_state = self._state.value
+            
+            # Validate if the operation is allowed
+            if not validate_pause_operation(current_state):
+                logger.debug(f"Cannot pause stream in state {current_state}")
+                return False
+            
+            # Check implementation-specific capability
             if not self.can_pause:
+                logger.debug("Stream does not support pausing")
                 return False
             
             try:
                 # Provider-specific pause implementation
                 if self._pause_provider_stream():
+                    # Create operation result
+                    result = {
+                        "success": True,
+                        "state": StreamState.PAUSED.value
+                    }
+                    
+                    # Validate the result
+                    validated_result = stream_operation_result_schema.load(result)
+                    
+                    # Update state
                     self._set_state(StreamState.PAUSED)
                     return True
                 return False
@@ -275,13 +422,34 @@ class StreamControlBase(StreamControl):
         Raises:
             ProviderStreamError: If the resume operation fails.
         """
+        from atlas.schemas.streaming import validate_resume_operation, stream_operation_result_schema
+        
         with self._state_lock:
+            current_state = self._state.value
+            
+            # Validate if the operation is allowed
+            if not validate_resume_operation(current_state):
+                logger.debug(f"Cannot resume stream in state {current_state}")
+                return False
+            
+            # Check implementation-specific capability
             if not self.can_resume:
+                logger.debug("Stream does not support resuming")
                 return False
             
             try:
                 # Provider-specific resume implementation
                 if self._resume_provider_stream():
+                    # Create operation result
+                    result = {
+                        "success": True,
+                        "state": StreamState.ACTIVE.value
+                    }
+                    
+                    # Validate the result
+                    validated_result = stream_operation_result_schema.load(result)
+                    
+                    # Update state
                     self._set_state(StreamState.ACTIVE)
                     return True
                 return False
@@ -305,13 +473,34 @@ class StreamControlBase(StreamControl):
         Raises:
             ProviderStreamError: If the cancel operation fails.
         """
+        from atlas.schemas.streaming import validate_cancel_operation, stream_operation_result_schema
+        
         with self._state_lock:
+            current_state = self._state.value
+            
+            # Validate if the operation is allowed
+            if not validate_cancel_operation(current_state):
+                logger.debug(f"Cannot cancel stream in state {current_state}")
+                return False
+            
+            # Check implementation-specific capability
             if not self.can_cancel:
+                logger.debug("Stream does not support cancellation")
                 return False
             
             try:
                 # Provider-specific cancel implementation
                 if self._cancel_provider_stream():
+                    # Create operation result
+                    result = {
+                        "success": True,
+                        "state": StreamState.CANCELLED.value
+                    }
+                    
+                    # Validate the result
+                    validated_result = stream_operation_result_schema.load(result)
+                    
+                    # Update state
                     self._set_state(StreamState.CANCELLED)
                     return True
                 return False
@@ -365,7 +554,16 @@ class StreamControlBase(StreamControl):
         """
         with self._metrics_lock:
             # Make a copy to avoid thread safety issues
-            return dict(self._metrics)
+            metrics_copy = dict(self._metrics)
+            
+            try:
+                # Validate metrics using schema before returning
+                validated_metrics = stream_metrics_schema.validate_data(metrics_copy)
+                return validated_metrics
+            except Exception as e:
+                # Log warning but still return the metrics
+                logger.warning(f"Metrics validation failed: {e}")
+                return metrics_copy
     
     def _update_metrics(self, delta: str) -> None:
         """
@@ -377,19 +575,42 @@ class StreamControlBase(StreamControl):
         import time
         
         with self._metrics_lock:
-            # Initialize start time if not set
+            # Initialize metrics with default values if they're None
             if self._metrics["start_time"] is None:
                 self._metrics["start_time"] = time.time()
             
-            # Update metrics
-            self._metrics["chunks_processed"] += 1
-            self._metrics["chars_processed"] += len(delta)
+            if self._metrics["chunks_processed"] is None:
+                self._metrics["chunks_processed"] = 0
+                
+            if self._metrics["chars_processed"] is None:
+                self._metrics["chars_processed"] = 0
+                
+            if self._metrics["tokens_processed"] is None:
+                self._metrics["tokens_processed"] = 0
+            
+            # Get the current time for calculations
+            current_time = time.time()
+            
+            # Update metrics (with safe type handling)
+            chunks_processed = self._metrics["chunks_processed"]
+            chars_processed = self._metrics["chars_processed"]
+            tokens_processed = self._metrics["tokens_processed"]
+            
+            # Perform operations on the local variables
+            chunks_processed += 1
+            chars_processed += len(delta)
             
             # Estimate tokens (can be improved with actual tokenization)
             estimated_tokens = len(delta) / 4  # Rough estimate
-            self._metrics["tokens_processed"] += estimated_tokens
+            tokens_processed += estimated_tokens
             
-            # Calculate rate
-            elapsed = time.time() - self._metrics["start_time"]
+            # Store updated values back
+            self._metrics["chunks_processed"] = chunks_processed
+            self._metrics["chars_processed"] = chars_processed
+            self._metrics["tokens_processed"] = tokens_processed
+            
+            # Calculate rate safely
+            start_time = cast(float, self._metrics["start_time"])  # Cast to ensure type safety
+            elapsed = current_time - start_time
             if elapsed > 0:
-                self._metrics["avg_token_per_sec"] = self._metrics["tokens_processed"] / elapsed
+                self._metrics["avg_token_per_sec"] = tokens_processed / elapsed

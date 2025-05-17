@@ -43,9 +43,13 @@ from .mock import MockProvider
 if ANTHROPIC_AVAILABLE:
     from .anthropic import AnthropicProvider
 
-# Remaining providers to be migrated
-# from .openai import OpenAIProvider
-# from .ollama import OllamaProvider
+# Import OpenAIProvider if available
+if OPENAI_AVAILABLE:
+    from .openai import OpenAIProvider
+
+# Import OllamaProvider if available
+if OLLAMA_AVAILABLE:
+    from .ollama import OllamaProvider
 
 __all__ = [
     # Availability flags
@@ -61,3 +65,9 @@ __all__ = [
 # Add provider classes to __all__ if available
 if ANTHROPIC_AVAILABLE:
     __all__.append("AnthropicProvider")
+
+if OPENAI_AVAILABLE:
+    __all__.append("OpenAIProvider")
+    
+if OLLAMA_AVAILABLE:
+    __all__.append("OllamaProvider")

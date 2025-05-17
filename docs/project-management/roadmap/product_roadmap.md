@@ -1,3 +1,10 @@
+---
+
+title: Atlas Product
+
+---
+
+
 # Atlas Product Roadmap
 
 This document outlines the comprehensive roadmap for Atlas development, detailing our strategic vision, key milestones, and release plans. With a completion target of end of June 2025, this accelerated roadmap covers both MVP features and beyond.

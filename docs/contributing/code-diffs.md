@@ -1,3 +1,7 @@
+---
+title: Colored Diffs
+---
+
 # Colored Diffs in Code Blocks
 
 When documenting code changes, updates, or comparing different implementations, colored diffs make it easy to highlight what has changed. This guide explains how to effectively use colored diffs in Atlas documentation.

@@ -1,3 +1,8 @@
+---
+title: Timeline Component
+---
+
+
 # Timeline Component Usage Guide
 
 The Atlas documentation uses the [VitePress Markdown Timeline](https://github.com/HanochMa/vitepress-markdown-timeline) component to visualize chronological sequences and processes. This guide outlines when and how to use timeline components effectively.

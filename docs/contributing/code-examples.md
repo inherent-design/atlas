@@ -1,3 +1,7 @@
+---
+title: Code Examples
+---
+
 # Code Examples Standards
 
 Effective code examples are essential for helping users understand and implement Atlas functionality. This guide outlines the standards for creating clear, instructive code examples throughout the documentation.
@@ -426,7 +430,7 @@ This example demonstrates how to handle streaming responses from providers,
 which is useful for creating real-time user interfaces or processing large
 responses incrementally.
 
-**Prerequisites**: 
+**Prerequisites**:
 - Atlas installed
 - Provider API keys configured
 

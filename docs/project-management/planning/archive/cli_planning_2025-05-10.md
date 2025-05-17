@@ -1,4 +1,8 @@
-# CLI Planning
+---
+title: CLI
+---
+
+# CLI Planning - May 10, 2025
 
 This document outlines the planning and tracking system for Atlas CLI improvements, including the architecture, logging enhancements, and command-line interface upgrades.
 

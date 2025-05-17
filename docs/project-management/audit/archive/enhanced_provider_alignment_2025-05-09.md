@@ -1,4 +1,8 @@
-# Enhanced Provider Documentation Audit
+---
+title: Provider Doc.
+---
+
+# Enhanced Provider Documentation Audit - May 09, 2025
 
 > **Archived on May 9, 2025, 22:49 PT**
 > This document has been archived as part of the Enhanced Provider System implementation.

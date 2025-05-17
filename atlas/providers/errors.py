@@ -44,7 +44,7 @@ class ProviderError(APIError):
         )
 
 
-class ProviderAuthenticationError(AuthenticationError):
+class ProviderAuthenticationError(AuthenticationError, ProviderError):
     """Error related to provider authentication."""
     
     def __init__(
@@ -243,6 +243,38 @@ class ProviderValidationError(ValidationError):
         )
 
 
+class ProviderConfigError(ProviderValidationError):
+    """Error related to provider configuration validation."""
+    
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        provider: Optional[str] = None,
+        field_errors: Optional[Dict[str, List[str]]] = None,
+    ):
+        """Initialize the error.
+        
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+            field_errors: Mapping of field names to error messages.
+        """
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            field_errors=field_errors,
+        )
+
+
 class ProviderConnectionError(ProviderError):
     """Error related to provider connection issues."""
     
@@ -270,6 +302,66 @@ class ProviderConnectionError(ProviderError):
             severity=severity,
             provider=provider,
             retry_possible=True,  # Connection errors are usually retryable
+        )
+
+
+class ProviderNetworkError(ProviderError):
+    """Error related to provider network issues."""
+    
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.WARNING,
+        provider: Optional[str] = None,
+    ):
+        """Initialize the error.
+        
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+        """
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            retry_possible=True,  # Network errors are usually retryable
+        )
+
+
+class ProviderUnavailableError(ProviderError):
+    """Error when a provider is temporarily unavailable."""
+    
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        provider: Optional[str] = None,
+    ):
+        """Initialize the error.
+        
+        Args:
+            message: The error message.
+            details: Optional detailed information about the error.
+            cause: The original exception that caused this error.
+            severity: Severity level of the error.
+            provider: The provider that caused the error.
+        """
+        super().__init__(
+            message=message,
+            details=details,
+            cause=cause,
+            severity=severity,
+            provider=provider,
+            retry_possible=True,  # Unavailable errors may be retryable later
         )
 
 

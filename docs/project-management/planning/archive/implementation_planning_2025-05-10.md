@@ -1,4 +1,8 @@
-# Implementation Planning
+---
+title: Implementation
+---
+
+# Implementation Planning - May 10, 2025
 
 This document provides a comprehensive implementation plan based on the current status audit and priorities for the Atlas project.
 

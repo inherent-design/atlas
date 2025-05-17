@@ -1,5 +1,7 @@
 ---
-title: Home
+
+title: Atlas
+
 layout: home
 
 hero:
@@ -9,13 +11,13 @@ hero:
   actions:
     - theme: brand
       text: Getting Started
-      link: /guides/getting_started
+      link: /v2/nerv/
     - theme: alt
       text: Architecture
-      link: /architecture/
+      link: /v2/nerv/patterns/
     - theme: alt
-      text: Components
-      link: /components/providers/
+      text: Implementation
+      link: /v2/inner-universe/
 
 features:
   - icon: 🤖
@@ -54,29 +56,29 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 ### Documentation Sections
 
 #### Architecture (Top-Down Design)
-- **[Architecture Overview](./architecture/)**: High-level system architecture
-- **[Component Relationships](./architecture/components.md)**: How components interact
-- **[Data Flow](./architecture/data_flow.md)**: Data pathways through the system
-- **[Design Principles](./architecture/design_principles.md)**: Core design patterns and principles
+- **[Architecture Overview](./v2/nerv/)**: High-level system architecture
+- **[Component Patterns](./v2/nerv/patterns/)**: Core architectural patterns
+- **[Component Implementation](./v2/nerv/components/)**: Component implementations
+- **[Integration Guide](./v2/inner-universe/integration_guide.md)**: System integration guide
 
 #### Components (Bottom-Up Implementation)
-- **[Core Components](./components/core/config.md)**: Configuration, environment, errors, and prompts
-- **[Agent System](./components/agents/controller.md)**: Agent implementation and registry
-- **[Knowledge System](./components/knowledge/)**: Document processing and retrieval
-- **[Graph System](./components/graph/)**: State management and workflow construction
-- **[Providers](./components/providers/)**: Integration with different LLM providers
+- **[Primitives](./v2/nerv/primitives/)**: Core building blocks of the system
+- **[Composites](./v2/nerv/composites/)**: Combined component patterns
+- **[Implementation](./v2/inner-universe/implementation.md)**: Implementation details
+- **[Type System](./v2/inner-universe/types.md)**: Type definitions and mappings
+- **[Schema](./v2/inner-universe/schema.md)**: Data schema definitions
 
-#### Workflows (Holistic Integration)
-- **[Query Workflow](./workflows/query.md)**: Standard query-response flow
-- **[Retrieval Workflow](./workflows/retrieval.md)**: Knowledge retrieval process
-- **[Multi-Agent Workflow](./workflows/multi_agent.md)**: Controller-worker coordination
-- **[Custom Workflows](./workflows/custom_workflows.md)**: Creating specialized workflows
+#### System Integration (Holistic Integration)
+- **[Event-Driven Architecture](./v2/nerv/composites/event_driven_architecture.md)**: Event-based communication system
+- **[Parallel Workflow Engine](./v2/nerv/composites/parallel_workflow_engine.md)**: Multi-step workflow orchestration
+- **[Adaptive State Management](./v2/nerv/composites/adaptive_state_management.md)**: Dynamic state handling
+- **[Implementation Strategy](./v2/inner-universe/implementation.md)**: Implementation approach and details
 
 #### Developer Guides
-- **[Getting Started](./guides/getting_started.md)**: Quick start for new developers
-- **[Configuration](./guides/configuration.md)**: Configuring Atlas for your needs
-- **[Testing](./guides/testing.md)** 🚧: Testing strategies and tools (planned architecture)
-- **[Type Checking](./guides/type_checking.md)**: Type safety and validation
+- **[Testing Strategy](./v2/inner-universe/testing_strategy.md)**: Testing approach and tools
+- **[Deployment](./v2/inner-universe/deployment.md)**: Deployment guidelines
+- **[Migration Guide](./v2/inner-universe/migration_guide.md)**: Migrating to the current architecture
+- **[Type Mappings](./v2/inner-universe/type_mappings.md)**: Type reference for implementation
 - **[Examples](https://github.com/inherent-design/atlas/tree/main/examples)**: Practical demonstrations of Atlas functionality
 
 #### Project Management
@@ -86,10 +88,10 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 - **[Project Overview](./project-management/index.md)**: Project management documentation
 
 #### Reference
-- **[API Reference](./reference/api.md)**: Core API documentation
-- **[CLI Options](./reference/cli.md)**: Command-line interface guide
-- **[Environment Variables](./reference/env_variables.md)**: Available configuration options
-- **[FAQ](./reference/faq.md)**: Frequently asked questions
+- **[Licensing](./reference/licensing.md)**: Licensing information
+- **[Pattern Cheatsheet](./v2/nerv/types/cheatsheet.md)**: Quick reference for patterns and components
+- **[Architecture Diagrams](./v2/nerv/types/diagrams.md)**: Visual architecture representations
+- **[Implementation Approach](./v2/inner-universe/index.md)**: Implementation overview and approach
 
 #### Contributing
 - **[Contribution Guide](./contributing/)**: Guidelines for contributing to Atlas

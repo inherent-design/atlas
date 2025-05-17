@@ -1,3 +1,7 @@
+---
+title: Contributing
+---
+
 # Contributing to Atlas Documentation
 
 This section outlines the guidelines and standards for contributing to the Atlas project documentation. Our documentation follows the structure of the [Trimodal Methodology Framework](../project-management/planning/architecture_planning.md), combining top-down design, bottom-up implementation, and holistic system integration perspectives.
@@ -18,12 +22,23 @@ This section outlines the guidelines and standards for contributing to the Atlas
 
 Our documentation is organized into these main sections:
 
-1. **[Architecture](../architecture/)**: High-level system design (Top-Down)
-2. **[Components](../components/providers/)**: Individual module documentation (Bottom-Up)
-3. **[Workflows](../workflows/query.md)**: Cross-component integration (Holistic)
-4. **[Guides](../guides/getting_started.md)**: Task-oriented tutorials and guides
-5. **[Reference](../reference/api.md)**: API references and configuration details
-6. **[Project Management](../project-management/)**: Roadmaps, tracking, and planning
+1. **Architecture**: The system architecture is now documented in:
+   - **[Architectural Patterns](../v2/nerv/patterns/)**: Core architectural patterns (Top-Down)
+   - **[Components](../v2/nerv/components/)**: Core component implementation (Bottom-Up)
+   - **[Composites](../v2/nerv/composites/)**: System integration components (Holistic)
+
+2. **Implementation**: Implementation details are found in:
+   - **[Implementation Guide](../v2/inner-universe/implementation.md)**: Implementation approach
+   - **[Integration Guide](../v2/inner-universe/integration_guide.md)**: System integration
+   - **[Type System](../v2/inner-universe/types.md)**: Type definitions
+
+3. **Project Management**: Project planning and tracking:
+   - **[Product Roadmap](../project-management/roadmap/product_roadmap.md)**: Development roadmap
+   - **[Implementation Plan](../project-management/planning/accelerated_implementation_plan.md)**: Execution plan
+   - **[Progress Tracking](../project-management/tracking/todo.md)**: Implementation status
+
+4. **Reference**: Reference documentation:
+   - **[Licensing](../reference/licensing.md)**: Licensing information
 
 ## Contribution Guides
 
@@ -39,6 +54,28 @@ These guides provide detailed standards and best practices for specific aspects 
    - Implementation syntax and examples
 4. **[Code Examples](./code-examples.md)**: Standards for code samples and snippets
 5. **[Style Guide](./style-guide.md)**: Writing style, terminology, and voice guidelines
+
+### Type System and Schema Validation
+
+The following guides provide information about Atlas's type system and schema validation approach:
+
+1. **[Type System Guide](./types.md)**: Comprehensive overview of Atlas's type system
+   - Static typing with Protocol and TypedDict
+   - Generic typing and type narrowing
+   - Best practices for type safety
+2. **[Schema Validation](./schema_validation.md)**: How to use Marshmallow schema validation
+   - Basic schema usage and examples
+   - Validation decorators and patterns
+   - Migration notes for Marshmallow 4.0.0
+3. **[Schema Migration Tasks](../project-management/tracking/schema_migration_tasks.md)**: Detailed plan for migrating from TypedDict to schema validation
+   - Migration plan and priorities
+   - Implementation guidelines and circular import resolution
+   - Example implementations
+4. **[Type Mapping Guide](./type-mappings.md)**: Handling type conversions between systems
+   - Type conversion patterns and strategies
+   - Serialization and deserialization techniques
+   - System boundary handling
+   - Integration with NERV/Inner Universe types
 
 ::: warning Component Usage
 Remember to use [custom containers](./content-containers.md) and [timeline components](./timelines.md) sparingly throughout the documentation. These visual elements add significant weight and should only be used when they genuinely enhance understanding.

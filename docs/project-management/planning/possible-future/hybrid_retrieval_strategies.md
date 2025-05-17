@@ -1,3 +1,10 @@
+---
+
+title: Hybrid Retrieval
+
+---
+
+
 # Hybrid Retrieval Strategies
 
 **NOTE: The approaches outlined in this document are design proposals and are not yet implemented in Atlas.**
@@ -65,27 +72,27 @@ def retrieve_hybrid(
     """Retrieve documents using hybrid semantic and keyword search."""
     # Get semantic search results
     semantic_results = self.retrieve(
-        query, 
+        query,
         n_results=n_results*2,  # Get more results to allow for merging
         filter=filter
     )
-    
+
     # Get keyword search results (e.g., using BM25 or simple term matching)
     keyword_results = self.retrieve_keywords(
         query,
         n_results=n_results*2,
         filter=filter
     )
-    
+
     # Merge results with appropriate weights
     merged_results = self._merge_results(
-        semantic_results, 
+        semantic_results,
         keyword_results,
         semantic_weight=semantic_weight,
         keyword_weight=keyword_weight,
         deduplicate=True
     )
-    
+
     # Return top N results after merging
     return merged_results[:n_results]
 ```
@@ -243,23 +250,23 @@ To continuously improve hybrid search, consider:
 
 ### Content Type Considerations
 
-| Content Type | Recommended Approach | Weight Balance |
-|--------------|----------------------|----------------|
-| General documentation | Parallel Combination | 70% semantic, 30% keyword |
-| Code repositories | BM25 + Vector Hybrid | 40% semantic, 60% keyword |
-| Technical specifications | Sequential Filtering | 50% semantic, 50% keyword |
-| Conceptual content | Parallel with emphasis on semantic | 85% semantic, 15% keyword |
-| Mixed content | Feedback Loop | Dynamic based on query |
+| Content Type             | Recommended Approach               | Weight Balance            |
+| ------------------------ | ---------------------------------- | ------------------------- |
+| General documentation    | Parallel Combination               | 70% semantic, 30% keyword |
+| Code repositories        | BM25 + Vector Hybrid               | 40% semantic, 60% keyword |
+| Technical specifications | Sequential Filtering               | 50% semantic, 50% keyword |
+| Conceptual content       | Parallel with emphasis on semantic | 85% semantic, 15% keyword |
+| Mixed content            | Feedback Loop                      | Dynamic based on query    |
 
 ### Query Type Considerations
 
-| Query Type | Example | Recommended Approach |
-|------------|---------|----------------------|
-| Conceptual | "How does knowledge embedding work?" | Emphasize semantic search |
-| Specific | "APIError in authentication module" | Emphasize keyword search |
-| Mixed | "How to handle authentication errors in login flow" | Balanced hybrid approach |
-| Ambiguous | "Atlas architecture overview" | Feedback loop approach |
-| Technical terms | "ChromaDB metadata filtering syntax" | BM25 + Vector hybrid |
+| Query Type      | Example                                             | Recommended Approach      |
+| --------------- | --------------------------------------------------- | ------------------------- |
+| Conceptual      | "How does knowledge embedding work?"                | Emphasize semantic search |
+| Specific        | "APIError in authentication module"                 | Emphasize keyword search  |
+| Mixed           | "How to handle authentication errors in login flow" | Balanced hybrid approach  |
+| Ambiguous       | "Atlas architecture overview"                       | Feedback loop approach    |
+| Technical terms | "ChromaDB metadata filtering syntax"                | BM25 + Vector hybrid      |
 
 ## Conclusion
 

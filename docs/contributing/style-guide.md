@@ -1,3 +1,7 @@
+---
+title: Writing Style
+---
+
 # Writing Style Guide
 
 This style guide establishes consistent writing standards across Atlas documentation. Following these guidelines ensures our documentation maintains a cohesive voice and delivers information effectively.
@@ -22,10 +26,10 @@ Atlas documentation maintains these attributes:
 
 ### Examples
 
-| ✅ Preferred | ❌ Avoid |
-|-------------|---------|
-| You can configure the provider using environment variables. | The user can configure the provider using environment variables. |
-| We recommend using provider groups for production deployments. | I recommend using provider groups for production deployments. |
+| ✅ Preferred                                                          | ❌ Avoid                                                                  |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| You can configure the provider using environment variables.          | The user can configure the provider using environment variables.         |
+| We recommend using provider groups for production deployments.       | I recommend using provider groups for production deployments.            |
 | Atlas handles all model interactions through the provider interface. | Atlas will handle all model interactions through the provider interface. |
 
 ## Language and Style
@@ -34,20 +38,20 @@ Atlas documentation maintains these attributes:
 
 Use active voice for clarity and directness:
 
-| ✅ Active Voice | ❌ Passive Voice |
-|----------------|-----------------|
-| The provider sends the request to the API. | The request is sent to the API by the provider. |
-| You should configure API keys before using providers. | API keys should be configured before providers are used. |
-| Atlas generates responses using the selected provider. | Responses are generated using the selected provider. |
+| ✅ Active Voice                                         | ❌ Passive Voice                                          |
+| ------------------------------------------------------ | -------------------------------------------------------- |
+| The provider sends the request to the API.             | The request is sent to the API by the provider.          |
+| You should configure API keys before using providers.  | API keys should be configured before providers are used. |
+| Atlas generates responses using the selected provider. | Responses are generated using the selected provider.     |
 
 ### Present Tense
 
 Use present tense for most documentation:
 
-| ✅ Present Tense | ❌ Other Tenses |
-|-----------------|----------------|
-| The provider returns a response object. | The provider will return a response object. |
-| This method processes the input text. | This method will process the input text. |
+| ✅ Present Tense                            | ❌ Other Tenses                                 |
+| ------------------------------------------ | ---------------------------------------------- |
+| The provider returns a response object.    | The provider will return a response object.    |
+| This method processes the input text.      | This method will process the input text.       |
 | The agent communicates with worker agents. | The agent has communicated with worker agents. |
 
 ### Clarity and Conciseness
@@ -57,11 +61,11 @@ Use present tense for most documentation:
 - Break long sentences into shorter ones
 - Use specific, concrete terms over vague ones
 
-| ✅ Clear and Concise | ❌ Wordy or Vague |
-|--------------------|------------------|
-| Configure the provider with your API key. | It is necessary for you to undertake the task of configuring the provider with your specific API key credentials. |
+| ✅ Clear and Concise                                         | ❌ Wordy or Vague                                                                                                                                      |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Configure the provider with your API key.                   | It is necessary for you to undertake the task of configuring the provider with your specific API key credentials.                                     |
 | Atlas retrieves relevant documents from the knowledge base. | Atlas utilizes various methodologies to engage in the process of retrieving documents that may be considered relevant from the knowledge base system. |
-| Set `max_tokens` to limit response length. | In the event that you wish to impose limitations on the length of responses, you can proceed to set the `max_tokens` parameter. |
+| Set `max_tokens` to limit response length.                  | In the event that you wish to impose limitations on the length of responses, you can proceed to set the `max_tokens` parameter.                       |
 
 ## Terminology Standards
 
@@ -69,13 +73,13 @@ Use present tense for most documentation:
 
 Use consistent terminology throughout documentation:
 
-| Term | Definition | Notes |
-|------|------------|-------|
-| Provider | Implementation of an LLM API integration | Not "model", "backend", or "service" |
-| Agent | AI entity that performs tasks | Not "assistant", "bot", or "AI" |
-| Generate | Create model output | Not "predict", "create", or "produce" |
-| Knowledge Base | Stored embeddings and document content | Not "database", "store", or "index" |
-| Retrieve | Find relevant documents | Not "search", "query", or "lookup" |
+| Term           | Definition                               | Notes                                 |
+| -------------- | ---------------------------------------- | ------------------------------------- |
+| Provider       | Implementation of an LLM API integration | Not "model", "backend", or "service"  |
+| Agent          | AI entity that performs tasks            | Not "assistant", "bot", or "AI"       |
+| Generate       | Create model output                      | Not "predict", "create", or "produce" |
+| Knowledge Base | Stored embeddings and document content   | Not "database", "store", or "index"   |
+| Retrieve       | Find relevant documents                  | Not "search", "query", or "lookup"    |
 
 ### Technical Accuracy
 
@@ -93,15 +97,15 @@ Use consistent terminology throughout documentation:
 
 ### Text Formatting
 
-| Element | Formatting | Example |
-|---------|------------|---------|
-| Code | Backticks | Use `AnthropicProvider` for Claude models. |
-| File paths | Backticks | Save the file to `/path/to/atlas/config.yaml`. |
-| Commands | Backticks | Run `python -m atlas` to start the CLI. |
-| UI elements | Bold | Click the **Generate** button. |
-| Emphasis | Italic | This is *required* for all deployments. |
-| Book/doc titles | Italic | Refer to the *Atlas API Reference*. |
-| New terms | Bold on first mention | **Vector embeddings** represent text as numerical vectors. |
+| Element         | Formatting            | Example                                                    |
+| --------------- | --------------------- | ---------------------------------------------------------- |
+| Code            | Backticks             | Use `AnthropicProvider` for Claude models.                 |
+| File paths      | Backticks             | Save the file to `/path/to/atlas/config.yaml`.             |
+| Commands        | Backticks             | Run `python -m atlas` to start the CLI.                    |
+| UI elements     | Bold                  | Click the **Generate** button.                             |
+| Emphasis        | Italic                | This is *required* for all deployments.                    |
+| Book/doc titles | Italic                | Refer to the *Atlas API Reference*.                        |
+| New terms       | Bold on first mention | **Vector embeddings** represent text as numerical vectors. |
 
 ### Lists
 
@@ -118,10 +122,10 @@ Use consistent terminology throughout documentation:
 - Use relative links for internal documentation
 - Include the full URL for external resources when appropriate
 
-| ✅ Good Link Text | ❌ Poor Link Text |
-|------------------|------------------|
-| See the [Provider Configuration Guide](../components/providers/index.md) for details. | Click [here](../components/providers/index.md) for details. |
-| Learn about [🚧 streaming responses in Atlas](#). | [Read more](#). |
+| ✅ Good Link Text                                                                      | ❌ Poor Link Text                                        |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| See the [Provider Configuration Guide](../v2/nerv/patterns/index.md) for details.     | Click [here](../v2/nerv/patterns/index.md) for details. |
+| Learn about [Streaming in the Inner Universe](../v2/inner-universe/implementation.md) | [Read more](#).                                         |
 
 ## Content Structure
 
@@ -174,11 +178,11 @@ Use consistent terminology throughout documentation:
 - Avoid gendered terms like "guys," "mankind," or "manpower"
 - Use role descriptions rather than gendered terms
 
-| ✅ Inclusive | ❌ Non-inclusive |
-|-------------|-----------------|
-| The developer can configure their environment. | The developer can configure his environment. |
-| Team members should update their API keys. | Each programmer should update his or her API key. |
-| Staff, team, workforce | Manpower |
+| ✅ Inclusive                                    | ❌ Non-inclusive                                   |
+| ---------------------------------------------- | ------------------------------------------------- |
+| The developer can configure their environment. | The developer can configure his environment.      |
+| Team members should update their API keys.     | Each programmer should update his or her API key. |
+| Staff, team, workforce                         | Manpower                                          |
 
 ### Cultural Sensitivity
 
@@ -192,11 +196,11 @@ Use consistent terminology throughout documentation:
 - Avoid ableist terms and metaphors
 - Use neutral, respectful terminology
 
-| ✅ Preferred | ❌ Avoid |
-|-------------|---------|
-| Users who navigate with screen readers | Blind users |
-| Verify or check | Sanity check |
-| Easy to use | Dummy-proof |
+| ✅ Preferred                            | ❌ Avoid      |
+| -------------------------------------- | ------------ |
+| Users who navigate with screen readers | Blind users  |
+| Verify or check                        | Sanity check |
+| Easy to use                            | Dummy-proof  |
 
 ## Documentation Review Checklist
 

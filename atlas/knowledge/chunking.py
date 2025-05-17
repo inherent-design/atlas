@@ -282,7 +282,7 @@ class SemanticChunker(ChunkingStrategy):
         paragraphs = [p.strip() for p in paragraphs if p.strip()]
         
         chunks = []
-        current_chunk = []
+        current_chunk: list[str] = []
         current_size = 0
         
         # Always include the section title/heading in each chunk for context
@@ -533,7 +533,7 @@ class CodeChunker(ChunkingStrategy):
         lines = content.split('\n')
         
         chunks = []
-        current_chunk_lines = []
+        current_chunk_lines: list[str] = []
         current_size = 0
         chunk_index = 0
         

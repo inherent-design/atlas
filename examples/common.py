@@ -324,6 +324,17 @@ def create_provider_from_args(args: argparse.Namespace) -> Any:
     return create_provider_from_options(resolved)
 
 
+def print_example_header(title: str) -> None:
+    """Print a header for the example.
+    
+    Args:
+        title: The title of the example
+    """
+    print("\n" + "="*50)
+    print(f"     {title}")
+    print("="*50 + "\n")
+
+
 def print_example_footer() -> None:
     """Print a footer for the example."""
     print("\n" + "="*50)

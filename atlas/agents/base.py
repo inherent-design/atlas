@@ -12,7 +12,8 @@ from atlas.core.config import AtlasConfig
 from atlas.core.telemetry import traced, TracedClass
 from atlas.knowledge.retrieval import KnowledgeBase
 from atlas.providers.factory import create_provider, discover_providers
-from atlas.providers.base import ModelRequest, ModelMessage, ModelProvider
+from atlas.providers.base import ModelProvider
+from atlas.providers.messages import ModelRequest, ModelMessage
 from atlas.providers.options import ProviderOptions
 from atlas.providers.group import ProviderGroup, ProviderSelectionStrategy, TaskAwareSelectionStrategy
 from atlas.providers.resolver import create_provider_from_options, resolve_provider_options
@@ -347,9 +348,23 @@ class AtlasAgent(TracedClass):
                 detected_task = detect_task_type_from_prompt(message)
                 logger.info(f"Detected task type: {detected_task}")
 
-            # Create model request with task information
-            model_request = ModelRequest(
-                messages=[ModelMessage.user(msg["content"]) for msg in self.messages],
+            # Create model request with task information - create message list first
+            converted_messages = []
+            for msg in self.messages:
+                if isinstance(msg, dict) and "content" in msg and "role" in msg:
+                    if msg["role"] == "user":
+                        converted_messages.append(ModelMessage.user(msg["content"]))
+                    elif msg["role"] == "assistant":
+                        converted_messages.append(ModelMessage.assistant(msg["content"]))
+                    elif msg["role"] == "system":
+                        converted_messages.append(ModelMessage.system(msg["content"]))
+                        
+            # If no messages, create at least one placeholder
+            if not converted_messages:
+                converted_messages = [ModelMessage.user("Hello")]
+                
+            model_request = ModelRequest.create_direct(
+                messages=converted_messages,
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )
@@ -468,9 +483,23 @@ class AtlasAgent(TracedClass):
                 detected_task = detect_task_type_from_prompt(message)
                 logger.info(f"Detected task type: {detected_task}")
 
-            # Create model request with task information
-            model_request = ModelRequest(
-                messages=[ModelMessage.user(msg["content"]) for msg in self.messages],
+            # Create model request with task information - create message list first
+            converted_messages = []
+            for msg in self.messages:
+                if isinstance(msg, dict) and "content" in msg and "role" in msg:
+                    if msg["role"] == "user":
+                        converted_messages.append(ModelMessage.user(msg["content"]))
+                    elif msg["role"] == "assistant":
+                        converted_messages.append(ModelMessage.assistant(msg["content"]))
+                    elif msg["role"] == "system":
+                        converted_messages.append(ModelMessage.system(msg["content"]))
+                        
+            # If no messages, create at least one placeholder
+            if not converted_messages:
+                converted_messages = [ModelMessage.user("Hello")]
+                
+            model_request = ModelRequest.create_direct(
+                messages=converted_messages,
                 system_prompt=system_msg,
                 max_tokens=self.config.max_tokens,
             )

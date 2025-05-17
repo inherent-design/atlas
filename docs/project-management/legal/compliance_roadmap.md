@@ -1,3 +1,8 @@
+---
+title: Compliance
+---
+
+
 # Compliance and Regulatory Roadmap
 
 This document outlines the compliance and regulatory considerations for Atlas as it transitions from an open-source project to a commercial product. It establishes a timeline for implementing necessary compliance measures, with a focus on data privacy, intellectual property, and industry-specific regulations.
@@ -126,93 +131,93 @@ As Atlas evolves into a commercial product with enterprise features and cloud of
 
 ### Enterprise Features (August-September 2025)
 
-| Feature | Compliance Area | Implementation Timeframe | Priority |
-|---------|-----------------|--------------------------|----------|
-| Enhanced Audit Logging | Security, Industry-Specific | August 2025 | High |
-| Role-Based Access Control | Security, Data Privacy | August 2025 | High |
-| Data Encryption Controls | Security, Data Privacy | August 2025 | High |
-| Compliance Documentation | All | September 2025 | Medium |
-| Vulnerability Management | Security | September 2025 | High |
-| Activity Monitoring | Security, Industry-Specific | September 2025 | Medium |
+| Feature                   | Compliance Area             | Implementation Timeframe | Priority |
+| ------------------------- | --------------------------- | ------------------------ | -------- |
+| Enhanced Audit Logging    | Security, Industry-Specific | August 2025              | High     |
+| Role-Based Access Control | Security, Data Privacy      | August 2025              | High     |
+| Data Encryption Controls  | Security, Data Privacy      | August 2025              | High     |
+| Compliance Documentation  | All                         | September 2025           | Medium   |
+| Vulnerability Management  | Security                    | September 2025           | High     |
+| Activity Monitoring       | Security, Industry-Specific | September 2025           | Medium   |
 
 ### Cloud Service Features (October-December 2025)
 
-| Feature | Compliance Area | Implementation Timeframe | Priority |
-|---------|-----------------|--------------------------|----------|
-| Multi-Tenant Isolation | Security, Data Privacy | October 2025 | Critical |
-| Data Residency Controls | Data Privacy | October 2025 | High |
-| Compliance Reporting | Industry-Specific | November 2025 | Medium |
-| Backup and Recovery | Security, Industry-Specific | November 2025 | High |
-| Customer Data Lifecycle | Data Privacy | November 2025 | High |
-| Access Management | Security, Industry-Specific | December 2025 | High |
+| Feature                 | Compliance Area             | Implementation Timeframe | Priority |
+| ----------------------- | --------------------------- | ------------------------ | -------- |
+| Multi-Tenant Isolation  | Security, Data Privacy      | October 2025             | Critical |
+| Data Residency Controls | Data Privacy                | October 2025             | High     |
+| Compliance Reporting    | Industry-Specific           | November 2025            | Medium   |
+| Backup and Recovery     | Security, Industry-Specific | November 2025            | High     |
+| Customer Data Lifecycle | Data Privacy                | November 2025            | High     |
+| Access Management       | Security, Industry-Specific | December 2025            | High     |
 
 ## Certification Timeline
 
-| Certification | Preparation Start | Target Completion | Responsible Team |
-|---------------|-------------------|-------------------|------------------|
-| SOC 2 Type 1 | November 2025 | March 2026 | Security, Engineering |
-| ISO 27001 | January 2026 | July 2026 | Security, Operations |
-| HIPAA Compliance | December 2025 | April 2026 | Security, Legal |
-| GDPR Validation | August 2025 | October 2025 | Legal, Engineering |
-| FedRAMP Ready | Q1 2026 | Q4 2026 | Security, Operations, Legal |
+| Certification    | Preparation Start | Target Completion | Responsible Team            |
+| ---------------- | ----------------- | ----------------- | --------------------------- |
+| SOC 2 Type 1     | November 2025     | March 2026        | Security, Engineering       |
+| ISO 27001        | January 2026      | July 2026         | Security, Operations        |
+| HIPAA Compliance | December 2025     | April 2026        | Security, Legal             |
+| GDPR Validation  | August 2025       | October 2025      | Legal, Engineering          |
+| FedRAMP Ready    | Q1 2026           | Q4 2026           | Security, Operations, Legal |
 
 ## Compliance Documentation Roadmap
 
 ### Customer-Facing Documentation
 
-| Document | Target Completion | Status | Responsible Team |
-|----------|-------------------|--------|------------------|
-| Privacy Policy | July 2025 | Planned | Legal |
-| Terms of Service | July 2025 | Planned | Legal |
-| Security Whitepaper | September 2025 | Planned | Security |
-| Compliance Overview | September 2025 | Planned | Legal, Security |
-| Data Processing Agreement | October 2025 | Planned | Legal |
-| Industry Compliance Guides | November 2025 | Planned | Legal, Product |
+| Document                   | Target Completion | Status  | Responsible Team |
+| -------------------------- | ----------------- | ------- | ---------------- |
+| Privacy Policy             | July 2025         | Planned | Legal            |
+| Terms of Service           | July 2025         | Planned | Legal            |
+| Security Whitepaper        | September 2025    | Planned | Security         |
+| Compliance Overview        | September 2025    | Planned | Legal, Security  |
+| Data Processing Agreement  | October 2025      | Planned | Legal            |
+| Industry Compliance Guides | November 2025     | Planned | Legal, Product   |
 
 ### Internal Documentation
 
-| Document | Target Completion | Status | Responsible Team |
-|----------|-------------------|--------|------------------|
-| Compliance Requirements | July 2025 | Planned | Legal |
-| Security Controls Framework | August 2025 | Planned | Security |
-| Data Privacy Framework | August 2025 | Planned | Legal, Security |
-| Compliance Test Plan | September 2025 | Planned | QA, Security |
-| Incident Response Plan | October 2025 | Planned | Security, Operations |
-| Compliance Monitoring Plan | November 2025 | Planned | Security, Operations |
+| Document                    | Target Completion | Status  | Responsible Team     |
+| --------------------------- | ----------------- | ------- | -------------------- |
+| Compliance Requirements     | July 2025         | Planned | Legal                |
+| Security Controls Framework | August 2025       | Planned | Security             |
+| Data Privacy Framework      | August 2025       | Planned | Legal, Security      |
+| Compliance Test Plan        | September 2025    | Planned | QA, Security         |
+| Incident Response Plan      | October 2025      | Planned | Security, Operations |
+| Compliance Monitoring Plan  | November 2025     | Planned | Security, Operations |
 
 ## Compliance Roles and Responsibilities
 
 ### Core Compliance Team (Formation: July 2025)
 
-| Role | Responsibilities | Hiring Timeline |
-|------|------------------|-----------------|
-| Compliance Officer | Overall compliance strategy, regulatory engagement | July 2025 |
-| Security Officer | Security controls, vulnerability management | August 2025 |
-| Privacy Officer | Data privacy controls, subject requests | September 2025 |
-| Compliance Engineer | Compliance feature implementation | August 2025 |
-| Documentation Specialist | Compliance documentation | September 2025 |
+| Role                     | Responsibilities                                   | Hiring Timeline |
+| ------------------------ | -------------------------------------------------- | --------------- |
+| Compliance Officer       | Overall compliance strategy, regulatory engagement | July 2025       |
+| Security Officer         | Security controls, vulnerability management        | August 2025     |
+| Privacy Officer          | Data privacy controls, subject requests            | September 2025  |
+| Compliance Engineer      | Compliance feature implementation                  | August 2025     |
+| Documentation Specialist | Compliance documentation                           | September 2025  |
 
 ### Extended Compliance Responsibilities
 
-| Team | Compliance Responsibilities | Implementation Timeline |
-|------|----------------------------|-------------------------|
-| Engineering | Implementing compliance controls, security features | Ongoing from June 2025 |
-| Product Management | Compliance feature requirements, roadmap | Ongoing from July 2025 |
-| Customer Success | Compliance guidance, customer documentation | From September 2025 |
-| Sales | Compliance positioning, customer requirements | From September 2025 |
-| Legal | Regulatory monitoring, compliance validation | Ongoing from June 2025 |
+| Team               | Compliance Responsibilities                         | Implementation Timeline |
+| ------------------ | --------------------------------------------------- | ----------------------- |
+| Engineering        | Implementing compliance controls, security features | Ongoing from June 2025  |
+| Product Management | Compliance feature requirements, roadmap            | Ongoing from July 2025  |
+| Customer Success   | Compliance guidance, customer documentation         | From September 2025     |
+| Sales              | Compliance positioning, customer requirements       | From September 2025     |
+| Legal              | Regulatory monitoring, compliance validation        | Ongoing from June 2025  |
 
 ## Regulatory Monitoring and Response
 
 ### Monitoring Framework (Establishment: August 2025)
 
-| Regulatory Area | Monitoring Approach | Response Protocol | Implementation |
-|-----------------|---------------------|-------------------|----------------|
-| Data Privacy | Legal updates tracking, advisory services | Impact assessment, implementation plan | August 2025 |
-| Security Standards | Industry group participation, vulnerability alerts | Security review, patch management | September 2025 |
-| Industry Regulations | Regulatory subscriptions, customer feedback | Feature requirements, documentation updates | October 2025 |
-| Open Source Licensing | License tracking, community monitoring | License strategy adjustments, remediation | July 2025 |
-| Export Controls | Export regulations monitoring | Classification review, control implementation | November 2025 |
+| Regulatory Area       | Monitoring Approach                                | Response Protocol                             | Implementation |
+| --------------------- | -------------------------------------------------- | --------------------------------------------- | -------------- |
+| Data Privacy          | Legal updates tracking, advisory services          | Impact assessment, implementation plan        | August 2025    |
+| Security Standards    | Industry group participation, vulnerability alerts | Security review, patch management             | September 2025 |
+| Industry Regulations  | Regulatory subscriptions, customer feedback        | Feature requirements, documentation updates   | October 2025   |
+| Open Source Licensing | License tracking, community monitoring             | License strategy adjustments, remediation     | July 2025      |
+| Export Controls       | Export regulations monitoring                      | Classification review, control implementation | November 2025  |
 
 ### Regulatory Change Process
 
@@ -227,13 +232,13 @@ As Atlas evolves into a commercial product with enterprise features and cloud of
 
 ### Key Compliance Risks
 
-| Risk Area | Probability | Impact | Risk Score | Mitigation Strategy |
-|-----------|-------------|--------|------------|---------------------|
-| Data Privacy Violations | Medium | High | High | Privacy-by-design, data minimization, robust access controls |
-| Security Vulnerabilities | High | High | Critical | Security testing, vulnerability management, rapid patching |
-| License Compliance Issues | Medium | Medium | Medium | License scanning, dependency management, CLA enforcement |
-| Industry Regulation Changes | High | Medium | High | Regulatory monitoring, flexible compliance framework |
-| Export Control Violations | Low | High | Medium | Export classification, restricted countries controls |
+| Risk Area                   | Probability | Impact | Risk Score | Mitigation Strategy                                          |
+| --------------------------- | ----------- | ------ | ---------- | ------------------------------------------------------------ |
+| Data Privacy Violations     | Medium      | High   | High       | Privacy-by-design, data minimization, robust access controls |
+| Security Vulnerabilities    | High        | High   | Critical   | Security testing, vulnerability management, rapid patching   |
+| License Compliance Issues   | Medium      | Medium | Medium     | License scanning, dependency management, CLA enforcement     |
+| Industry Regulation Changes | High        | Medium | High       | Regulatory monitoring, flexible compliance framework         |
+| Export Control Violations   | Low         | High   | Medium     | Export classification, restricted countries controls         |
 
 ### Compliance Risk Monitoring
 

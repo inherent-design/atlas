@@ -1,3 +1,7 @@
+---
+title: License
+---
+
 # License Selection Analysis
 
 This document provides a comprehensive analysis of the license selection process for Atlas, explaining the rationale behind choosing the Apache License 2.0 for the open source component and implementing a dual licensing strategy for enterprise features.

@@ -7,6 +7,7 @@ without making actual API calls.
 """
 
 import logging
+import random
 import threading
 import time
 from typing import List, Dict, Any, Optional, Tuple, Union, Iterator, Callable
@@ -66,7 +67,8 @@ class MockStreamHandler(StreamHandler):
             delay: Time delay between chunks in seconds
             error_after: If set, raise an error after this many chunks
         """
-        super().__init__(provider, model, initial_response)
+        content = ""  # Initial content is empty
+        super().__init__(content, provider, model, initial_response)
         self.chunks = chunks
         self.delay = delay
         self.error_after = error_after
@@ -75,6 +77,60 @@ class MockStreamHandler(StreamHandler):
         self._position = 0
         self._buffer = []
         self._buffer_lock = threading.Lock()
+        self._position_lock = threading.Lock()  # Lock for protecting the position variable
+        self.iterator = None
+        
+    def get_iterator(self) -> Iterator:
+        """Get an iterator for the stream.
+        
+        Returns:
+            An iterator that yields chunks of the content.
+        """
+        return self
+        
+    def __iter__(self) -> "MockStreamHandler":
+        """Make the handler iterable for processing in a for loop."""
+        with self._position_lock:
+            self._position = 0
+        return self
+        
+    def __next__(self) -> str:
+        """Get the next chunk of content.
+        
+        Returns:
+            The next chunk of content.
+            
+        Raises:
+            StopIteration: When the content is exhausted.
+        """
+        # Check if we're at the end - use position lock for thread safety
+        with self._position_lock:
+            if self._position >= len(self.chunks):
+                raise StopIteration
+            
+        # Simulate delay
+        time.sleep(self.delay)
+        
+        # Check for simulated error
+        if self.error_after is not None and self._position >= self.error_after:
+            raise ProviderError("Simulated streaming error")
+        
+        try:
+            # Use position lock to ensure thread safety
+            with self._position_lock:
+                # Get the next chunk
+                chunk = self.chunks[self._position]
+                self._position += 1
+            
+            # Update response content
+            self.response.content += chunk
+            
+            return chunk
+        except IndexError:
+            # Handle case where the index is out of range
+            # This can happen if the position was incremented in another thread
+            logger.debug(f"Index out of range in MockStreamHandler: position {self._position}, chunks length {len(self.chunks)}")
+            raise StopIteration
         
     def start(self) -> None:
         """Start streaming content in a background thread."""
@@ -100,8 +156,8 @@ class MockStreamHandler(StreamHandler):
                 if self.error_after is not None and i >= self.error_after:
                     raise ProviderError("Simulated streaming error")
                 
-                # Add chunk to buffer
-                with self._buffer_lock:
+                # Add chunk to buffer and update position atomically
+                with self._buffer_lock, self._position_lock:
                     self._buffer.append(chunk)
                     self._position += 1
                     
@@ -186,19 +242,20 @@ class MockProvider(ModelProvider):
     # Default retry and circuit breaker configuration
     DEFAULT_RETRY_CONFIG = ProviderRetryConfig(
         max_retries=3,
-        min_delay=0.5,
+        initial_delay=0.5,
         max_delay=5.0,
         backoff_factor=2.0,
-        jitter=0.25,
-        retry_on=[
+        jitter_factor=0.25,
+        retryable_errors=[
             ProviderTimeoutError,
         ]
     )
     
     DEFAULT_CIRCUIT_BREAKER = ProviderCircuitBreaker(
-        error_threshold=5,
+        failure_threshold=5,
         recovery_timeout=30.0,
-        min_requests=10,
+        test_requests=1,
+        reset_timeout=300.0
     )
 
     def __init__(
@@ -233,8 +290,8 @@ class MockProvider(ModelProvider):
             circuit_breaker=circuit_breaker or self.DEFAULT_CIRCUIT_BREAKER
         )
         
-        self.model_name = model_name or "mock-standard"
-        self.api_key = api_key or "mock-api-key"
+        self._model_name = model_name or "mock-standard"
+        self._api_key = api_key or "mock-api-key"
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.response_format = response_format
@@ -245,7 +302,7 @@ class MockProvider(ModelProvider):
         # Validate model name
         if self.model_name not in self.AVAILABLE_MODELS:
             logger.warning(f"Unknown mock model: {self.model_name}, defaulting to mock-standard")
-            self.model_name = "mock-standard"
+            self._model_name = "mock-standard"
             
         # Additional internal state
         self._request_count = 0
@@ -293,15 +350,15 @@ class MockProvider(ModelProvider):
         # Generate response content
         content = self.DEFAULT_RESPONSES["standard"]
         
-        # Create response with token usage
-        usage = TokenUsage(
+        # Create token usage directly to avoid validation recursion
+        usage = TokenUsage.create_direct(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens
         )
         
-        # Create and return response
-        return ModelResponse(
+        # Create and return response directly to avoid validation recursion
+        return ModelResponse.create_direct(
             provider="mock",
             model=self.model_name,
             content=content,
@@ -344,14 +401,15 @@ class MockProvider(ModelProvider):
         output_tokens = self.max_tokens // 2  # Simulate using half of max_tokens
         self._token_count += input_tokens + output_tokens
         
-        # Create initial response
-        usage = TokenUsage(
+        # Create token usage directly to avoid validation recursion
+        usage = TokenUsage.create_direct(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens
         )
         
-        initial_response = ModelResponse(
+        # Create initial response directly to avoid validation recursion
+        initial_response = ModelResponse.create_direct(
             provider="mock",
             model=self.model_name,
             content="",  # Empty initial content, will be updated during streaming
@@ -435,7 +493,7 @@ class MockProvider(ModelProvider):
         input_tokens = len(str(request.messages)) // 4
         output_tokens = len(str(response)) // 4 if response else 0
         
-        return TokenUsage(
+        return TokenUsage.create_direct(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens
@@ -458,21 +516,24 @@ class MockProvider(ModelProvider):
         input_cost = (usage.input_tokens / 1000000) * pricing["input"]
         output_cost = (usage.output_tokens / 1000000) * pricing["output"]
         
-        return CostEstimate(
+        return CostEstimate.create_direct(
             input_cost=input_cost,
             output_cost=output_cost,
             total_cost=input_cost + output_cost
         )
         
-    def get_capability_strength(self, capability: str) -> int:
+    def get_capability_strength(self, capability: str) -> 'CapabilityStrength':
         """Get the capability strength for the current model.
         
         Args:
             capability: The capability name
             
         Returns:
-            Capability strength (0-4)
+            CapabilityStrength enum value
         """
+        # Import here to avoid circular import
+        from atlas.providers.capabilities import CapabilityStrength
+        
         # Mock capability mappings
         capability_map = {
             "mock-basic": {
@@ -498,5 +559,8 @@ class MockProvider(ModelProvider):
         # Get capability map for current model
         model_caps = capability_map.get(self.model_name, {})
         
-        # Return capability strength or 0 if not found
-        return model_caps.get(capability, 0)
+        # Get integer strength or 0 if not found
+        strength_int = model_caps.get(capability, 0)
+        
+        # Convert to enum
+        return CapabilityStrength(strength_int)

@@ -1,3 +1,10 @@
+---
+
+title: Open-Source Strategy
+
+---
+
+
 # Open-Source Strategy
 
 This document outlines the strategic approach for positioning Atlas as a professional open-source project under inherent.design, with a clear path to community adoption, contribution, and future monetization.

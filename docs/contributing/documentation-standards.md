@@ -1,3 +1,7 @@
+---
+title: Doc. Standards
+---
+
 # Documentation Standards
 
 This guide outlines the standards and best practices for writing documentation for the Atlas project. Following these guidelines ensures our documentation remains consistent, clear, and useful for all users.

@@ -1,3 +1,10 @@
+---
+
+title: Project Management
+
+---
+
+
 # Project Management Documentation
 
 This directory contains critical project management documentation for the Atlas project. These documents guide our development, business strategy, and legal considerations with a focus on our accelerated timeline that requires completion by June 30, 2025.
@@ -21,11 +28,7 @@ This directory contains critical project management documentation for the Atlas 
 - [Compliance Roadmap](./legal/compliance_roadmap.md): Timeline for implementing necessary compliance measures
 - [License Selection](./legal/license_selection.md): Analysis of license selection and dual licensing strategy
 
-#### Marketing
-- [Go-to-Market Strategy](./marketing/go_to_market_strategy.md): Strategy for positioning, promoting, and selling Atlas
-- [Pitch Deck Outline](./marketing/pitch_deck_outline.md): Structure for investor and partner presentations
-- [Press Release Template](./marketing/press_release_template.md): Template for public announcements
-- [Project Overview](./marketing/project_overview.md): High-level project description for external audiences
+<!-- Marketing section removed as it didn't fit our current use case -->
 
 #### Tracking
 - [Proposed Structure](./tracking/proposed_structure.md): Current project structure with status indicators

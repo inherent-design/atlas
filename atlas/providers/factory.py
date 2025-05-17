@@ -609,12 +609,62 @@ def create_provider(
 
     # Create provider instance
     try:
+        # Process and validate provider options
+        provider_options = kwargs.pop("options", {}) or {}
+        
+        # Extract capabilities from the model configuration
+        model_capabilities = {}
+        if provider_name in PROVIDER_MODELS:
+            model_info = PROVIDER_MODELS[provider_name]["models"].get(model_name, [])
+            for capability in model_info:
+                # Set reasonable strength levels based on capability type
+                if capability in ["premium", "vision"]:
+                    strength = CapabilityStrength.STRONG
+                elif capability in ["efficient"]:
+                    strength = CapabilityStrength.MODERATE
+                elif capability in ["inexpensive"]:
+                    strength = CapabilityStrength.BASIC
+                else:
+                    strength = CapabilityStrength.MODERATE
+                
+                model_capabilities[capability] = strength
+        
+        # Add capabilities to provider options
+        if model_capabilities and "capabilities" not in provider_options:
+            provider_options["capabilities"] = model_capabilities
+            
+        # Construct provider kwargs
         provider_kwargs = {
             "model_name": model_name,
             "max_tokens": max_tokens,
+            "options": provider_options,
             **kwargs,
         }
 
+        # Validate provider options using schema validation
+        try:
+            # Import here to avoid circular imports
+            from atlas.schemas.options import PROVIDER_OPTIONS_SCHEMAS
+            
+            # Validate options with the appropriate schema
+            options_schema = PROVIDER_OPTIONS_SCHEMAS.get(
+                provider_name, 
+                PROVIDER_OPTIONS_SCHEMAS["default"]
+            )
+            
+            # If options exist and are not empty, validate them
+            if provider_options:
+                provider_options = options_schema.load(provider_options)
+                provider_kwargs["options"] = provider_options
+                
+        except ImportError:
+            # Schema validation module not available, log warning but continue
+            logger.warning("Schema validation module not available, skipping options validation")
+        except Exception as e:
+            # Log validation error but continue (will be caught by provider constructor)
+            logger.warning(f"Provider options validation failed: {e}")
+            
+        # Create the provider with validated arguments
         provider = provider_class(**provider_kwargs)
         logger.debug(f"Created provider '{provider_name}' with model '{model_name}'")
         

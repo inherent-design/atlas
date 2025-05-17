@@ -13,7 +13,9 @@ Examples are numbered to create a logical learning progression:
 | [01_query_simple.py](./01_query_simple.py) | ✅ Complete | Basic querying with different providers |
 | [02_query_streaming.py](./02_query_streaming.py) | ✅ Complete | Streaming responses from language models |
 | [03_provider_selection.py](./03_provider_selection.py) | ✅ Complete | Provider and model selection options |
-| [03_agent_options_verification.py](./03_agent_options_verification.py) | ✅ Complete | Agent initialization with provider options |
+| [05_agent_options_verification.py](./05_agent_options_verification.py) | ✅ Complete | Agent initialization with provider options |
+| [06_task_aware_providers.py](./06_task_aware_providers.py) | ✅ Complete | Task-aware provider selection |
+| [07_task_aware_agent.py](./07_task_aware_agent.py) | ✅ Complete | Task-aware agent implementation |
 
 ### Knowledge & Retrieval (10-19)
 
@@ -21,14 +23,15 @@ Examples are numbered to create a logical learning progression:
 |---------|--------|-------------|
 | [10_document_ingestion.py](./10_document_ingestion.py) | ✅ Complete | Document ingestion into knowledge base |
 | [11_basic_retrieval.py](./11_basic_retrieval.py) | ✅ Complete | Document retrieval with filters |
-| [12_hybrid_retrieval.py.todo](./12_hybrid_retrieval.py.todo) | 🚧 Planned | Combined semantic and keyword search |
+| [12_hybrid_retrieval.py](./12_hybrid_retrieval.py) | ✅ Complete | Combined semantic and keyword search |
 | [15_advanced_filtering.py](./15_advanced_filtering.py) | ✅ Complete | Advanced metadata and document content filtering |
+| [16_schema_validation.py](./16_schema_validation.py) | ✅ Complete | Schema-based validation for messages and data structures |
 
 ### Advanced Features (20-29)
 
 | Example | Status | Description |
 |---------|--------|-------------|
-| [20_tool_agent.py.todo](./20_tool_agent.py.todo) | 🚧 Planned | Tool usage with agents |
+| [20_tool_agent.py](./20_tool_agent.py) | ✅ Complete | Tool usage with agents |
 | [21_multi_agent.py.todo](./21_multi_agent.py.todo) | 🚧 Planned | Multi-agent communication |
 | [22_agent_workflows.py.todo](./22_agent_workflows.py.todo) | 🚧 Planned | Agent workflows with LangGraph |
 

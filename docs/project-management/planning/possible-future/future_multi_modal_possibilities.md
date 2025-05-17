@@ -1,3 +1,10 @@
+---
+
+title: Future Multi-Modal
+
+---
+
+
 # Future Multi-Modal Possibilities for Atlas
 
 **⚠️ IMPORTANT DISCLAIMER**

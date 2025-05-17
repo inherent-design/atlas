@@ -1,4 +1,15 @@
+---
+
+title: Proposed Project
+
+---
+
+
 # Proposed Project Structure
+
+::: tip CURRENT STRUCTURE
+This document outlines the current Atlas project structure as of May 16, 2025. The structure has been updated to reflect the NERV documentation port and V0/V1/V2 architecture organization.
+:::
 
 This document outlines the refined structure for the Atlas project, focusing on clean architecture, minimal dependencies, and clear component boundaries. This structure represents a clean-break approach that simplifies the codebase while ensuring all required functionality is maintained.
 
@@ -50,6 +61,7 @@ atlas/
 │   ├── prompts.py                   ✅  🔴  System prompt management
 │   ├── retry.py                     ✅  🔴  Retry mechanisms
 │   ├── telemetry.py                 ✅  🔴  Telemetry and metrics
+│   ├── types.py                     🗑️  🔴  Legacy type definitions (to be replaced by schemas)
 │   ├── services/                    🔲  🔴  Service architecture components
 │   │   ├── __init__.py              🔲  🔴  Module initialization
 │   │   ├── base.py                  🔲  🔴  Base service interfaces
@@ -75,7 +87,7 @@ atlas/
 │   ├── embedding.py                 ✅  🔴  Embedding generation
 │   ├── ingest.py                    ✅  🔴  Document ingestion
 │   ├── retrieval.py                 🚧  🔴  Document retrieval interface
-│   ├── hybrid_search.py             🔲  🔴  Hybrid semantic+keyword search
+│   ├── hybrid_search.py             ✅  🔴  Hybrid semantic+keyword search
 │   ├── reranking.py                 🔲  🟠  Result reranking strategies
 │   ├── search_scoring.py            🔲  🟠  Configurable relevance scoring
 │   └── settings.py                  ✅  🔴  Retrieval settings configuration
@@ -95,11 +107,11 @@ atlas/
 │   │   ├── base.py                  ✅  🔴  Base streaming interfaces
 │   │   ├── control.py               ✅  🔴  Stream control implementation
 │   │   └── buffer.py                ✅  🔴  Stream buffer management
-│   ├── implementations/             🚧  🔴  Provider implementations
+│   ├── implementations/             ✅  🔴  Provider implementations
 │   │   ├── __init__.py              ✅  🔴  Module initialization
 │   │   ├── anthropic.py             ✅  🔴  Anthropic provider
-│   │   ├── openai.py                🔲  🔴  OpenAI provider
-│   │   ├── ollama.py                🔲  🔴  Ollama provider
+│   │   ├── openai.py                ✅  🔴  OpenAI provider
+│   │   ├── ollama.py                ✅  🔴  Ollama provider
 │   │   └── mock.py                  ✅  🔴  Mock provider for testing
 │   ├── group.py                     ✅  🔴  Provider group implementation
 │   ├── registry.py                  ✅  🔴  Provider registry
@@ -107,16 +119,28 @@ atlas/
 │   ├── resolver.py                  ✅  🔴  Provider auto-resolution
 │   ├── capabilities.py              ✅  🔴  Provider capabilities
 │   ├── options.py                   ✅  🔴  Provider options and configuration
-│   ├── anthropic.py                 🗑️  🔴  Legacy Anthropic provider (moved to implementations)
-│   ├── openai.py                    🗑️  🔴  Legacy OpenAI provider (to be moved)
-│   ├── ollama.py                    🗑️  🔴  Legacy Ollama provider (to be moved)
-│   └── mock.py                      🗑️  🔴  Legacy Mock provider (moved to implementations)
+│   ├── validation.py                ✅  🔴  Schema-based validation utilities
+│   ├── anthropic.py                 🗑️  🔴  Legacy Anthropic provider (moved to implementations and ready for removal)
+│   ├── openai.py                    🗑️  🔴  Legacy OpenAI provider (moved to implementations and ready for removal)
+│   ├── ollama.py                    🗑️  🔴  Legacy Ollama provider (moved to implementations and ready for removal)
+│   └── mock.py                      🗑️  🔴  Legacy Mock provider (moved to implementations and ready for removal)
 ├── query.py                         ✅  🔴  Query client interface
 ├── reasoning/                       🔲  🟢  Structured reasoning frameworks
 │   ├── __init__.py                  🔲  🟢  Module initialization
 │   ├── chain_of_thought.py          🔲  🟢  Chain-of-thought implementation
 │   ├── verification.py              🔲  🟢  Self-verification mechanisms
 │   └── reflection.py                🔲  🟢  Self-critique and improvement
+├── schemas/                         🚧  🔴  Schema-based validation and types
+│   ├── __init__.py                  ✅  🔴  Module initialization
+│   ├── base.py                      ✅  🔴  Base schema definitions and utilities
+│   ├── messages.py                  ✅  🔴  Message schema definitions
+│   ├── providers.py                 ✅  🔴  Provider schema definitions
+│   ├── options.py                   ✅  🔴  Options and capabilities schemas
+│   ├── config.py                    ✅  🔴  Configuration schemas
+│   ├── types.py                     ✅  🔴  Schema-compatible type annotations
+│   ├── agents.py                    🔲  🔴  Agent schema definitions
+│   ├── knowledge.py                 🔲  🔴  Knowledge system schemas
+│   └── validation.py                🔲  🔴  Validation utilities and decorators
 ├── security/                        🔲  🟠  Security and safety framework
 │   ├── __init__.py                  🔲  🟠  Module initialization
 │   ├── content_filter.py            🔲  🟠  Input/output content filtering
@@ -125,7 +149,7 @@ atlas/
 ├── tools/                           🚧  🔴  Tools system
 │   ├── __init__.py                  ✅  🔴  Module initialization
 │   ├── base.py                      🚧  🔴  Base tool interface
-│   ├── registry.py                  🔲  🔴  Tool registry and discovery
+│   ├── registry.py                  ✅  🔴  Tool registry and discovery
 │   ├── standard/                    🚧  🔴  Standard built-in tools
 │   │   ├── __init__.py              ✅  🔴  Module initialization
 │   │   ├── knowledge.py             🚧  🔴  Knowledge management tools
@@ -145,170 +169,202 @@ atlas/
 
 ```
 docs/
-├── architecture/                    ✅  🔴  Architecture overview
-│   ├── components.md                ✅  🔴  Component architecture
-│   ├── data_flow.md                 ✅  🔴  Data flow diagrams
-│   ├── design_principles.md         ✅  🔴  Core design principles
-│   └── index.md                     ✅  🔴  Architecture introduction
-├── components/                      ✅  🔴  Detailed component documentation
-│   ├── agents/                      ✅  🔴  Agent system documentation
-│   │   ├── index.md                 🔲  🔴  Agent system overview
-│   │   ├── controller.md            ✅  🔴  Controller agent
-│   │   ├── messaging.md             ✅  🔴  Messaging system
-│   │   ├── workers.md               ✅  🔴  Worker agents
-│   │   └── specialized.md           ✅  🔴  Specialized agents
-│   ├── core/                        ✅  🔴  Core utilities documentation
-│   │   ├── index.md                 🔲  🔴  Core utilities overview
-│   │   ├── config.md                ✅  🔴  Configuration management
-│   │   ├── env.md                   ✅  🔴  Environment variables
-│   │   ├── errors.md                ✅  🔴  Error handling
-│   │   ├── logging.md               ✅  🔴  Logging system
-│   │   ├── prompts.md               ✅  🔴  System prompts
-│   │   ├── telemetry.md             ✅  🔴  Telemetry system
-│   │   └── caching.md               🔲  🟠  Caching system
-│   ├── graph/                       ✅  🔴  Graph system documentation
-│   │   ├── index.md                 ✅  🔴  Graph system overview
-│   │   ├── edges.md                 ✅  🔴  Graph edges
-│   │   ├── nodes.md                 ✅  🔴  Graph nodes
-│   │   └── state.md                 ✅  🔴  State management
-│   ├── knowledge/                   ✅  🔴  Knowledge system documentation
-│   │   ├── index.md                 ✅  🔴  Knowledge system overview
-│   │   ├── chunking.md              🔲  🔴  Document chunking
-│   │   ├── hybrid_search.md         🔲  🔴  Hybrid search strategies
-│   │   ├── ingestion.md             ✅  🔴  Document ingestion
-│   │   └── retrieval.md             ✅  🔴  Document retrieval
-│   ├── memory/                      🔲  🟠  Memory system documentation
-│   │   ├── index.md                 🔲  🟠  Memory system overview
-│   │   ├── buffer.md                🔲  🟠  Conversation buffers
-│   │   ├── persistence.md           🔲  🟠  Long-term storage
-│   │   └── session.md               🔲  🟠  Session management
-│   ├── providers/                   ✅  🔴  Provider system documentation
-│   │   ├── index.md                 ✅  🔴  Provider system overview
-│   │   ├── implementations/         🔲  🔴  Provider implementations documentation
-│   │   │   ├── anthropic.md         ✅  🔴  Anthropic provider
-│   │   │   ├── openai.md            ✅  🔴  OpenAI provider
-│   │   │   ├── ollama.md            ✅  🔴  Ollama provider
-│   │   │   └── mock.md              ✅  🔴  Mock provider
-│   │   ├── streaming/               🚧  🔴  Streaming documentation
-│   │   │   ├── index.md             🔲  🔴  Streaming overview
-│   │   │   ├── control.md           🔲  🔴  Stream control interface
-│   │   │   └── buffer.md            🔲  🔴  Stream buffering
-│   │   ├── capabilities.md          ✅  🔴  Provider capabilities
-│   │   ├── group.md                 ✅  🔴  Provider group implementation
-│   │   ├── messages.md              ✅  🔴  Message and request modeling
-│   │   ├── errors.md                ✅  🔴  Error handling and categorization
-│   │   ├── reliability.md           ✅  🔴  Retry and circuit breaker patterns
-│   │   ├── selection.md             ✅  🔴  Provider selection strategies
-│   │   └── registry.md              ✅  🔴  Provider registry
-│   ├── reasoning/                   🔲  🟢  Reasoning framework documentation
-│   │   ├── index.md                 🔲  🟢  Reasoning system overview
-│   │   ├── chain_of_thought.md      🔲  🟢  Chain-of-thought patterns
-│   │   └── verification.md          🔲  🟢  Self-verification strategies
-│   ├── security/                    🔲  🟠  Security framework documentation
-│   │   ├── index.md                 🔲  🟠  Security system overview
-│   │   ├── content_filtering.md     🔲  🟠  Content filtering guide
-│   │   └── privacy.md               🔲  🟠  Privacy protection strategies
-│   └── tools/                       ✅  🔴  Tool system documentation
-│       ├── index.md                 ✅  🔴  Tool system overview
-│       ├── core.md                  ✅  🔴  Core tool interfaces
-│       ├── mcp.md                   ✅  🟠  MCP integration
-│       └── standard.md              ✅  🔴  Standard tools
-├── contributing/                    🚧  🔴  Contribution guides and standards
-│   ├── index.md                     🔲  🔴  Overview of contribution process
-│   ├── documentation-standards.md   🔲  🔴  Documentation writing guidelines
-│   ├── content-containers.md        🔲  🔴  Custom container usage guide
-│   ├── timelines.md                 🔲  🔴  Timeline component usage guide
-│   ├── code-examples.md             🔲  🔴  Standards for code examples
-│   └── style-guide.md               🔲  🔴  Writing style and terminology standards
-├── guides/                          ✅  🔴  User guides
-│   ├── getting_started.md           ✅  🔴  Getting started guide
-│   ├── configuration.md             ✅  🔴  Configuration guide
-│   ├── testing.md                   ✅  🔴  Testing guide
-│   ├── type_checking.md             ✅  🔴  Type checking guide
-│   ├── hybrid_search.md             🔲  🔴  Hybrid search implementation guide
-│   ├── caching.md                   🔲  🟠  Caching guide
-│   ├── memory.md                    🔲  🟠  Memory management guide
-│   ├── security.md                  🔲  🟠  Security best practices
-│   └── rate_limiting.md             🔲  🟠  Rate limiting configuration
+├── contributing/                    ✅  🔴  Contribution guides and standards
+│   ├── code-diffs.md                ✅  🔴  Code diff formatting standards
+│   ├── code-examples.md             ✅  🔴  Code example standards
+│   ├── content-containers.md        ✅  🔴  Custom container usage guide
+│   ├── documentation-standards.md   ✅  🔴  Documentation writing guidelines
+│   ├── index.md                     ✅  🔴  Overview of contribution process
+│   ├── style-guide.md               ✅  🔴  Writing style and terminology standards
+│   ├── timelines.md                 ✅  🔴  Timeline component usage guide
+│   ├── types.md                     ✅  🔴  Type system documentation
+│   └── typing-issues.md             ✅  🔴  Common typing issues and solutions
+├── NERV_DOC_PORT.md                 ✅  🔴  Documentation port information
 ├── project-management/              ✅  🔴  Project management documentation
-│   ├── index.md                     ✅  🔴  Project management overview
 │   ├── audit/                       ✅  🔴  Audit reports and analysis
-│   │   ├── implementation_audit.md  🔲  🔴  Implementation status audit
 │   │   └── archive/                 ✅  🔴  Historical audit documents
-│   │       ├── agent_system_update_2025-05-09.md   ✅  🔴  Agent system audit
-│   │       ├── doc_audit_2025-05-09.md             ✅  🔴  Documentation audit
+│   │       ├── agent_system_update_2025-05-09.md     ✅  🔴  Agent system audit
+│   │       ├── doc_audit_2025-05-09.md               ✅  🔴  Documentation audit
 │   │       └── enhanced_provider_alignment_2025-05-09.md ✅  🔴  Provider system audit
 │   ├── business/                    ✅  🔴  Business planning and strategy
 │   │   ├── commercialization_timeline.md ✅  🔴  Post-development commercialization plan
 │   │   └── monetization_strategy.md ✅  🔴  Monetization approaches
+│   ├── index.md                     ✅  🔴  Project management overview
 │   ├── legal/                       ✅  🔴  Legal considerations
 │   │   ├── compliance_roadmap.md    ✅  🔴  Compliance implementation timeline
 │   │   └── license_selection.md     ✅  🔴  License selection rationale
-│   ├── marketing/                   ✅  🔴  Marketing materials
-│   │   ├── go_to_market_strategy.md ✅  🔴  Comprehensive go-to-market plan
-│   │   ├── pitch_deck_outline.md    ✅  🔴  Pitch deck structure
-│   │   ├── press_release_template.md ✅  🔴  Press release template
-│   │   └── project_overview.md      ✅  🔴  Project overview for audiences
 │   ├── planning/                    ✅  🔴  Planning documents
 │   │   ├── accelerated_implementation_plan.md ✅  🔴  Accelerated execution plan
 │   │   ├── architecture_planning.md ✅  🔴  Architecture design planning
 │   │   ├── archive/                 ✅  🔴  Archived planning documents
-│   │   │   ├── index.md             ✅  🔴  Archive documentation
-│   │   │   ├── cli_planning_2025-05-10.md        ✅  🔴  CLI interface planning (archived)
+│   │   │   ├── cli_planning_2025-05-10.md            ✅  🔴  CLI interface planning (archived)
 │   │   │   ├── implementation_planning_2025-05-10.md ✅  🔴  Implementation strategy (archived)
+│   │   │   ├── index.md                              ✅  🔴  Archive documentation
 │   │   │   └── mvp_completion_strategy_2025-05-10.md ✅  🔴  MVP roadmap (archived)
 │   │   └── possible-future/         ✅  🟢  Future planning documents
+│   │       ├── core_services_architecture.md ✅  🟢  Core services planning
 │   │       ├── future_multi_modal_possibilities.md ✅  🟢  Multi-modal support
 │   │       ├── hybrid_retrieval_strategies.md ✅  🟢  Advanced retrieval
 │   │       ├── open_source_strategy.md ✅  🟢  Open source approach
 │   │       └── test_suite_planning.md ✅  🟢  Test suite planning
 │   ├── roadmap/                     ✅  🔴  Product roadmap
-│   │   ├── product_roadmap.md       ✅  🔴  Comprehensive product roadmap
-│   │   └── archive/                 ✅  🔴  Archived roadmap documents
-│   │       ├── index.md             ✅  🔴  Archive documentation
-│   │       └── mvp_strategy_2025-05-10.md  ✅  🔴  MVP strategy (archived)
+│   │   ├── archive/                 ✅  🔴  Archived roadmap documents
+│   │   │   ├── index.md             ✅  🔴  Archive documentation
+│   │   │   └── mvp_strategy_2025-05-10.md  ✅  🔴  MVP strategy (archived)
+│   │   └── product_roadmap.md       ✅  🔴  Comprehensive product roadmap
 │   └── tracking/                    ✅  🔴  Implementation tracking
-│       ├── proposed_structure.md    ✅  🔴  Proposed code structure
-│       ├── todo.md                  ✅  🔴  Current implementation tasks
-│       └── archive/                 ✅  🔴  Historical tracking documents
-│           └── enhanced_provider_todo_2025-05-10.md ✅  🔴  Provider system tasks
+│       ├── archive/                 ✅  🔴  Historical tracking documents
+│       │   └── enhanced_provider_todo_2025-05-10.md ✅  🔴  Provider system tasks
+│       ├── proposed_structure.md    ✅  🔴  Current code structure
+│       └── todo.md                  ✅  🔴  Current implementation tasks
 ├── reference/                       ✅  🔴  Reference documentation
-│   ├── api.md                       ✅  🔴  API reference
-│   ├── cli.md                       ✅  🔴  CLI options reference
-│   ├── env_variables.md             ✅  🔴  Environment variables reference
-│   ├── faq.md                       ✅  🔴  Frequently asked questions
 │   └── licensing.md                 ✅  🔴  Licensing information
-└── workflows/                       ✅  🔴  Workflow documentation
-    ├── query.md                     ✅  🔴  Basic query workflow
-    ├── retrieval.md                 ✅  🔴  Retrieval workflow
-    ├── conversational.md            🔲  🟠  Conversational workflows
-    ├── multi_agent.md               ✅  🔴  Multi-agent workflow
-    └── custom_workflows.md          ✅  🔴  Custom workflow guide
+├── v0/                              ✅  🔴  V0 architecture documentation
+│   ├── architecture/                ✅  🔴  Architecture overview
+│   │   ├── components.md            ✅  🔴  Component architecture
+│   │   ├── data_flow.md             ✅  🔴  Data flow diagrams
+│   │   ├── design_principles.md     ✅  🔴  Core design principles
+│   │   ├── index.md                 ✅  🔴  Architecture introduction
+│   │   ├── module_interaction.md    ✅  🔴  Module interaction patterns
+│   │   └── system_requirements.md   ✅  🔴  System requirements
+│   ├── components/                  ✅  🔴  Detailed component documentation
+│   │   ├── agents/                  ✅  🔴  Agent system documentation
+│   │   │   ├── controller.md        ✅  🔴  Controller agent
+│   │   │   ├── messaging.md         ✅  🔴  Messaging system
+│   │   │   ├── specialized.md       ✅  🔴  Specialized agents
+│   │   │   └── workers.md           ✅  🔴  Worker agents
+│   │   ├── core/                    ✅  🔴  Core utilities documentation
+│   │   │   ├── config.md            ✅  🔴  Configuration management
+│   │   │   ├── env.md               ✅  🔴  Environment variables
+│   │   │   ├── errors.md            ✅  🔴  Error handling
+│   │   │   ├── logging.md           ✅  🔴  Logging system
+│   │   │   ├── prompts.md           ✅  🔴  System prompts
+│   │   │   └── telemetry.md         ✅  🔴  Telemetry system
+│   │   ├── graph/                   ✅  🔴  Graph system documentation
+│   │   │   ├── edges.md             ✅  🔴  Graph edges
+│   │   │   ├── index.md             ✅  🔴  Graph system overview
+│   │   │   ├── nodes.md             ✅  🔴  Graph nodes
+│   │   │   └── state.md             ✅  🔴  State management
+│   │   ├── knowledge/               ✅  🔴  Knowledge system documentation
+│   │   │   ├── index.md             ✅  🔴  Knowledge system overview
+│   │   │   ├── ingestion.md         ✅  🔴  Document ingestion
+│   │   │   └── retrieval.md         ✅  🔴  Document retrieval
+│   │   ├── providers/               ✅  🔴  Provider system documentation
+│   │   │   ├── anthropic.md         ✅  🔴  Anthropic provider
+│   │   │   ├── capabilities.md      ✅  🔴  Provider capabilities
+│   │   │   ├── index.md             ✅  🔴  Provider system overview
+│   │   │   ├── mock.md              ✅  🔴  Mock provider
+│   │   │   ├── ollama.md            ✅  🔴  Ollama provider
+│   │   │   ├── openai.md            ✅  🔴  OpenAI provider
+│   │   │   ├── provider_group.md    ✅  🔴  Provider group implementation
+│   │   │   ├── provider_selection.md✅  🔴  Provider selection strategies
+│   │   │   └── registry.md          ✅  🔴  Provider registry
+│   │   └── tools/                   ✅  🔴  Tool system documentation
+│   │       ├── core.md              ✅  🔴  Core tool interfaces
+│   │       ├── index.md             ✅  🔴  Tool system overview
+│   │       ├── mcp.md               ✅  🔴  MCP integration
+│   │       └── standard.md          ✅  🔴  Standard tools
+│   ├── guides/                      ✅  🔴  User guides
+│   │   └── chromadb_usage.md        ✅  🔴  ChromaDB usage guide
+│   └── workflows/                   ✅  🔴  Workflow documentation
+│       ├── custom_workflows.md      ✅  🔴  Custom workflow guide
+│       ├── multi_agent.md           ✅  🔴  Multi-agent workflow
+│       ├── query.md                 ✅  🔴  Basic query workflow
+│       └── retrieval.md             ✅  🔴  Retrieval workflow
+├── v1/                              ✅  🔴  V1 architecture documentation
+│   ├── matrix_to_nerv.md            ✅  🔴  Matrix to NERV transition
+│   └── the-matrix/                  ✅  🔴  Matrix architecture
+│       ├── code_examples.md         ✅  🔴  Code examples
+│       ├── core_patterns.md         ✅  🔴  Core design patterns
+│       ├── event_flow.md            ✅  🔴  Event system flow
+│       ├── implementation_strategy.md ✅  🔴  Implementation strategy
+│       ├── index.md                 ✅  🔴  Matrix overview
+│       ├── overview.md              ✅  🔴  System overview
+│       ├── system_dependencies.md   ✅  🔴  System dependencies
+│       └── the-matrix.md            ✅  🔴  Matrix core documentation
+└── v2/                              ✅  🔴  V2 architecture documentation (NERV)
+    ├── inner-universe/              ✅  🔴  Inner Universe implementation
+    │   ├── deployment.md            ✅  🔴  Deployment strategies
+    │   ├── implementation.md        ✅  🔴  Implementation details
+    │   ├── index.md                 ✅  🔴  Inner Universe overview
+    │   ├── integration_guide.md     ✅  🔴  Integration guidelines
+    │   ├── migration_guide.md       ✅  🔴  Migration from V1 to V2
+    │   ├── reducers.md              ✅  🔴  Reducer implementation
+    │   ├── schema.md                ✅  🔴  Schema system
+    │   ├── testing_strategy.md      ✅  🔴  Testing approach
+    │   ├── type_mappings.md         ✅  🔴  Type system mappings
+    │   └── types.md                 ✅  🔴  Type definitions
+    └── nerv/                        ✅  🔴  NERV architecture
+        ├── components/              ✅  🔴  NERV components
+        │   ├── aspect_weaver.md     ✅  🔴  Aspect weaver component
+        │   ├── container.md         ✅  🔴  Container component
+        │   ├── diff_synchronizer.md ✅  🔴  Diff synchronizer
+        │   ├── effect_monad.md      ✅  🔴  Effect monad implementation
+        │   ├── event_bus.md         ✅  🔴  Event bus
+        │   ├── index.md             ✅  🔴  Components overview
+        │   ├── perspective_aware.md ✅  🔴  Perspective aware component
+        │   ├── quantum_partitioner.md ✅  🔴  Quantum partitioner
+        │   ├── state_projector.md   ✅  🔴  State projector
+        │   └── temporal_store.md    ✅  🔴  Temporal store
+        ├── composites/              ✅  🔴  NERV composite patterns
+        │   ├── adaptive_state_management.md ✅  🔴  Adaptive state management
+        │   ├── event_driven_architecture.md ✅  🔴  Event architecture
+        │   ├── index.md             ✅  🔴  Composites overview
+        │   └── parallel_workflow_engine.md  ✅  🔴  Parallel workflows
+        ├── index.md                 ✅  🔴  NERV overview
+        ├── patterns/                ✅  🔴  NERV design patterns
+        │   ├── aspect_orientation.md✅  🔴  Aspect oriented programming
+        │   ├── boundaries.md        ✅  🔴  System boundaries
+        │   ├── dependency_inversion.md ✅  🔴  Dependency inversion
+        │   ├── effect_system.md     ✅  🔴  Effect system
+        │   ├── index.md             ✅  🔴  Patterns overview
+        │   ├── interfaces.md        ✅  🔴  Interface design
+        │   ├── perspective_shifting.md ✅  🔴  Perspective shifting
+        │   ├── quantum_partitioning.md ✅  🔴  Quantum partitioning
+        │   ├── reactive_event_mesh.md ✅  🔴  Reactive event mesh
+        │   ├── state_projection.md  ✅  🔴  State projection
+        │   ├── state_synchronization.md ✅  🔴  State synchronization
+        │   ├── temporal_versioning.md ✅  🔴  Temporal versioning
+        │   └── types.md             ✅  🔴  Type system patterns
+        ├── primitives/              ✅  🔴  NERV primitives
+        │   ├── builder.md           ✅  🔴  Builder pattern
+        │   ├── command.md           ✅  🔴  Command pattern
+        │   ├── dag.md               ✅  🔴  Directed acyclic graph
+        │   ├── decorator.md         ✅  🔴  Decorator pattern
+        │   ├── factory.md           ✅  🔴  Factory pattern
+        │   ├── index.md             ✅  🔴  Primitives overview
+        │   ├── monad.md             ✅  🔴  Monad implementation
+        │   ├── observer.md          ✅  🔴  Observer pattern
+        │   └── strategy.md          ✅  🔴  Strategy pattern
+        ├── python/                  ✅  🔴  Python implementation
+        │   └── nerv.py              ✅  🔴  NERV Python module
+        └── types/                   ✅  🔴  NERV type system
+            ├── cheatsheet.md        ✅  🔴  Type system cheatsheet
+            └── diagrams.md          ✅  🔴  Type system diagrams
 ```
 
 ## Example Structure
 
 ```
 examples/
-├── 01_query_simple.py               ✅  🔴  Basic query
+├── 01_query_simple.py               ✅  🔴  Basic query 
 ├── 02_query_streaming.py            ✅  🔴  Streaming query
 ├── 03_provider_selection.py         ✅  🔴  Provider selection and options
 ├── 04_provider_group.py             ✅  🔴  Provider group with fallback
-├── 05_task_aware_providers.py       ✅  🔴  Task-aware provider selection
-├── 06_task_aware_agent.py           ✅  🔴  Task-aware agent implementation
+├── 05_agent_options_verification.py ✅  🔴  Agent options verification 
+├── 06_task_aware_providers.py       ✅  🔴  Task-aware provider selection
+├── 07_task_aware_agent.py           ✅  🔴  Task-aware agent implementation
+├── 08_multi_agent_providers.py      ✅  🔴  Multi-agent provider example
 ├── 10_document_ingestion.py         ✅  🔴  Document ingestion
 ├── 11_basic_retrieval.py            ✅  🔴  Basic retrieval
-├── 12_hybrid_retrieval.py           🚧  🔴  Hybrid retrieval
+├── 12_hybrid_retrieval.py           ✅  🔴  Hybrid retrieval
 ├── 15_advanced_filtering.py         ✅  🔴  Advanced metadata and content filtering
-├── 20_tool_agent.py                 🚧  🔴  Tool agent usage
-├── 21_multi_agent.py                🚧  🔴  Multi-agent system
-├── 22_agent_workflows.py            🚧  🔴  Agent workflows
-├── 30_memory_conversation.py        🔲  🟠  Memory-enabled conversations
-├── 31_caching_example.py            🔲  🟠  Response caching demonstration
-├── 32_rate_limiting.py              🔲  🟠  Rate limiting configuration
-├── 33_security_filtering.py         🔲  🟠  Content filtering and security
-├── 40_chain_of_thought.py           🔲  🟢  Chain-of-thought reasoning
-├── 41_self_verification.py          🔲  🟢  Self-verification techniques
+├── 16_schema_validation.py          ✅  🔴  Schema-based validation examples
+├── 20_tool_agent.py                 🚧  🔴  Tool agent usage (needs fixing)
+├── 21_multi_agent.py                🚧  🔴  Multi-agent system (in progress)
+├── 22_agent_workflows.py            🚧  🔴  Agent workflows (planned)
+├── 23_knowledge_tools.py            🔲  🔴  Knowledge tools implementation (planned)
+├── 24_tool_chaining.py              🔲  🔴  Tool chaining and composition (planned)
 ├── common.py                        ✅  🔴  Shared utilities for examples
 ├── EXAMPLES.md                      ✅  🔴  Example implementation standards
 └── README.md                        ✅  🔴  Examples guide
@@ -318,33 +374,48 @@ examples/
 
 ### Core Functionality (MVP) 🔴
 
-#### 1. Provider System Completion
-- Standardized provider interface with comprehensive streaming controls (current focus)
-- Robust ProviderGroup with enhanced fallback mechanisms (current focus)
+#### 1. Tool Agent Implementation
+- Fix tool agent registration in examples (current focus)
+- Enhance tool registry with proper permissions handling
+- Improve tool discovery and initialization
+- Add schema validation for tool execution
+- Create knowledge tools integration
+- Implement automatic tool granting to worker agents
+
+#### 2. Provider System Completion
+- Standardized provider interface with comprehensive streaming controls (completed)
+- Robust ProviderGroup with enhanced fallback mechanisms (completed)
 - Capability-based provider selection (completed)
-- Error handling and lifecycle management improvements (current focus)
+- Error handling and lifecycle management improvements (completed)
 
-#### 2. Knowledge System Enhancement
-- Hybrid retrieval combining semantic and keyword search
-- Improved chunking strategies for better document understanding
-- Streamlined retrieval interface with unified search approach
+#### 3. Schema-Based Validation System
+- Marshmallow schemas for data validation (completed)
+- Provider options schema validation (completed)
+- Message system schema validation (completed)
+- Stream handler schema validation (completed)
+- Knowledge system schema migration (in progress)
+- Tool and agent schema development (current focus)
 
-#### 3. Agent System Refinement
+#### 4. Knowledge System Enhancement
+- Hybrid retrieval combining semantic and keyword search (completed)
+- Multiple merging strategies for hybrid search (completed)
+- Improved chunking strategies for better document understanding (in progress)
+- Advanced metadata filtering capabilities (in progress)
+- Knowledge tools implementation (current focus)
+
+#### 5. Agent System Refinement
 - Consolidated messaging system into a single file (completed)
 - Clear base class responsibilities (completed)
-- Specialized agent implementations (TaskAwareAgent completed, others in progress)
-- Enhanced provider integration in agent system (current focus)
-- Streaming control propagation to agents (current focus)
+- Specialized agent implementations (TaskAwareAgent completed)
+- Enhanced provider integration in agent system (completed)
+- Integration with tool system (current focus)
 
-#### 4. Tools System Implementation
-- Simplified tool interface with validation
-- Focused on essential tool categories
-- Clear tool registry architecture
-
-#### 5. Graph System Refinement
-- Enhanced state management for workflows
-- Reusable workflow patterns
-- Clean interfaces for new workflows
+#### 6. Core Services Layer
+- Buffer system implementation (planned)
+- Event system integration (planned)
+- State management with versioning (planned)
+- Resource lifecycle management (planned)
+- System boundaries definition (planned)
 
 ### Next-Phase Improvements 🟠
 
@@ -397,25 +468,36 @@ examples/
 
 ## Implementation Roadmap
 
-::: timeline Provider System Finalization
-- **May 10-17, 2025**
-- Enhanced streaming with controls
-- Provider lifecycle management
-- Improved fallback mechanisms
+::: timeline Tool Agent Implementation
+- **May 17-20, 2025**
+- Fix tool registration in examples
+- Enhance tool registry with permissions
+- Add schema validation for tools
+- Create knowledge tools integration
+- Implement tool execution framework
 :::
 
-::: timeline Agent-Provider Integration
-- **May 18-24, 2025**
-- Agent streaming controls
-- Provider capability utilization
-- Controller-worker improvements
+::: timeline Schema System Integration
+- **May 17-22, 2025**
+- Tool schema development (May 17-18)
+- Agent schema development (May 19-20)
+- Knowledge system schema migration (May 21)
+- Configuration schema validation (May 22)
+:::
+
+::: timeline Core Services Layer
+- **May 23-27, 2025**
+- Boundary interfaces implementation
+- Event system development
+- State management with versioning
+- Resource lifecycle management
 :::
 
 ::: timeline Knowledge System Enhancements
-- **May 25-31, 2025**
-- Hybrid retrieval implementation
+- **May 28-31, 2025**
+- Document chunking strategies
 - Advanced metadata extraction
-- Document-specific chunkers
+- Knowledge caching implementation
 :::
 
 ::: timeline Multi-Agent Orchestration
@@ -426,21 +508,14 @@ examples/
 :::
 
 ::: timeline Enterprise Features
-- **June 8-14, 2025**
+- **June 8-15, 2025**
 - Security and access control
 - Compliance tools
 - Advanced monitoring
 :::
 
-::: timeline Cloud Service Foundations
-- **June 15-22, 2025**
-- Multi-tenant architecture
-- Usage tracking and metering
-- Self-service capabilities
-:::
-
 ::: timeline Finalization & Documentation
-- **June 23-30, 2025**
+- **June 16-30, 2025**
 - Bug fixes and stabilization
 - Complete documentation
 - Final examples and testing
@@ -452,17 +527,64 @@ Remember that Atlas follows a **clean break philosophy** - we prioritize best-in
 
 ## Key Files for Current Sprint
 
-| Component                    | Key Files                                                                                | Priority | Owner         |
-| ---------------------------- | ---------------------------------------------------------------------------------------- | -------- | ------------- |
-| **Provider Streaming**       | `atlas/providers/base.py`, `atlas/providers/group.py`                                    | Critical | Provider Team |
-| **Provider Implementations** | `atlas/providers/anthropic.py`, `atlas/providers/openai.py`, `atlas/providers/ollama.py` | High     | Provider Team |
-| **Agent Integration**        | `atlas/agents/controller.py`, `atlas/agents/worker.py`                                   | High     | Agent Team    |
-| **Specialized Agents**       | `atlas/agents/specialized/tool_agent.py`, `atlas/agents/specialized/task_aware_agent.py` | Medium   | Agent Team    |
-| **Examples**                 | `examples/07_enhanced_streaming.py`, `examples/08_multi_agent_providers.py`              | Medium   | Examples Team |
+| Component                      | Key Files                                                                          | Priority | Owner         |
+| ------------------------------ | ---------------------------------------------------------------------------------- | -------- | ------------- |
+| **Tool Agent Implementation**  | `atlas/agents/specialized/tool_agent.py`, `atlas/tools/base.py`                    | Critical | Agent Team    |
+| **Tool Registry**              | `atlas/tools/registry.py`, `atlas/tools/standard/knowledge_tools.py`               | Critical | Tools Team    |
+| **Schema - Tools**             | `atlas/schemas/tools.py`, `atlas/schemas/base.py`                                  | Critical | Schema Team   |
+| **Schema - Agents**            | `atlas/schemas/agents.py`, `atlas/agents/base.py`                                  | High     | Schema Team   |
+| **Knowledge Integration**      | `atlas/knowledge/hybrid_search.py`, `atlas/tools/standard/knowledge_tools.py`      | High     | Knowledge Team|
+| **Tool Agent Examples**        | `examples/20_tool_agent.py`, `examples/23_knowledge_tools.py`                      | High     | Examples Team |
+| **Core Services Foundation**   | `atlas/core/services/__init__.py`, `atlas/core/services/base.py`                   | Medium   | Core Team     |
+| **Schema - Knowledge**         | `atlas/schemas/knowledge.py`, `atlas/knowledge/chunking.py`                        | Medium   | Schema Team   |
 
 ## Resource Allocation
 
-- **Primary Focus**: Provider system enhancements with streaming controls
-- **Secondary Focus**: Agent-provider integration optimization
-- **On Hold**: Knowledge system, tool system implementation
-- **Team Distribution**: See the [Accelerated Implementation Plan](../planning/accelerated_implementation_plan.md) for detailed team allocations
+- **Primary Focus**: Tool agent implementation and tool registry enhancement
+- **Secondary Focus**: Schema validation for tools and agents
+- **Next Phase**: Core services layer and knowledge system enhancements
+- **Team Distribution**: 
+  - **Agent Team**: Tool agent implementation and worker permissions
+  - **Tools Team**: Tool registry and knowledge tools integration
+  - **Schema Team**: Tool and agent schema validation
+  - **Examples Team**: Tool usage examples and demonstrations
+  - See the [Accelerated Implementation Plan](../planning/accelerated_implementation_plan.md) for details
+
+## Schema System Implementation
+
+### Architectural Approach
+
+The schema system follows these key principles:
+
+1. **Bottom-up transformation**: Starting with the atomic data structures and working upward
+2. **Verbs to nouns**: Converting actions/methods into typed data structures
+3. **Explicit validation**: Clear and consistent validation at API boundaries
+4. **Standardized serialization**: Unified approach for all data transformations
+5. **Schema-validated classes**: Using decorators to ensure runtime validation
+
+### Implementation Status
+
+| Component                      | Status        | Description                                         |
+| ------------------------------ | ------------- | --------------------------------------------------- |
+| **Base Schemas**               | ✅ Complete    | Foundation schemas and utility classes              |
+| **Message Schemas**            | ✅ Complete    | Schema definitions for provider messages            |
+| **Provider Schemas**           | ✅ Complete    | Schemas for requests, responses, and usage tracking |
+| **Options/Config Schemas**     | ✅ Complete    | Schemas for provider and system configuration       |
+| **Type Integration**           | ✅ Complete    | Type annotations compatible with schema validation  |
+| **Validation Decorators**      | ✅ Complete    | Schema validation decorators for functions/classes  |
+| **Schema-Validated Wrappers**  | ✅ Complete    | Utility for creating schema-validated classes       |
+| **Provider Message Migration** | ✅ Complete    | Converting provider messages to schema-validated    |
+| **Provider Options Migration** | ✅ Complete    | Converting provider options to schema-validated     |
+| **Stream Handler Migration**   | ✅ Complete    | Converting stream handlers to schema-validated      |
+| **Knowledge Schema Migration** | 🚧 In Progress | Migrating document chunks and retrieval to schemas  |
+| **Tool Schema Migration**      | 🚧 Current Focus | Migrating tool definitions to schemas            |
+| **Agent Schema Migration**     | 🚧 Current Focus | Migrating agent configuration to schemas         |
+| **Core Types Migration**       | ✅ Complete    | Moving TypedDict definitions to schema types        |
+
+### Benefits
+
+1. **Reduced Type Errors**: Clear validation eliminates ambiguity
+2. **Simplified Testing**: Input/output validation is declarative
+3. **Self-Documenting**: Schemas define and document data structures
+4. **Improved Error Messages**: Detailed validation errors with context
+5. **Greater API Consistency**: Uniform validation across components

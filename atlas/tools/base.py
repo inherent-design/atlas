@@ -9,10 +9,14 @@ import abc
 import json
 import inspect
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Any, Optional, Callable, Type, Union, TypeVar, Set, get_type_hints
+from typing import Dict, List, Any, Optional, Callable, Type, Union, TypeVar, Set, get_type_hints, Collection, cast, Generic
+from typing_extensions import Protocol
 import logging
 
 from atlas.core.telemetry import traced, TracedClass
+from atlas.core.types import (
+    ToolSchemaDict, ToolResultDict, ToolDefinitionDict, ToolExecutionDict
+)
 
 
 logger = logging.getLogger(__name__)
@@ -72,7 +76,7 @@ class ToolSchema:
         type_hints = get_type_hints(func)
         
         # Build parameters schema
-        parameters = {
+        parameters: Dict[str, Any] = {
             "type": "object",
             "properties": {},
             "required": []
@@ -109,7 +113,7 @@ class ToolSchema:
         )
     
     @staticmethod
-    def _type_to_json_schema(type_hint: Type) -> Dict[str, Any]:
+    def _type_to_json_schema(type_hint: Any) -> Dict[str, Any]:
         """Convert a Python type hint to a JSON Schema type.
         
         Args:
@@ -133,14 +137,17 @@ class ToolSchema:
             return {"type": "object"}
         elif hasattr(type_hint, "__origin__"):
             # Handle generics like List[str], Dict[str, int], etc.
-            if type_hint.__origin__ is list or type_hint.__origin__ is List:
+            origin = type_hint.__origin__
+            
+            # Handle list-like types including Collection
+            if origin is list or origin is List or (hasattr(Collection, "__origin__") and origin is Collection.__origin__):
                 item_type = type_hint.__args__[0] if hasattr(type_hint, "__args__") else Any
                 return {
                     "type": "array",
                     "items": ToolSchema._type_to_json_schema(item_type)
                 }
-            elif type_hint.__origin__ is dict or type_hint.__origin__ is Dict:
-                value_type = type_hint.__args__[1] if len(type_hint.__args__) > 1 else Any
+            elif origin is dict or origin is Dict:
+                value_type = type_hint.__args__[1] if len(getattr(type_hint, "__args__", [])) > 1 else Any
                 return {
                     "type": "object",
                     "additionalProperties": ToolSchema._type_to_json_schema(value_type)
@@ -169,7 +176,10 @@ class ToolSchema:
         return {}
 
 
-class Tool(TracedClass, abc.ABC):
+# Type variable for tool result
+R = TypeVar('R')
+
+class Tool(TracedClass, abc.ABC, Generic[R]):
     """Base class for all tools usable by agents."""
     
     def __init__(self, name: Optional[str] = None, description: Optional[str] = None):
@@ -216,7 +226,7 @@ class Tool(TracedClass, abc.ABC):
     
     @traced(name="execute")
     @abc.abstractmethod
-    def execute(self, **kwargs) -> Any:
+    def execute(self, **kwargs) -> R:
         """Execute the tool with the given arguments.
         
         Args:
@@ -226,6 +236,20 @@ class Tool(TracedClass, abc.ABC):
             The result of executing the tool.
         """
         pass
+    
+    def to_dict(self) -> ToolDefinitionDict:
+        """Convert the tool to a dictionary representation.
+        
+        Returns:
+            A dictionary representation of the tool.
+        """
+        # Cast to ToolSchemaDict since we know the structure is compatible
+        schema_dict = cast(ToolSchemaDict, self.schema.to_dict())
+        return {
+            "name": self.name,
+            "description": self.description,
+            "schema": schema_dict
+        }
     
     @traced(name="validate_args")
     def validate_args(self, **kwargs) -> bool:
@@ -249,10 +273,10 @@ class Tool(TracedClass, abc.ABC):
         return True
 
 
-class FunctionTool(Tool):
+class FunctionTool(Tool[R]):
     """A tool that wraps a Python function."""
     
-    def __init__(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, func: Callable[..., R], name: Optional[str] = None, description: Optional[str] = None):
         """Initialize a function tool.
         
         Args:
@@ -274,7 +298,7 @@ class FunctionTool(Tool):
         return self._schema
     
     @traced(name="execute")
-    def execute(self, **kwargs) -> Any:
+    def execute(self, **kwargs) -> R:
         """Execute the wrapped function with the given arguments.
         
         Args:

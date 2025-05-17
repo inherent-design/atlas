@@ -1,3 +1,7 @@
+---
+title: Licensing/Legal
+---
+
 # Licensing and Legal Information
 
 This document provides detailed information about Atlas licensing, contribution terms, and related legal information.
@@ -52,13 +56,13 @@ The CLA ensures that inherent.design has the necessary rights to distribute cont
 
 Atlas uses various third-party open source libraries, each with its own license. The main dependencies include:
 
-| Dependency | License | Purpose |
-|------------|---------|---------|
-| LangGraph | MIT | Graph-based workflow orchestration |
-| ChromaDB | Apache 2.0 | Vector storage for knowledge retrieval |
-| Anthropic SDK | MIT | Integration with Anthropic Claude models |
-| OpenAI SDK | MIT | Integration with OpenAI models |
-| VitePress | MIT | Documentation system |
+| Dependency    | License    | Purpose                                  |
+| ------------- | ---------- | ---------------------------------------- |
+| LangGraph     | MIT        | Graph-based workflow orchestration       |
+| ChromaDB      | Apache 2.0 | Vector storage for knowledge retrieval   |
+| Anthropic SDK | MIT        | Integration with Anthropic Claude models |
+| OpenAI SDK    | MIT        | Integration with OpenAI models           |
+| VitePress     | MIT        | Documentation system                     |
 
 A complete list of dependencies and their licenses can be found in the project's `pyproject.toml` file.
 

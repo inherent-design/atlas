@@ -1,3 +1,10 @@
+---
+
+title: Archived Documents
+
+---
+
+
 # Archived Planning Documents
 
 This directory contains planning documents that have been archived as they have been superseded by newer documents or are no longer relevant to the current project focus.

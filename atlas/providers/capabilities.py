@@ -6,11 +6,11 @@ task-aware provider selection and capability-based model resolution.
 """
 
 import re
-from enum import IntEnum
-from typing import Dict, Set, List, Optional, Any, Union
+from enum import IntEnum, Enum
+from typing import Dict, Set, List, Optional, Any, Union, cast
 
 
-class CapabilityStrength(IntEnum):
+class CapabilityLevel(IntEnum):
     """Enumeration of capability strength levels.
     
     These levels define how well a model performs with a particular capability,
@@ -25,6 +25,43 @@ class CapabilityStrength(IntEnum):
     def __str__(self) -> str:
         """Return the string representation of the strength level."""
         return self.name.lower()
+
+
+# CapabilityStrength is kept for backward compatibility
+CapabilityStrength = CapabilityLevel
+
+
+class Capability(str, Enum):
+    """Enumeration of capabilities supported by providers."""
+    
+    # Operational capabilities
+    INEXPENSIVE = "inexpensive"  # Low cost per token
+    EFFICIENT = "efficient"      # Good balance of performance and cost
+    PREMIUM = "premium"          # High-end models with best quality
+    STANDARD = "standard"        # Standard text completion
+    STREAMING = "streaming"      # Efficient streaming support
+    VISION = "vision"            # Visual content understanding
+    
+    # Task capabilities
+    REASONING = "reasoning"       # General reasoning ability
+    LOGIC = "logic"               # Logical reasoning and deduction
+    MATH = "math"                 # Mathematical computation and reasoning
+    ANALYSIS = "analysis"         # Detailed analytical thinking
+    CODE = "code"                 # Code generation and understanding
+    CREATIVE = "creative"         # Creative content generation
+    SUMMARIZATION = "summarization" # Content summarization
+    EXTRACTION = "extraction"      # Information extraction from text
+    FORMATTING = "formatting"      # Structured output formatting
+    TOOL_USE = "tool_use"          # Ability to use tools
+    JSON_OUTPUT = "json_output"    # Ability to output well-formatted JSON
+    
+    # Domain capabilities
+    SCIENCE = "science"           # Scientific knowledge
+    FINANCE = "finance"           # Financial knowledge
+    LEGAL = "legal"               # Legal knowledge
+    MEDICAL = "medical"           # Medical knowledge
+    TECHNICAL = "technical"       # Technical knowledge
+    MULTILINGUAL = "multilingual" # Support for multiple languages
 
 
 # Operational Capabilities
@@ -290,8 +327,9 @@ def parse_capability_string(capability_str: str) -> Dict[str, CapabilityStrength
             
             # Convert strength string to enum
             try:
-                strength_level = CapabilityStrength[strength.upper()]
-            except KeyError:
+                # Convert string to actual enum member using proper typing
+                strength_level = cast(CapabilityStrength, getattr(CapabilityStrength, strength.upper()))
+            except (AttributeError, KeyError):
                 # Default to MODERATE if unrecognized
                 strength_level = CapabilityStrength.MODERATE
             

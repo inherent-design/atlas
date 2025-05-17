@@ -1,3 +1,10 @@
+---
+
+title: Enhanced Provider
+
+---
+
+
 # Enhanced Provider Implementation Plan
 
 > **Archived on May 9, 2025, 22:49 PT**

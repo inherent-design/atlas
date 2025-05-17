@@ -1,3 +1,7 @@
+---
+title: Custom Container
+---
+
 # Custom Container Usage Guide
 
 VitePress provides custom containers that help highlight and organize content. This guide outlines when and how to use these containers in Atlas documentation.
@@ -224,7 +228,7 @@ Here's how containers might be used in a complete documentation page:
 The Provider System manages integrations with external LLM providers.
 
 ::: tip Provider Auto-Detection
-Atlas can automatically detect the appropriate provider based on the model name. 
+Atlas can automatically detect the appropriate provider based on the model name.
 For example, models starting with "claude" will use the AnthropicProvider.
 :::
 

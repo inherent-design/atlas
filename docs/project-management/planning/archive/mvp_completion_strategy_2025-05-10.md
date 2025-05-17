@@ -1,4 +1,8 @@
-# MVP Completion Strategy
+---
+title: MVP Strat.
+---
+
+# MVP Completion Strategy - May 10, 2025
 
 This document outlines the strategic approach for completing the Atlas MVP, focusing on the three key areas identified in the roadmap: Knowledge System Enhancements, Workflow & Multi-Agent Orchestration, and Provider Optimization.
 
