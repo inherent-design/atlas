@@ -27,3 +27,4 @@ from atlas.schemas.config import *
 from atlas.schemas.types import *
 from atlas.schemas.agents import *
 from atlas.schemas.knowledge import *
+from atlas.schemas.tools import *

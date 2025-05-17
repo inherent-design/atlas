@@ -60,6 +60,15 @@ from atlas.schemas.definitions.options import (
     provider_config_schema
 )
 
+from atlas.schemas.definitions.tools import (
+    ToolParameterSchemaDefinition,
+    ToolSchemaDefinitionSchema,
+    ToolDefinitionSchemaDefinition,
+    ToolPermissionSchemaDefinition,
+    ToolCallSchemaDefinition,
+    ToolResultSchemaDefinition
+)
+
 __all__ = [
     # Messages schemas
     "message_role_schema",
@@ -108,5 +117,13 @@ __all__ = [
     "provider_options_schema",
     "provider_retry_config_schema",
     "provider_circuit_breaker_schema",
-    "provider_config_schema"
+    "provider_config_schema",
+    
+    # Tools schemas
+    "ToolParameterSchemaDefinition",
+    "ToolSchemaDefinitionSchema",
+    "ToolDefinitionSchemaDefinition",
+    "ToolPermissionSchemaDefinition",
+    "ToolCallSchemaDefinition",
+    "ToolResultSchemaDefinition"
 ]

@@ -8,7 +8,7 @@ title: Proposed Project
 # Proposed Project Structure
 
 ::: tip CURRENT STRUCTURE
-This document outlines the current Atlas project structure as of May 16, 2025. The structure has been updated to reflect the NERV documentation port and V0/V1/V2 architecture organization.
+This document outlines the current Atlas project structure as of May 16, 2025. The structure has been updated to reflect the NERV documentation port, V0/V1/V2 architecture organization, and the planned Textual CLI implementation.
 :::
 
 This document outlines the refined structure for the Atlas project, focusing on clean architecture, minimal dependencies, and clear component boundaries. This structure represents a clean-break approach that simplifies the codebase while ensuring all required functionality is maintained.
@@ -17,8 +17,8 @@ This document outlines the refined structure for the Atlas project, focusing on 
 Atlas follows a **clean break philosophy** with a focus on best-in-class API design over backward compatibility. This structure prioritizes modularity, clear interfaces, and maintainable code.
 :::
 
-::: warning Current Focus (May 10-17, 2025)
-We are currently focused on **Provider System Finalization** with enhanced streaming capabilities, provider lifecycle management, and robust error handling. See the [current TODO list](./todo.md) for specific implementation tasks.
+::: warning Current Focus (May 17-24, 2025)
+We are currently focused on **Core Services Layer**, **Tool Execution Framework**, and **Tool Agent Enhancements**. Our immediate priority is implementing the foundational services that enable robust tool execution, event-driven communication, and improved state management. See the [current TODO list](./todo.md) for specific implementation tasks.
 :::
 
 ## Status Legend
@@ -42,16 +42,59 @@ atlas/
 │   ├── __init__.py                  ✅  🔴  Module initialization
 │   ├── registry.py                  ✅  🔴  Agent registry for dynamic discovery
 │   ├── messaging.py                 ✅  🔴  Unified messaging system (consolidation)
-│   ├── controller.py                🚧  🔴  Controller agent implementation (needs provider integration)
-│   ├── worker.py                    🚧  🔴  Worker agent implementation (needs provider integration)
+│   ├── controller.py                🚧  🔴  Controller agent implementation
+│   ├── worker.py                    🚧  🔴  Worker agent implementation
 │   └── specialized/                 🚧  🔴  Specialized agent implementations
 │       ├── __init__.py              ✅  🔴  Module initialization
 │       ├── task_aware.py            ✅  🔴  Task-aware agent implementation
 │       └── tool_agent.py            🚧  🔴  Tool-using agent implementation
-├── cli/                             ✅  🔴  Command-line interface
+├── cli/                             🚧  🔴  Command-line interface
 │   ├── __init__.py                  ✅  🔴  Module initialization
 │   ├── config.py                    ✅  🔴  CLI configuration utilities
-│   └── parser.py                    ✅  🔴  Command-line argument parsing
+│   ├── parser.py                    🚧  🔴  Command-line argument parsing (needs Textual support)
+│   ├── utils.py                     🔲  🔴  Utility functions from common.py
+│   ├── formatting.py                🔲  🔴  Text formatting utilities from common.py
+│   └── textual/                     🔲  🔴  Textual CLI implementation (planned)
+│       ├── __init__.py              🔲  🔴  Module initialization
+│       ├── app.py                   🔲  🔴  Main Textual application
+│       ├── schema.py                🔲  🔴  Command and configuration schemas
+│       ├── commands.py              🔲  🔴  Command execution system
+│       ├── config.py                🔲  🔴  Configuration management
+│       ├── serialization.py         🔲  🔴  Serialization utilities
+│       ├── history.py               🔲  🔴  Command history management
+│       ├── flags.py                 🔲  🔴  CLI flags mapping
+│       ├── import_export.py         🔲  🔴  Configuration import/export
+│       ├── utils/                   🔲  🔴  Utility functions
+│       │   ├── __init__.py          🔲  🔴  Module initialization
+│       │   ├── markdown.py          🔲  🔴  Markdown rendering
+│       │   ├── color.py             🔲  🔴  Color utilities
+│       │   ├── formatting.py        🔲  🔴  Text formatting utilities
+│       │   └── streaming.py         🔲  🔴  Streaming utilities
+│       ├── widgets/                 🔲  🔴  UI components
+│       │   ├── __init__.py          🔲  🔴  Module initialization
+│       │   ├── command_bar.py       🔲  🔴  Command input widget
+│       │   ├── conversation.py      🔲  🔴  Conversation display
+│       │   ├── status.py            🔲  🔴  Status display
+│       │   ├── context.py           🔲  🔴  Context information panel
+│       │   ├── directory_browser.py 🔲  🔴  Directory selection browser
+│       │   ├── file_browser.py      🔲  🔴  File selection browser
+│       │   ├── provider_selector.py 🔲  🔴  Provider selection widget
+│       │   ├── stream_controls.py   🔲  🔴  Stream control buttons
+│       │   └── tool_list.py         🔲  🔴  Tool listing and management widget
+│       ├── screens/                 🔲  🔴  Screen implementations
+│       │   ├── __init__.py          🔲  🔴  Module initialization
+│       │   ├── main.py              🔲  🔴  Main application screen
+│       │   ├── provider.py          🔲  🔴  Provider selection screen
+│       │   ├── ingest.py            🔲  🔴  Document ingestion screen
+│       │   ├── tools.py             🔲  🔴  Tool management screen
+│       │   └── settings.py          🔲  🔴  Settings management screen
+│       └── commands/                🔲  🔴  Command implementations
+│           ├── __init__.py          🔲  🔴  Module initialization
+│           ├── base.py              🔲  🔴  Base command class
+│           ├── query.py             🔲  🔴  Query command
+│           ├── ingest.py            🔲  🔴  Ingest command
+│           ├── tool.py              🔲  🔴  Tool command
+│           └── controller.py        🔲  🔴  Controller command
 ├── core/                            ✅  🔴  Core utilities and configuration
 │   ├── __init__.py                  ✅  🔴  Module initialization
 │   ├── config.py                    ✅  🔴  Configuration management
@@ -61,14 +104,15 @@ atlas/
 │   ├── prompts.py                   ✅  🔴  System prompt management
 │   ├── retry.py                     ✅  🔴  Retry mechanisms
 │   ├── telemetry.py                 ✅  🔴  Telemetry and metrics
-│   ├── types.py                     🗑️  🔴  Legacy type definitions (to be replaced by schemas)
+│   ├── types.py                     🚧  🔴  Type definitions
 │   ├── services/                    🔲  🔴  Service architecture components
 │   │   ├── __init__.py              🔲  🔴  Module initialization
 │   │   ├── base.py                  🔲  🔴  Base service interfaces
 │   │   ├── buffer.py                🔲  🔴  Thread-safe buffer implementations
+│   │   ├── events.py                🔲  🔴  Event system implementation
 │   │   ├── state.py                 🔲  🔴  State management utilities
 │   │   ├── commands.py              🔲  🔴  Command pattern implementation
-│   │   ├── concurrency.py           🔲  🔴  Thread safety utilities
+│   │   ├── boundaries.py            🔲  🔴  System boundary interfaces
 │   │   └── resources.py             🔲  🔴  Resource lifecycle management
 │   └── caching/                     🔲  🟠  Response caching system
 │       ├── __init__.py              🔲  🟠  Module initialization
@@ -91,17 +135,13 @@ atlas/
 │   ├── reranking.py                 🔲  🟠  Result reranking strategies
 │   ├── search_scoring.py            🔲  🟠  Configurable relevance scoring
 │   └── settings.py                  ✅  🔴  Retrieval settings configuration
-├── memory/                          🔲  🟠  Conversation memory system
-│   ├── __init__.py                  🔲  🟠  Module initialization
-│   ├── buffer.py                    🔲  🟠  Conversation buffer with windowing
-│   ├── persistence.py               🔲  🟠  Long-term conversation storage
-│   └── session.py                   🔲  🟠  Session management with resumption
-├── providers/                       🚧  🔴  Model provider system
+├── providers/                       ✅  🔴  Model provider system
 │   ├── __init__.py                  ✅  🔴  Module initialization and exports
 │   ├── base.py                      ✅  🔴  Core provider interface only
 │   ├── messages.py                  ✅  🔴  Message and request modeling
 │   ├── errors.py                    ✅  🔴  Provider-specific error classes
 │   ├── reliability.py               ✅  🔴  Retry and circuit breaker
+│   ├── helpers.py                   🔲  🔴  Provider creation utilities from common.py
 │   ├── streaming/                   ✅  🔴  Enhanced streaming infrastructure
 │   │   ├── __init__.py              ✅  🔴  Module initialization
 │   │   ├── base.py                  ✅  🔴  Base streaming interfaces
@@ -119,17 +159,8 @@ atlas/
 │   ├── resolver.py                  ✅  🔴  Provider auto-resolution
 │   ├── capabilities.py              ✅  🔴  Provider capabilities
 │   ├── options.py                   ✅  🔴  Provider options and configuration
-│   ├── validation.py                ✅  🔴  Schema-based validation utilities
-│   ├── anthropic.py                 🗑️  🔴  Legacy Anthropic provider (moved to implementations and ready for removal)
-│   ├── openai.py                    🗑️  🔴  Legacy OpenAI provider (moved to implementations and ready for removal)
-│   ├── ollama.py                    🗑️  🔴  Legacy Ollama provider (moved to implementations and ready for removal)
-│   └── mock.py                      🗑️  🔴  Legacy Mock provider (moved to implementations and ready for removal)
+│   └── validation.py                ✅  🔴  Schema-based validation utilities
 ├── query.py                         ✅  🔴  Query client interface
-├── reasoning/                       🔲  🟢  Structured reasoning frameworks
-│   ├── __init__.py                  🔲  🟢  Module initialization
-│   ├── chain_of_thought.py          🔲  🟢  Chain-of-thought implementation
-│   ├── verification.py              🔲  🟢  Self-verification mechanisms
-│   └── reflection.py                🔲  🟢  Self-critique and improvement
 ├── schemas/                         🚧  🔴  Schema-based validation and types
 │   ├── __init__.py                  ✅  🔴  Module initialization
 │   ├── base.py                      ✅  🔴  Base schema definitions and utilities
@@ -140,20 +171,27 @@ atlas/
 │   ├── types.py                     ✅  🔴  Schema-compatible type annotations
 │   ├── agents.py                    🔲  🔴  Agent schema definitions
 │   ├── knowledge.py                 🔲  🔴  Knowledge system schemas
+│   ├── tools.py                     ✅  🔴  Tool schema definitions with validation
+│   ├── cli.py                       🔲  🔴  CLI command and configuration schemas
 │   └── validation.py                🔲  🔴  Validation utilities and decorators
-├── security/                        🔲  🟠  Security and safety framework
-│   ├── __init__.py                  🔲  🟠  Module initialization
-│   ├── content_filter.py            🔲  🟠  Input/output content filtering
-│   ├── privacy.py                   🔲  🟠  PII detection and redaction
-│   └── sanitization.py              🔲  🟠  Input sanitization for safety
 ├── tools/                           🚧  🔴  Tools system
 │   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── base.py                      🚧  🔴  Base tool interface
+│   ├── base.py                      ✅  🔴  Base tool interface with enhanced validation
 │   ├── registry.py                  ✅  🔴  Tool registry and discovery
+│   ├── execution.py                 🔲  🔴  Tool execution framework
+│   ├── results.py                   🔲  🔴  Tool result processing
+│   ├── chaining.py                  🔲  🔴  Tool chaining and composition
 │   ├── standard/                    🚧  🔴  Standard built-in tools
 │   │   ├── __init__.py              ✅  🔴  Module initialization
-│   │   ├── knowledge.py             🚧  🔴  Knowledge management tools
+│   │   ├── knowledge_tools.py       🔲  🔴  Knowledge management tools
+│   │   │   ├── RetrievalTool        🔲  🔴  Retrieval tool for knowledge base
+│   │   │   ├── IngestTool           🔲  🔴  Document ingestion tool
+│   │   │   ├── FilteringTool        🔲  🔴  Metadata filtering tool
+│   │   │   └── SearchTool           🔲  🔴  Combined hybrid search tool
 │   │   └── system.py                🔲  🔴  System interaction tools
+│   │       ├── FileTool             🔲  🔴  File system interaction
+│   │       ├── CommandTool          🔲  🔴  Command execution
+│   │       └── EnvironmentTool      🔲  🔴  Environment variable access
 │   └── mcp/                         🔲  🟠  MCP integration tools
 │       └── __init__.py              ✅  🟠  Module initialization
 └── scripts/                         ✅  🔴  Utility scripts
@@ -165,185 +203,7 @@ atlas/
         └── check_models.py          ✅  🔴  Model checker
 ```
 
-## Documentation Structure
-
-```
-docs/
-├── contributing/                    ✅  🔴  Contribution guides and standards
-│   ├── code-diffs.md                ✅  🔴  Code diff formatting standards
-│   ├── code-examples.md             ✅  🔴  Code example standards
-│   ├── content-containers.md        ✅  🔴  Custom container usage guide
-│   ├── documentation-standards.md   ✅  🔴  Documentation writing guidelines
-│   ├── index.md                     ✅  🔴  Overview of contribution process
-│   ├── style-guide.md               ✅  🔴  Writing style and terminology standards
-│   ├── timelines.md                 ✅  🔴  Timeline component usage guide
-│   ├── types.md                     ✅  🔴  Type system documentation
-│   └── typing-issues.md             ✅  🔴  Common typing issues and solutions
-├── NERV_DOC_PORT.md                 ✅  🔴  Documentation port information
-├── project-management/              ✅  🔴  Project management documentation
-│   ├── audit/                       ✅  🔴  Audit reports and analysis
-│   │   └── archive/                 ✅  🔴  Historical audit documents
-│   │       ├── agent_system_update_2025-05-09.md     ✅  🔴  Agent system audit
-│   │       ├── doc_audit_2025-05-09.md               ✅  🔴  Documentation audit
-│   │       └── enhanced_provider_alignment_2025-05-09.md ✅  🔴  Provider system audit
-│   ├── business/                    ✅  🔴  Business planning and strategy
-│   │   ├── commercialization_timeline.md ✅  🔴  Post-development commercialization plan
-│   │   └── monetization_strategy.md ✅  🔴  Monetization approaches
-│   ├── index.md                     ✅  🔴  Project management overview
-│   ├── legal/                       ✅  🔴  Legal considerations
-│   │   ├── compliance_roadmap.md    ✅  🔴  Compliance implementation timeline
-│   │   └── license_selection.md     ✅  🔴  License selection rationale
-│   ├── planning/                    ✅  🔴  Planning documents
-│   │   ├── accelerated_implementation_plan.md ✅  🔴  Accelerated execution plan
-│   │   ├── architecture_planning.md ✅  🔴  Architecture design planning
-│   │   ├── archive/                 ✅  🔴  Archived planning documents
-│   │   │   ├── cli_planning_2025-05-10.md            ✅  🔴  CLI interface planning (archived)
-│   │   │   ├── implementation_planning_2025-05-10.md ✅  🔴  Implementation strategy (archived)
-│   │   │   ├── index.md                              ✅  🔴  Archive documentation
-│   │   │   └── mvp_completion_strategy_2025-05-10.md ✅  🔴  MVP roadmap (archived)
-│   │   └── possible-future/         ✅  🟢  Future planning documents
-│   │       ├── core_services_architecture.md ✅  🟢  Core services planning
-│   │       ├── future_multi_modal_possibilities.md ✅  🟢  Multi-modal support
-│   │       ├── hybrid_retrieval_strategies.md ✅  🟢  Advanced retrieval
-│   │       ├── open_source_strategy.md ✅  🟢  Open source approach
-│   │       └── test_suite_planning.md ✅  🟢  Test suite planning
-│   ├── roadmap/                     ✅  🔴  Product roadmap
-│   │   ├── archive/                 ✅  🔴  Archived roadmap documents
-│   │   │   ├── index.md             ✅  🔴  Archive documentation
-│   │   │   └── mvp_strategy_2025-05-10.md  ✅  🔴  MVP strategy (archived)
-│   │   └── product_roadmap.md       ✅  🔴  Comprehensive product roadmap
-│   └── tracking/                    ✅  🔴  Implementation tracking
-│       ├── archive/                 ✅  🔴  Historical tracking documents
-│       │   └── enhanced_provider_todo_2025-05-10.md ✅  🔴  Provider system tasks
-│       ├── proposed_structure.md    ✅  🔴  Current code structure
-│       └── todo.md                  ✅  🔴  Current implementation tasks
-├── reference/                       ✅  🔴  Reference documentation
-│   └── licensing.md                 ✅  🔴  Licensing information
-├── v0/                              ✅  🔴  V0 architecture documentation
-│   ├── architecture/                ✅  🔴  Architecture overview
-│   │   ├── components.md            ✅  🔴  Component architecture
-│   │   ├── data_flow.md             ✅  🔴  Data flow diagrams
-│   │   ├── design_principles.md     ✅  🔴  Core design principles
-│   │   ├── index.md                 ✅  🔴  Architecture introduction
-│   │   ├── module_interaction.md    ✅  🔴  Module interaction patterns
-│   │   └── system_requirements.md   ✅  🔴  System requirements
-│   ├── components/                  ✅  🔴  Detailed component documentation
-│   │   ├── agents/                  ✅  🔴  Agent system documentation
-│   │   │   ├── controller.md        ✅  🔴  Controller agent
-│   │   │   ├── messaging.md         ✅  🔴  Messaging system
-│   │   │   ├── specialized.md       ✅  🔴  Specialized agents
-│   │   │   └── workers.md           ✅  🔴  Worker agents
-│   │   ├── core/                    ✅  🔴  Core utilities documentation
-│   │   │   ├── config.md            ✅  🔴  Configuration management
-│   │   │   ├── env.md               ✅  🔴  Environment variables
-│   │   │   ├── errors.md            ✅  🔴  Error handling
-│   │   │   ├── logging.md           ✅  🔴  Logging system
-│   │   │   ├── prompts.md           ✅  🔴  System prompts
-│   │   │   └── telemetry.md         ✅  🔴  Telemetry system
-│   │   ├── graph/                   ✅  🔴  Graph system documentation
-│   │   │   ├── edges.md             ✅  🔴  Graph edges
-│   │   │   ├── index.md             ✅  🔴  Graph system overview
-│   │   │   ├── nodes.md             ✅  🔴  Graph nodes
-│   │   │   └── state.md             ✅  🔴  State management
-│   │   ├── knowledge/               ✅  🔴  Knowledge system documentation
-│   │   │   ├── index.md             ✅  🔴  Knowledge system overview
-│   │   │   ├── ingestion.md         ✅  🔴  Document ingestion
-│   │   │   └── retrieval.md         ✅  🔴  Document retrieval
-│   │   ├── providers/               ✅  🔴  Provider system documentation
-│   │   │   ├── anthropic.md         ✅  🔴  Anthropic provider
-│   │   │   ├── capabilities.md      ✅  🔴  Provider capabilities
-│   │   │   ├── index.md             ✅  🔴  Provider system overview
-│   │   │   ├── mock.md              ✅  🔴  Mock provider
-│   │   │   ├── ollama.md            ✅  🔴  Ollama provider
-│   │   │   ├── openai.md            ✅  🔴  OpenAI provider
-│   │   │   ├── provider_group.md    ✅  🔴  Provider group implementation
-│   │   │   ├── provider_selection.md✅  🔴  Provider selection strategies
-│   │   │   └── registry.md          ✅  🔴  Provider registry
-│   │   └── tools/                   ✅  🔴  Tool system documentation
-│   │       ├── core.md              ✅  🔴  Core tool interfaces
-│   │       ├── index.md             ✅  🔴  Tool system overview
-│   │       ├── mcp.md               ✅  🔴  MCP integration
-│   │       └── standard.md          ✅  🔴  Standard tools
-│   ├── guides/                      ✅  🔴  User guides
-│   │   └── chromadb_usage.md        ✅  🔴  ChromaDB usage guide
-│   └── workflows/                   ✅  🔴  Workflow documentation
-│       ├── custom_workflows.md      ✅  🔴  Custom workflow guide
-│       ├── multi_agent.md           ✅  🔴  Multi-agent workflow
-│       ├── query.md                 ✅  🔴  Basic query workflow
-│       └── retrieval.md             ✅  🔴  Retrieval workflow
-├── v1/                              ✅  🔴  V1 architecture documentation
-│   ├── matrix_to_nerv.md            ✅  🔴  Matrix to NERV transition
-│   └── the-matrix/                  ✅  🔴  Matrix architecture
-│       ├── code_examples.md         ✅  🔴  Code examples
-│       ├── core_patterns.md         ✅  🔴  Core design patterns
-│       ├── event_flow.md            ✅  🔴  Event system flow
-│       ├── implementation_strategy.md ✅  🔴  Implementation strategy
-│       ├── index.md                 ✅  🔴  Matrix overview
-│       ├── overview.md              ✅  🔴  System overview
-│       ├── system_dependencies.md   ✅  🔴  System dependencies
-│       └── the-matrix.md            ✅  🔴  Matrix core documentation
-└── v2/                              ✅  🔴  V2 architecture documentation (NERV)
-    ├── inner-universe/              ✅  🔴  Inner Universe implementation
-    │   ├── deployment.md            ✅  🔴  Deployment strategies
-    │   ├── implementation.md        ✅  🔴  Implementation details
-    │   ├── index.md                 ✅  🔴  Inner Universe overview
-    │   ├── integration_guide.md     ✅  🔴  Integration guidelines
-    │   ├── migration_guide.md       ✅  🔴  Migration from V1 to V2
-    │   ├── reducers.md              ✅  🔴  Reducer implementation
-    │   ├── schema.md                ✅  🔴  Schema system
-    │   ├── testing_strategy.md      ✅  🔴  Testing approach
-    │   ├── type_mappings.md         ✅  🔴  Type system mappings
-    │   └── types.md                 ✅  🔴  Type definitions
-    └── nerv/                        ✅  🔴  NERV architecture
-        ├── components/              ✅  🔴  NERV components
-        │   ├── aspect_weaver.md     ✅  🔴  Aspect weaver component
-        │   ├── container.md         ✅  🔴  Container component
-        │   ├── diff_synchronizer.md ✅  🔴  Diff synchronizer
-        │   ├── effect_monad.md      ✅  🔴  Effect monad implementation
-        │   ├── event_bus.md         ✅  🔴  Event bus
-        │   ├── index.md             ✅  🔴  Components overview
-        │   ├── perspective_aware.md ✅  🔴  Perspective aware component
-        │   ├── quantum_partitioner.md ✅  🔴  Quantum partitioner
-        │   ├── state_projector.md   ✅  🔴  State projector
-        │   └── temporal_store.md    ✅  🔴  Temporal store
-        ├── composites/              ✅  🔴  NERV composite patterns
-        │   ├── adaptive_state_management.md ✅  🔴  Adaptive state management
-        │   ├── event_driven_architecture.md ✅  🔴  Event architecture
-        │   ├── index.md             ✅  🔴  Composites overview
-        │   └── parallel_workflow_engine.md  ✅  🔴  Parallel workflows
-        ├── index.md                 ✅  🔴  NERV overview
-        ├── patterns/                ✅  🔴  NERV design patterns
-        │   ├── aspect_orientation.md✅  🔴  Aspect oriented programming
-        │   ├── boundaries.md        ✅  🔴  System boundaries
-        │   ├── dependency_inversion.md ✅  🔴  Dependency inversion
-        │   ├── effect_system.md     ✅  🔴  Effect system
-        │   ├── index.md             ✅  🔴  Patterns overview
-        │   ├── interfaces.md        ✅  🔴  Interface design
-        │   ├── perspective_shifting.md ✅  🔴  Perspective shifting
-        │   ├── quantum_partitioning.md ✅  🔴  Quantum partitioning
-        │   ├── reactive_event_mesh.md ✅  🔴  Reactive event mesh
-        │   ├── state_projection.md  ✅  🔴  State projection
-        │   ├── state_synchronization.md ✅  🔴  State synchronization
-        │   ├── temporal_versioning.md ✅  🔴  Temporal versioning
-        │   └── types.md             ✅  🔴  Type system patterns
-        ├── primitives/              ✅  🔴  NERV primitives
-        │   ├── builder.md           ✅  🔴  Builder pattern
-        │   ├── command.md           ✅  🔴  Command pattern
-        │   ├── dag.md               ✅  🔴  Directed acyclic graph
-        │   ├── decorator.md         ✅  🔴  Decorator pattern
-        │   ├── factory.md           ✅  🔴  Factory pattern
-        │   ├── index.md             ✅  🔴  Primitives overview
-        │   ├── monad.md             ✅  🔴  Monad implementation
-        │   ├── observer.md          ✅  🔴  Observer pattern
-        │   └── strategy.md          ✅  🔴  Strategy pattern
-        ├── python/                  ✅  🔴  Python implementation
-        │   └── nerv.py              ✅  🔴  NERV Python module
-        └── types/                   ✅  🔴  NERV type system
-            ├── cheatsheet.md        ✅  🔴  Type system cheatsheet
-            └── diagrams.md          ✅  🔴  Type system diagrams
-```
-
-## Example Structure
+## New Example Structure
 
 ```
 examples/
@@ -360,12 +220,14 @@ examples/
 ├── 12_hybrid_retrieval.py           ✅  🔴  Hybrid retrieval
 ├── 15_advanced_filtering.py         ✅  🔴  Advanced metadata and content filtering
 ├── 16_schema_validation.py          ✅  🔴  Schema-based validation examples
-├── 20_tool_agent.py                 🚧  🔴  Tool agent usage (needs fixing)
-├── 21_multi_agent.py                🚧  🔴  Multi-agent system (in progress)
-├── 22_agent_workflows.py            🚧  🔴  Agent workflows (planned)
+├── 20_tool_agent.py                 ✅  🔴  Tool agent usage with enhanced permissions
 ├── 23_knowledge_tools.py            🔲  🔴  Knowledge tools implementation (planned)
 ├── 24_tool_chaining.py              🔲  🔴  Tool chaining and composition (planned)
-├── common.py                        ✅  🔴  Shared utilities for examples
+├── 25_cli_commands.py               🔲  🔴  Command execution example (planned)
+├── 26_cli_config.py                 🔲  🔴  Configuration example (planned)
+├── 27_cli_batch.py                  🔲  🔴  Batch command example (planned)
+├── 28_custom_tool_development.py    🔲  🔴  Custom tool example (planned)
+├── common.py                        ✅  🔴  Shared utilities for examples (to be migrated)
 ├── EXAMPLES.md                      ✅  🔴  Example implementation standards
 └── README.md                        ✅  🔴  Examples guide
 ```
@@ -374,7 +236,15 @@ examples/
 
 ### Core Functionality (MVP) 🔴
 
-#### 1. Tool Agent Implementation
+#### 1. Textual CLI Implementation
+- Design and implement serializable command schema
+- Create command execution system with history
+- Build UI components for different modes
+- Implement dual-mode entry points (interactive and flags)
+- Add configuration management with import/export
+- Migrate utilities from common.py to appropriate modules
+
+#### 2. Tool Agent Implementation
 - Fix tool agent registration in examples (current focus)
 - Enhance tool registry with proper permissions handling
 - Improve tool discovery and initialization
@@ -382,209 +252,717 @@ examples/
 - Create knowledge tools integration
 - Implement automatic tool granting to worker agents
 
-#### 2. Provider System Completion
-- Standardized provider interface with comprehensive streaming controls (completed)
-- Robust ProviderGroup with enhanced fallback mechanisms (completed)
-- Capability-based provider selection (completed)
-- Error handling and lifecycle management improvements (completed)
+#### 3. Core Services Layer
+- Define boundary interfaces for system components
+- Implement event system with subscription
+- Create buffer system with thread-safety
+- Add state management with versioning
+- Develop resource lifecycle management
 
-#### 3. Schema-Based Validation System
-- Marshmallow schemas for data validation (completed)
-- Provider options schema validation (completed)
-- Message system schema validation (completed)
-- Stream handler schema validation (completed)
-- Knowledge system schema migration (in progress)
-- Tool and agent schema development (current focus)
+#### 4. Integration and Utilities
+- Port common.py utilities to appropriate modules
+- Enhance error handling and formatting
+- Create reusable UI components
+- Implement streaming display with controls
+- Add session management and persistence
 
-#### 4. Knowledge System Enhancement
-- Hybrid retrieval combining semantic and keyword search (completed)
-- Multiple merging strategies for hybrid search (completed)
-- Improved chunking strategies for better document understanding (in progress)
-- Advanced metadata filtering capabilities (in progress)
-- Knowledge tools implementation (current focus)
+## Textual CLI Architecture
 
-#### 5. Agent System Refinement
-- Consolidated messaging system into a single file (completed)
-- Clear base class responsibilities (completed)
-- Specialized agent implementations (TaskAwareAgent completed)
-- Enhanced provider integration in agent system (completed)
-- Integration with tool system (current focus)
+### Command Schema Design
 
-#### 6. Core Services Layer
-- Buffer system implementation (planned)
-- Event system integration (planned)
-- State management with versioning (planned)
-- Resource lifecycle management (planned)
-- System boundaries definition (planned)
+The new CLI architecture is based on serializable commands and configurations that can be used in both interactive UI and command-line flag mode.
 
-### Next-Phase Improvements 🟠
+```python
+from dataclasses import dataclass, field
+from typing import Optional, List, Dict, Any, Union
+from marshmallow import Schema, fields, validate, validates_schema, ValidationError
 
-#### 1. Memory and Session Management
-- Conversation buffer with windowing strategies
-- Long-term conversation storage and retrieval
-- Session management with resumption capabilities
+from atlas.schemas.base import BaseSchema
+from atlas.providers.options import ProviderOptionsSchema
 
-#### 2. Advanced Caching System
-- Abstract cache interface with multiple backends
-- Semantic similarity caching for non-exact matches
-- Configurable policies for cache management
 
-#### 3. Rate Limiting Infrastructure
-- Provider-specific rate limit definitions
-- Request throttling and queueing implementation
-- Backpressure mechanisms for overload situations
+class ExecutionConfigSchema(BaseSchema):
+    """Schema for base execution configuration."""
+    mode = fields.Str(required=True, validate=validate.OneOf([
+        "query", "ingest", "controller", "worker", "tool"
+    ]))
+    provider = fields.Nested(ProviderOptionsSchema)
+    collection = fields.Str(default="atlas_knowledge_base")
+    db_path = fields.Str(allow_none=True)
+    system_prompt_file = fields.Str(allow_none=True)
 
-#### 4. Security Framework
-- Content filtering for inputs and outputs
-- PII detection and redaction capabilities
-- Input sanitization to prevent prompt injection
 
-#### 5. Enhanced Observability
-- Detailed metrics collection across components
-- Distributed tracing for complex operations
-- Cost tracking and optimization features
+class QueryConfigSchema(ExecutionConfigSchema):
+    """Schema for query mode configuration."""
+    mode = fields.Str(default="query", validate=validate.Equal("query"))
+    query = fields.Str(allow_none=True)
+    with_context = fields.Bool(default=True)
+    stream = fields.Bool(default=False)
+    include_sources = fields.Bool(default=True)
+    
+    
+class CommandSchema(BaseSchema):
+    """Schema for commands."""
+    command_id = fields.Str(required=True)
+    command_type = fields.Str(required=True)
+    config = fields.Nested(ExecutionConfigSchema)
+    timestamp = fields.DateTime()
+    
+    @validates_schema
+    def validate_config_type(self, data, **kwargs):
+        """Validate that config matches command_type."""
+        command_type = data.get("command_type")
+        config = data.get("config")
+        if command_type == "query" and config.get("mode") != "query":
+            raise ValidationError("Query command must have query config")
 
-### Future Capabilities 🟢
 
-#### 1. Structured Reasoning Framework
-- Chain-of-thought prompting implementation
-- Self-verification mechanisms
-- Self-critique and reflection capabilities
+@dataclass
+class ExecutionConfig:
+    """Base configuration for all execution modes."""
+    mode: str  # "query", "ingest", "controller", "worker", "tool"
+    provider: Dict[str, Any]
+    collection: str = "atlas_knowledge_base"
+    db_path: Optional[str] = None
+    system_prompt_file: Optional[str] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "mode": self.mode,
+            "provider": self.provider,
+            "collection": self.collection,
+            "db_path": self.db_path,
+            "system_prompt_file": self.system_prompt_file
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ExecutionConfig":
+        """Create from dictionary."""
+        return cls(**data)
 
-#### 2. Advanced Knowledge Capabilities
-- Sophisticated reranking strategies
-- Multiple scoring algorithms for relevance
-- Knowledge graph integration
 
-#### 3. Multi-Modal Support
-- Image handling and embedding
-- Audio processing capabilities
-- Multi-modal prompt construction
+@dataclass
+class QueryConfig(ExecutionConfig):
+    """Configuration for query mode."""
+    mode: str = "query"
+    query: Optional[str] = None
+    with_context: bool = True
+    stream: bool = False
+    include_sources: bool = True
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        base_dict = super().to_dict()
+        base_dict.update({
+            "query": self.query,
+            "with_context": self.with_context,
+            "stream": self.stream,
+            "include_sources": self.include_sources
+        })
+        return base_dict
 
-#### 4. Evaluation Framework
-- Quality metrics for responses
-- Automatic evaluations against benchmarks
-- Feedback collection and processing
+
+@dataclass
+class Command:
+    """Base class for all commands."""
+    command_id: str
+    command_type: str
+    config: ExecutionConfig
+    timestamp: Optional[str] = None
+    
+    def execute(self) -> Dict[str, Any]:
+        """Execute the command and return the result."""
+        raise NotImplementedError
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "command_id": self.command_id,
+            "command_type": self.command_type,
+            "config": self.config.to_dict(),
+            "timestamp": self.timestamp
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Command":
+        """Create from dictionary."""
+        config_data = data.get("config", {})
+        mode = config_data.get("mode")
+        
+        if mode == "query":
+            config = QueryConfig.from_dict(config_data)
+        else:
+            config = ExecutionConfig.from_dict(config_data)
+            
+        return cls(
+            command_id=data["command_id"],
+            command_type=data["command_type"],
+            config=config,
+            timestamp=data.get("timestamp")
+        )
+
+
+@dataclass
+class CommandResult:
+    """Result of command execution."""
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    command_id: Optional[str] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "success": self.success,
+            "data": self.data,
+            "error": self.error,
+            "command_id": self.command_id
+        }
+```
+
+### UI Component Architecture
+
+The UI follows a hierarchical design with screens, panels, and widgets:
+
+```python
+from textual.app import App, ComposeResult
+from textual.containers import Container, Horizontal, Vertical
+from textual.widgets import Header, Footer, Input, Static, Button
+from textual.reactive import reactive
+from textual.screen import Screen
+from textual import events
+from datetime import datetime
+import uuid
+
+from atlas.cli.textual.commands import Command, CommandResult
+from atlas.cli.textual.config import ConfigurationManager
+
+
+class CommandBar(Container):
+    """Command input widget with completion and history."""
+    
+    def __init__(self, history=None):
+        """Initialize command bar with history."""
+        super().__init__()
+        self.history = history or []
+        self.history_index = len(self.history)
+        
+    def compose(self) -> ComposeResult:
+        """Compose the command bar widget."""
+        with Horizontal():
+            yield Input(placeholder="Enter command...", id="command-input")
+            yield Button("Send", id="send-button")
+            
+    def on_button_pressed(self, event: events.Button.Pressed) -> None:
+        """Handle button press events."""
+        if event.button.id == "send-button":
+            self.submit_command()
+            
+    def on_input_submitted(self, event: events.Input.Submitted) -> None:
+        """Handle input submission."""
+        self.submit_command()
+        
+    def submit_command(self) -> None:
+        """Submit the current command."""
+        command_text = self.query_one("#command-input").value
+        if not command_text:
+            return
+            
+        # Add to history and reset index
+        self.history.append(command_text)
+        self.history_index = len(self.history)
+        
+        # Clear input
+        self.query_one("#command-input").value = ""
+        
+        # Post message to handle command
+        self.post_message(CommandSubmitted(command_text))
+        
+
+class ConversationDisplay(Container):
+    """Widget for displaying conversation messages."""
+    
+    def __init__(self):
+        """Initialize conversation display."""
+        super().__init__()
+        self.messages = []
+        
+    def compose(self) -> ComposeResult:
+        """Compose the conversation display widget."""
+        yield Static(id="conversation-content")
+        
+    def add_message(self, message: str, is_user: bool = False) -> None:
+        """Add a message to the conversation."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        sender = "User" if is_user else "Atlas"
+        message_html = f"<{timestamp}> [{sender}]: {message}\n"
+        
+        self.messages.append((message, is_user, timestamp))
+        
+        # Update display
+        content = self.query_one("#conversation-content")
+        current = content.render()
+        content.update(current + message_html)
+        
+    def add_stream_chunk(self, chunk: str) -> None:
+        """Add a streaming chunk to the last message."""
+        if not self.messages:
+            # No message to append to, create new one
+            self.add_message(chunk)
+            return
+            
+        # Append to the last message
+        last_message, is_user, timestamp = self.messages[-1]
+        if is_user:
+            # Last message was from user, create new one
+            self.add_message(chunk)
+            return
+            
+        # Update last message
+        self.messages[-1] = (last_message + chunk, is_user, timestamp)
+        
+        # Update display
+        content = self.query_one("#conversation-content")
+        current = content.render().rsplit("\n", 2)[0]
+        message_html = f"<{timestamp}> [Atlas]: {last_message + chunk}\n"
+        content.update(current + message_html)
+
+
+class StreamControls(Container):
+    """Controls for streaming operations."""
+    
+    def compose(self) -> ComposeResult:
+        """Compose the stream controls widget."""
+        with Horizontal():
+            yield Button("Pause", id="stream-pause")
+            yield Button("Resume", id="stream-resume", disabled=True)
+            yield Button("Cancel", id="stream-cancel")
+            
+    def on_button_pressed(self, event: events.Button.Pressed) -> None:
+        """Handle button press events."""
+        button_id = event.button.id
+        
+        if button_id == "stream-pause":
+            self.post_message(StreamPaused())
+            self.query_one("#stream-pause").disabled = True
+            self.query_one("#stream-resume").disabled = False
+            
+        elif button_id == "stream-resume":
+            self.post_message(StreamResumed())
+            self.query_one("#stream-pause").disabled = False
+            self.query_one("#stream-resume").disabled = True
+            
+        elif button_id == "stream-cancel":
+            self.post_message(StreamCancelled())
+            
+
+class MainScreen(Screen):
+    """Main application screen with command bar and conversation display."""
+    
+    def compose(self) -> ComposeResult:
+        """Compose the main screen."""
+        yield Header()
+        with Container(id="main-container"):
+            with Horizontal(id="content-area"):
+                with Vertical(id="conversation-column"):
+                    yield ConversationDisplay()
+                    yield StreamControls()
+                with Vertical(id="context-column"):
+                    yield Static("Context Information", id="context-header")
+                    yield Static("", id="context-content")
+            with Horizontal(id="input-area"):
+                yield CommandBar()
+        yield Footer()
+        
+    def on_mount(self) -> None:
+        """Handle screen mounting."""
+        self.title = "Atlas CLI"
+        
+    def handle_command(self, command_text: str) -> None:
+        """Handle a submitted command."""
+        # Add to conversation
+        conversation = self.query_one(ConversationDisplay)
+        conversation.add_message(command_text, is_user=True)
+        
+        # Parse and execute command
+        # (This would call the command execution system)
+        
+        
+class AtlasApp(App):
+    """Main Atlas Textual application."""
+    CSS_PATH = "atlas.css"
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("h", "help", "Help"),
+        ("c", "command", "Command Mode"),
+    ]
+    
+    def __init__(self):
+        """Initialize the application."""
+        super().__init__()
+        self.config_manager = ConfigurationManager()
+        self.command_executor = CommandExecutor()
+        
+    def on_mount(self):
+        """Handle application mounting."""
+        self.push_screen("main")
+```
+
+### Command Execution System
+
+The command execution system provides a clear flow from user input to execution and result presentation:
+
+```python
+import uuid
+import json
+import logging
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+
+from atlas.cli.textual.schema import Command, CommandResult
+
+
+class CommandExecutor:
+    """Executes commands with proper context and error handling."""
+    
+    def __init__(self):
+        """Initialize command executor."""
+        self.history = CommandHistory()
+        self.logger = logging.getLogger(__name__)
+        
+    def execute_command(self, command: Command) -> CommandResult:
+        """Execute a command and return the result."""
+        try:
+            # Pre-execution validation
+            self.validate_command(command)
+            
+            # Log command execution
+            self.logger.info(f"Executing command: {command.command_type}")
+            
+            # Command execution
+            result = command.execute()
+            
+            # Create result object
+            command_result = CommandResult(
+                success=True,
+                data=result,
+                command_id=command.command_id
+            )
+            
+            # Post-execution actions
+            self.record_history(command, command_result)
+            
+            return command_result
+        except Exception as e:
+            # Log error
+            self.logger.error(f"Error executing command: {e}")
+            
+            # Create error result
+            error_result = CommandResult(
+                success=False,
+                error=str(e),
+                command_id=command.command_id
+            )
+            
+            # Record in history
+            self.record_history(command, error_result)
+            
+            return error_result
+            
+    def validate_command(self, command: Command) -> None:
+        """Validate command before execution."""
+        # Perform schema validation
+        schema = get_schema_for_command(command)
+        schema.load(command.to_dict())
+        
+    def record_history(self, command: Command, result: CommandResult) -> None:
+        """Record command and result in history."""
+        self.history.add_entry(command, result)
+        
+    def create_command(self, command_type: str, config: Dict[str, Any]) -> Command:
+        """Create a command from type and config."""
+        command_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        
+        return Command(
+            command_id=command_id,
+            command_type=command_type,
+            config=config,
+            timestamp=timestamp
+        )
+
+
+class CommandHistory:
+    """Manages command execution history."""
+    
+    def __init__(self, max_entries: int = 100):
+        """Initialize command history."""
+        self.max_entries = max_entries
+        self.entries: List[Dict[str, Any]] = []
+        
+    def add_entry(self, command: Command, result: CommandResult) -> None:
+        """Add command and result to history."""
+        entry = {
+            "command": command.to_dict(),
+            "result": result.to_dict(),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        self.entries.append(entry)
+        
+        # Trim history if needed
+        if len(self.entries) > self.max_entries:
+            self.entries = self.entries[-self.max_entries:]
+            
+    def get_last_n_entries(self, n: int) -> List[Dict[str, Any]]:
+        """Get the last N entries from history."""
+        return self.entries[-n:]
+        
+    def save_to_file(self, filename: str) -> None:
+        """Save history to file."""
+        with open(filename, "w") as f:
+            json.dump(self.entries, f, indent=2)
+            
+    def load_from_file(self, filename: str) -> None:
+        """Load history from file."""
+        try:
+            with open(filename, "r") as f:
+                data = json.load(f)
+                # Validate entries
+                if not isinstance(data, list):
+                    raise ValueError("Invalid history format")
+                self.entries = data
+        except Exception as e:
+            logging.error(f"Error loading history: {e}")
+
+
+class ConfigurationManager:
+    """Manages configuration storage, loading, and validation."""
+    
+    def __init__(self, config_dir: Optional[str] = None):
+        """Initialize configuration manager."""
+        self.config_dir = config_dir or os.path.expanduser("~/.atlas")
+        self.logger = logging.getLogger(__name__)
+        
+        # Create config directory if it doesn't exist
+        os.makedirs(self.config_dir, exist_ok=True)
+        
+    def save_config(self, name: str, config: Dict[str, Any]) -> None:
+        """Save a configuration to file."""
+        filepath = os.path.join(self.config_dir, f"{name}.json")
+        
+        try:
+            with open(filepath, "w") as f:
+                json.dump(config, f, indent=2)
+            self.logger.info(f"Configuration saved to {filepath}")
+        except Exception as e:
+            self.logger.error(f"Error saving configuration: {e}")
+            raise
+            
+    def load_config(self, name: str) -> Dict[str, Any]:
+        """Load a configuration from file."""
+        filepath = os.path.join(self.config_dir, f"{name}.json")
+        
+        try:
+            with open(filepath, "r") as f:
+                config = json.load(f)
+            self.logger.info(f"Configuration loaded from {filepath}")
+            return config
+        except FileNotFoundError:
+            self.logger.warning(f"Configuration file not found: {filepath}")
+            return {}
+        except Exception as e:
+            self.logger.error(f"Error loading configuration: {e}")
+            raise
+            
+    def list_configs(self) -> List[str]:
+        """List available configurations."""
+        try:
+            files = os.listdir(self.config_dir)
+            return [f[:-5] for f in files if f.endswith(".json")]
+        except Exception as e:
+            self.logger.error(f"Error listing configurations: {e}")
+            return []
+```
+
+### Command Integration with CLI Flags
+
+The new CLI will support both interactive mode and traditional flag-based execution:
+
+```python
+import argparse
+import sys
+from typing import Dict, Any, Optional
+import uuid
+from datetime import datetime
+
+from atlas.cli.textual.schema import Command, QueryConfig
+from atlas.cli.textual.commands import CommandExecutor
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create the main CLI parser with textual support."""
+    parser = argparse.ArgumentParser(description="Atlas CLI")
+    
+    # Add textual flag
+    parser.add_argument(
+        "--textual",
+        action="store_true",
+        help="Launch the Textual UI"
+    )
+    
+    # Add subparsers for different commands
+    subparsers = parser.add_subparsers(dest="command")
+    
+    # Query command
+    query_parser = subparsers.add_parser("query", help="Run a query")
+    query_parser.add_argument("-q", "--query", help="Query text")
+    query_parser.add_argument("--no-context", action="store_true", help="Disable context")
+    query_parser.add_argument("--stream", action="store_true", help="Enable streaming")
+    
+    # Ingest command
+    ingest_parser = subparsers.add_parser("ingest", help="Ingest documents")
+    ingest_parser.add_argument("-d", "--directory", help="Directory to ingest")
+    
+    # Tool command
+    tool_parser = subparsers.add_parser("tool", help="Execute a tool")
+    tool_parser.add_argument("--name", help="Tool name")
+    tool_parser.add_argument("--args", help="Tool arguments as JSON")
+    
+    # Add common arguments to all subparsers
+    for subparser in [query_parser, ingest_parser, tool_parser]:
+        subparser.add_argument("--provider", help="Provider name")
+        subparser.add_argument("--model", help="Model name")
+        subparser.add_argument("--collection", help="Collection name")
+        subparser.add_argument("--db-path", help="Database path")
+    
+    return parser
+
+
+def convert_args_to_command(args: argparse.Namespace) -> Optional[Command]:
+    """Convert command line arguments to Command object."""
+    command_type = args.command
+    
+    if not command_type:
+        return None
+        
+    # Create base config with common args
+    base_config = {
+        "provider": {
+            "provider_name": args.provider if hasattr(args, "provider") and args.provider else None,
+            "model_name": args.model if hasattr(args, "model") and args.model else None
+        },
+        "collection": args.collection if hasattr(args, "collection") and args.collection else "atlas_knowledge_base",
+        "db_path": args.db_path if hasattr(args, "db_path") and args.db_path else None
+    }
+    
+    # Create command-specific config
+    if command_type == "query":
+        config = QueryConfig(
+            mode="query",
+            provider=base_config["provider"],
+            collection=base_config["collection"],
+            db_path=base_config["db_path"],
+            query=args.query if hasattr(args, "query") else None,
+            with_context=not args.no_context if hasattr(args, "no_context") else True,
+            stream=args.stream if hasattr(args, "stream") else False
+        )
+    elif command_type == "ingest":
+        # Create IngestConfig
+        config = IngestConfig(
+            mode="ingest",
+            provider=base_config["provider"],
+            collection=base_config["collection"],
+            db_path=base_config["db_path"],
+            directory=args.directory if hasattr(args, "directory") else None
+        )
+    elif command_type == "tool":
+        # Create ToolConfig
+        config = ToolConfig(
+            mode="tool",
+            provider=base_config["provider"],
+            collection=base_config["collection"],
+            db_path=base_config["db_path"],
+            tool_name=args.name if hasattr(args, "name") else None,
+            tool_args=json.loads(args.args) if hasattr(args, "args") and args.args else {}
+        )
+    else:
+        return None
+        
+    # Create command
+    return Command(
+        command_id=str(uuid.uuid4()),
+        command_type=command_type,
+        config=config,
+        timestamp=datetime.now().isoformat()
+    )
+
+
+def run_cli():
+    """Main entry point for the CLI."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # Check if textual UI was requested
+    if args.textual:
+        from atlas.cli.textual.app import AtlasApp
+        app = AtlasApp()
+        app.run()
+        return
+        
+    # Handle regular CLI command
+    command = convert_args_to_command(args)
+    
+    if not command:
+        parser.print_help()
+        return
+        
+    # Execute command
+    executor = CommandExecutor()
+    result = executor.execute_command(command)
+    
+    # Print result
+    if result.success:
+        print(json.dumps(result.data, indent=2))
+    else:
+        print(f"Error: {result.error}", file=sys.stderr)
+```
 
 ## Implementation Roadmap
 
-::: timeline Tool Agent Implementation
-- **May 17-20, 2025**
-- Fix tool registration in examples
-- Enhance tool registry with permissions
-- Add schema validation for tools
-- Create knowledge tools integration
-- Implement tool execution framework
-:::
-
-::: timeline Schema System Integration
-- **May 17-22, 2025**
-- Tool schema development (May 17-18)
-- Agent schema development (May 19-20)
-- Knowledge system schema migration (May 21)
-- Configuration schema validation (May 22)
-:::
-
 ::: timeline Core Services Layer
-- **May 23-27, 2025**
-- Boundary interfaces implementation
-- Event system development
-- State management with versioning
-- Resource lifecycle management
+- **May 17-20, 2025**
+- Create core services module foundation
+- Implement event system with subscription management
+- Develop thread-safe buffer implementations
+- Add state management with versioning
+- Create resource lifecycle management
 :::
 
-::: timeline Knowledge System Enhancements
-- **May 28-31, 2025**
-- Document chunking strategies
-- Advanced metadata extraction
-- Knowledge caching implementation
+::: timeline Tool Execution Framework
+- **May 20-22, 2025**
+- Create standardized tool execution pipeline
+- Implement tool result processing and validation
+- Add execution metrics and telemetry
+- Create hooks for pre/post execution processing
+- Implement comprehensive error handling
 :::
 
-::: timeline Multi-Agent Orchestration
-- **June 1-7, 2025**
-- Specialized worker agents
-- Coordination patterns
-- Parallel processing
+::: timeline Knowledge Tools Integration
+- **May 22-24, 2025**
+- Implement RetrievalTool for knowledge base searches
+- Create IngestTool for document processing
+- Add FilteringTool for metadata filtering
+- Design SearchTool for combined hybrid search
+- Integrate knowledge tools with agent system
 :::
 
-::: timeline Enterprise Features
-- **June 8-15, 2025**
-- Security and access control
-- Compliance tools
-- Advanced monitoring
+::: timeline Tool Chaining Implementation
+- **May 24-26, 2025**
+- Create tool chain builder interface
+- Implement sequential tool execution
+- Add parallel tool execution with result merging
+- Design conditional execution based on tool results
+- Implement result transformation between tools
 :::
-
-::: timeline Finalization & Documentation
-- **June 16-30, 2025**
-- Bug fixes and stabilization
-- Complete documentation
-- Final examples and testing
-:::
-
-::: warning Backward Compatibility
-Remember that Atlas follows a **clean break philosophy** - we prioritize best-in-class API design over backward compatibility. When implementing new features, focus on creating the best possible developer experience rather than maintaining compatibility with earlier design decisions.
-:::
-
-## Key Files for Current Sprint
-
-| Component                      | Key Files                                                                          | Priority | Owner         |
-| ------------------------------ | ---------------------------------------------------------------------------------- | -------- | ------------- |
-| **Tool Agent Implementation**  | `atlas/agents/specialized/tool_agent.py`, `atlas/tools/base.py`                    | Critical | Agent Team    |
-| **Tool Registry**              | `atlas/tools/registry.py`, `atlas/tools/standard/knowledge_tools.py`               | Critical | Tools Team    |
-| **Schema - Tools**             | `atlas/schemas/tools.py`, `atlas/schemas/base.py`                                  | Critical | Schema Team   |
-| **Schema - Agents**            | `atlas/schemas/agents.py`, `atlas/agents/base.py`                                  | High     | Schema Team   |
-| **Knowledge Integration**      | `atlas/knowledge/hybrid_search.py`, `atlas/tools/standard/knowledge_tools.py`      | High     | Knowledge Team|
-| **Tool Agent Examples**        | `examples/20_tool_agent.py`, `examples/23_knowledge_tools.py`                      | High     | Examples Team |
-| **Core Services Foundation**   | `atlas/core/services/__init__.py`, `atlas/core/services/base.py`                   | Medium   | Core Team     |
-| **Schema - Knowledge**         | `atlas/schemas/knowledge.py`, `atlas/knowledge/chunking.py`                        | Medium   | Schema Team   |
-
-## Resource Allocation
-
-- **Primary Focus**: Tool agent implementation and tool registry enhancement
-- **Secondary Focus**: Schema validation for tools and agents
-- **Next Phase**: Core services layer and knowledge system enhancements
-- **Team Distribution**: 
-  - **Agent Team**: Tool agent implementation and worker permissions
-  - **Tools Team**: Tool registry and knowledge tools integration
-  - **Schema Team**: Tool and agent schema validation
-  - **Examples Team**: Tool usage examples and demonstrations
-  - See the [Accelerated Implementation Plan](../planning/accelerated_implementation_plan.md) for details
-
-## Schema System Implementation
-
-### Architectural Approach
-
-The schema system follows these key principles:
-
-1. **Bottom-up transformation**: Starting with the atomic data structures and working upward
-2. **Verbs to nouns**: Converting actions/methods into typed data structures
-3. **Explicit validation**: Clear and consistent validation at API boundaries
-4. **Standardized serialization**: Unified approach for all data transformations
-5. **Schema-validated classes**: Using decorators to ensure runtime validation
-
-### Implementation Status
-
-| Component                      | Status        | Description                                         |
-| ------------------------------ | ------------- | --------------------------------------------------- |
-| **Base Schemas**               | ✅ Complete    | Foundation schemas and utility classes              |
-| **Message Schemas**            | ✅ Complete    | Schema definitions for provider messages            |
-| **Provider Schemas**           | ✅ Complete    | Schemas for requests, responses, and usage tracking |
-| **Options/Config Schemas**     | ✅ Complete    | Schemas for provider and system configuration       |
-| **Type Integration**           | ✅ Complete    | Type annotations compatible with schema validation  |
-| **Validation Decorators**      | ✅ Complete    | Schema validation decorators for functions/classes  |
-| **Schema-Validated Wrappers**  | ✅ Complete    | Utility for creating schema-validated classes       |
-| **Provider Message Migration** | ✅ Complete    | Converting provider messages to schema-validated    |
-| **Provider Options Migration** | ✅ Complete    | Converting provider options to schema-validated     |
-| **Stream Handler Migration**   | ✅ Complete    | Converting stream handlers to schema-validated      |
-| **Knowledge Schema Migration** | 🚧 In Progress | Migrating document chunks and retrieval to schemas  |
-| **Tool Schema Migration**      | 🚧 Current Focus | Migrating tool definitions to schemas            |
-| **Agent Schema Migration**     | 🚧 Current Focus | Migrating agent configuration to schemas         |
-| **Core Types Migration**       | ✅ Complete    | Moving TypedDict definitions to schema types        |
-
-### Benefits
-
-1. **Reduced Type Errors**: Clear validation eliminates ambiguity
-2. **Simplified Testing**: Input/output validation is declarative
-3. **Self-Documenting**: Schemas define and document data structures
-4. **Improved Error Messages**: Detailed validation errors with context
-5. **Greater API Consistency**: Uniform validation across components

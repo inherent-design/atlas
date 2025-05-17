@@ -465,6 +465,7 @@ def create_tool_agent(
     model_name: Optional[str] = None,
     provider: Optional[ModelProvider] = None,
     tools: Optional[List[Tool]] = None,
+    toolkit: Optional[AgentToolkit] = None,
     streaming: bool = False,
 ) -> ToolCapableAgent:
     """Create a tool-capable agent with the given configuration.
@@ -480,6 +481,7 @@ def create_tool_agent(
         model_name: Optional name of the model to use.
         provider: Optional pre-configured provider instance.
         tools: Optional list of tools to register with the agent.
+        toolkit: Optional pre-configured toolkit to use instead of creating a new one.
         streaming: Whether to enable streaming output.
         
     Returns:
@@ -506,11 +508,11 @@ def create_tool_agent(
             min_level=CapabilityLevel.MODERATE
         )
     
-    # Create toolkit if tools are provided
-    toolkit = None
-    if tools:
+    # Create toolkit if not provided and tools are specified
+    if toolkit is None and tools:
         toolkit = AgentToolkit()
-        
+        # Don't register tools here, will do it after agent creation
+    
     # Create the agent
     agent = ToolCapableAgent(
         worker_id=worker_id,
@@ -522,9 +524,14 @@ def create_tool_agent(
         task_aware=True
     )
     
-    # Register tools if provided
-    if tools:
+    # Register tools if provided and no pre-configured toolkit was used
+    if tools and toolkit is None:
         for tool in tools:
             agent.register_tool(tool)
+    # If both toolkit and tools are provided, register any missing tools
+    elif tools and toolkit is not None:
+        for tool in tools:
+            if tool.name not in toolkit.tools:
+                agent.register_tool(tool)
     
     return agent

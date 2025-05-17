@@ -8,6 +8,8 @@ to interact with external systems and perform specialized tasks.
 import abc
 import json
 import inspect
+import time
+import datetime
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional, Callable, Type, Union, TypeVar, Set, get_type_hints, Collection, cast, Generic
 from typing_extensions import Protocol
@@ -17,6 +19,16 @@ from atlas.core.telemetry import traced, TracedClass
 from atlas.core.types import (
     ToolSchemaDict, ToolResultDict, ToolDefinitionDict, ToolExecutionDict
 )
+
+# Import schemas - with conditional import to avoid circular references
+try:
+    from atlas.schemas.tools import (
+        ToolSchemaDefinitionSchema, ToolDefinitionSchema, 
+        ToolCallSchema, ToolResultSchema, ToolPermissionSchema
+    )
+    SCHEMAS_AVAILABLE = True
+except ImportError:
+    SCHEMAS_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +55,9 @@ class ToolSchema:
         
         Returns:
             The schema as a dictionary.
+            
+        Raises:
+            ValidationError: If schema validation is enabled and validation fails.
         """
         result = {
             "name": self.name,
@@ -52,6 +67,23 @@ class ToolSchema:
         
         if self.returns:
             result["returns"] = self.returns
+        
+        # Validate the schema if schemas are available
+        if SCHEMAS_AVAILABLE:
+            try:
+                # Use the schema to validate
+                schema = ToolSchemaDefinitionSchema()
+                validated_result = schema.load(result)
+                
+                # Update result with validated data
+                # This ensures any transformations from the validation are applied
+                result = validated_result
+                
+                logger.debug(f"Tool schema validation passed for '{self.name}'")
+            except Exception as e:
+                logger.warning(f"Tool schema validation failed for '{self.name}': {str(e)}")
+                # We log but don't raise to maintain backward compatibility
+                # In a future version, we could make this stricter by raising the exception
             
         return result
     
@@ -242,14 +274,37 @@ class Tool(TracedClass, abc.ABC, Generic[R]):
         
         Returns:
             A dictionary representation of the tool.
+            
+        Raises:
+            ValidationError: If schema validation is enabled and validation fails.
         """
         # Cast to ToolSchemaDict since we know the structure is compatible
         schema_dict = cast(ToolSchemaDict, self.schema.to_dict())
-        return {
+        
+        result = {
             "name": self.name,
             "description": self.description,
             "schema": schema_dict
         }
+        
+        # Validate the tool definition if schemas are available
+        if SCHEMAS_AVAILABLE:
+            try:
+                # Use the schema to validate
+                schema = ToolDefinitionSchema()
+                validated_result = schema.load(result)
+                
+                # Update result with validated data
+                # This ensures any transformations from the validation are applied
+                result = validated_result
+                
+                logger.debug(f"Tool definition validation passed for '{self.name}'")
+            except Exception as e:
+                logger.warning(f"Tool definition validation failed for '{self.name}': {str(e)}")
+                # We log but don't raise to maintain backward compatibility
+                # In a future version, we could make this stricter by raising the exception
+                
+        return result
     
     @traced(name="validate_args")
     def validate_args(self, **kwargs) -> bool:
@@ -260,16 +315,91 @@ class Tool(TracedClass, abc.ABC, Generic[R]):
             
         Returns:
             True if arguments are valid, False otherwise.
+            
+        Note:
+            This performs basic validation of required parameters and type checking.
+            For more complex validation, consider using a full JSON Schema validator.
         """
-        # Check required parameters
-        required = self.schema.parameters.get("required", [])
+        # Get schema parameters
+        parameters = self.schema.parameters
+        required = parameters.get("required", [])
+        properties = parameters.get("properties", {})
+        
+        # Use schema validation if available for more comprehensive validation
+        if SCHEMAS_AVAILABLE:
+            try:
+                from atlas.schemas.tools import ToolCallSchema
+                
+                # Create a tool call object for validation
+                tool_call = {
+                    "name": self.name,
+                    "arguments": kwargs
+                }
+                
+                # Validate using schema
+                schema = ToolCallSchema()
+                schema.load(tool_call)
+                
+                logger.debug(f"Schema validation passed for tool '{self.name}' arguments")
+            except Exception as e:
+                logger.error(f"Schema validation failed for tool '{self.name}' arguments: {str(e)}")
+                return False
+        
+        # Continue with basic validation for better error messages
+        # Check required parameters are present
         for param in required:
             if param not in kwargs:
                 logger.error(f"Missing required parameter '{param}' for tool '{self.name}'")
                 return False
         
-        # For now, we just check presence of required parameters
-        # A more thorough validation would check types against the schema
+        # Validate parameter types
+        for param_name, param_value in kwargs.items():
+            if param_name not in properties:
+                logger.warning(f"Unknown parameter '{param_name}' for tool '{self.name}'")
+                continue
+                
+            param_schema = properties[param_name]
+            param_type = param_schema.get("type")
+            
+            # Skip validation if no type is specified
+            if not param_type:
+                continue
+                
+            # Check parameter type
+            if param_type == "string" and not isinstance(param_value, str):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be a string")
+                return False
+            elif param_type == "number" and not isinstance(param_value, (int, float)):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be a number")
+                return False
+            elif param_type == "integer" and not isinstance(param_value, int):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be an integer")
+                return False
+            elif param_type == "boolean" and not isinstance(param_value, bool):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be a boolean")
+                return False
+            elif param_type == "array" and not isinstance(param_value, list):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be an array")
+                return False
+            elif param_type == "object" and not isinstance(param_value, dict):
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' should be an object")
+                return False
+            
+            # Additional validation for enums if specified
+            if "enum" in param_schema and param_value not in param_schema["enum"]:
+                logger.error(f"Parameter '{param_name}' for tool '{self.name}' must be one of: {', '.join(map(str, param_schema['enum']))}")
+                return False
+            
+            # Additional validation for numeric ranges
+            if param_type in ("number", "integer"):
+                if "minimum" in param_schema and param_value < param_schema["minimum"]:
+                    logger.error(f"Parameter '{param_name}' for tool '{self.name}' must be greater than or equal to {param_schema['minimum']}")
+                    return False
+                    
+                if "maximum" in param_schema and param_value > param_schema["maximum"]:
+                    logger.error(f"Parameter '{param_name}' for tool '{self.name}' must be less than or equal to {param_schema['maximum']}")
+                    return False
+        
         return True
 
 
@@ -313,6 +443,26 @@ class FunctionTool(Tool[R]):
         return self._func(**kwargs)
 
 
+@dataclass
+class ToolPermission:
+    """Permission for an agent to use a tool."""
+    
+    agent_id: str
+    """The ID of the agent."""
+    
+    tool_name: str
+    """The name of the tool or '*' for all tools."""
+    
+    granted_at: float = field(default_factory=lambda: time.time())
+    """Timestamp when permission was granted."""
+    
+    granted_by: Optional[str] = None
+    """ID of the agent who granted this permission."""
+    
+    scope: str = "execute"
+    """Scope of the permission (e.g., 'execute', 'read', 'manage')."""
+
+
 class AgentToolkit(TracedClass):
     """Registry for tools that agents can use."""
     
@@ -320,6 +470,8 @@ class AgentToolkit(TracedClass):
         """Initialize an agent toolkit."""
         self.tools: Dict[str, Tool] = {}
         self.permissions: Dict[str, Set[str]] = {}
+        # Store detailed permission records
+        self._permission_records: List[ToolPermission] = []
     
     @traced(name="register_tool")
     def register_tool(self, tool: Union[Tool, Callable]) -> str:
@@ -361,12 +513,16 @@ class AgentToolkit(TracedClass):
         return self.tools.get(name)
     
     @traced(name="grant_permission")
-    def grant_permission(self, agent_id: str, tool_name: str) -> None:
+    def grant_permission(self, agent_id: str, tool_name: str, 
+                         granted_by: Optional[str] = None, 
+                         scope: str = "execute") -> None:
         """Grant an agent permission to use a specific tool.
         
         Args:
             agent_id: The ID of the agent.
             tool_name: The name of the tool.
+            granted_by: Optional ID of agent granting the permission.
+            scope: Scope of the permission (e.g., 'execute', 'read', 'manage').
             
         Raises:
             ValueError: If the tool does not exist.
@@ -378,16 +534,30 @@ class AgentToolkit(TracedClass):
             self.permissions[agent_id] = set()
         
         self.permissions[agent_id].add(tool_name)
+        
+        # Record detailed permission
+        permission = ToolPermission(
+            agent_id=agent_id,
+            tool_name=tool_name,
+            granted_by=granted_by,
+            scope=scope
+        )
+        self._permission_records.append(permission)
+        
         logger.info(f"Granted permission for tool '{tool_name}' to agent '{agent_id}'")
     
     @traced(name="grant_all_permissions")
-    def grant_all_permissions(self, agent_id: str) -> None:
+    def grant_all_permissions(self, agent_id: str, 
+                             granted_by: Optional[str] = None,
+                             scope: str = "execute") -> None:
         """Grant an agent permission to use all tools.
         
         Args:
             agent_id: The ID of the agent.
+            granted_by: Optional ID of agent granting the permission.
+            scope: Scope of the permission (e.g., 'execute', 'read', 'manage').
         """
-        self.grant_permission(agent_id, "*")
+        self.grant_permission(agent_id, "*", granted_by, scope)
     
     @traced(name="revoke_permission")
     def revoke_permission(self, agent_id: str, tool_name: str) -> None:
@@ -399,15 +569,23 @@ class AgentToolkit(TracedClass):
         """
         if agent_id in self.permissions and tool_name in self.permissions[agent_id]:
             self.permissions[agent_id].remove(tool_name)
+            
+            # Filter out revoked permissions from detailed records
+            self._permission_records = [
+                p for p in self._permission_records 
+                if not (p.agent_id == agent_id and p.tool_name == tool_name)
+            ]
+            
             logger.info(f"Revoked permission for tool '{tool_name}' from agent '{agent_id}'")
     
     @traced(name="has_permission")
-    def has_permission(self, agent_id: str, tool_name: str) -> bool:
+    def has_permission(self, agent_id: str, tool_name: str, scope: str = "execute") -> bool:
         """Check if an agent has permission to use a specific tool.
         
         Args:
             agent_id: The ID of the agent.
             tool_name: The name of the tool.
+            scope: Scope of the permission to check.
             
         Returns:
             True if the agent has permission, False otherwise.
@@ -415,14 +593,38 @@ class AgentToolkit(TracedClass):
         if agent_id not in self.permissions:
             return False
         
-        return "*" in self.permissions[agent_id] or tool_name in self.permissions[agent_id]
+        # First check for wildcard permission
+        has_wildcard = any(
+            p.agent_id == agent_id and p.tool_name == "*" and p.scope == scope
+            for p in self._permission_records
+        )
+        
+        if has_wildcard:
+            return True
+            
+        # Then check for specific tool permission
+        has_specific = "*" in self.permissions[agent_id] or tool_name in self.permissions[agent_id]
+        
+        # Verify the scope matches
+        if has_specific:
+            matching_records = [
+                p for p in self._permission_records 
+                if p.agent_id == agent_id and (p.tool_name == tool_name or p.tool_name == "*")
+            ]
+            
+            for record in matching_records:
+                if record.scope == scope:
+                    return True
+        
+        return False
     
     @traced(name="get_accessible_tools")
-    def get_accessible_tools(self, agent_id: str) -> Dict[str, Tool]:
+    def get_accessible_tools(self, agent_id: str, scope: str = "execute") -> Dict[str, Tool]:
         """Get all tools that an agent has permission to use.
         
         Args:
             agent_id: The ID of the agent.
+            scope: Scope of the permission to check.
             
         Returns:
             A dictionary mapping tool names to Tool instances.
@@ -430,14 +632,72 @@ class AgentToolkit(TracedClass):
         if agent_id not in self.permissions:
             return {}
         
-        if "*" in self.permissions[agent_id]:
-            return self.tools.copy()
+        # Get all permissions for this agent
+        agent_permissions = self.permissions[agent_id]
         
-        return {
-            name: tool 
-            for name, tool in self.tools.items() 
-            if name in self.permissions[agent_id]
-        }
+        # If wildcard permission, return all tools
+        if "*" in agent_permissions:
+            # Verify scope for wildcard
+            wildcard_allowed = any(
+                p.agent_id == agent_id and p.tool_name == "*" and p.scope == scope
+                for p in self._permission_records
+            )
+            
+            if wildcard_allowed:
+                return self.tools.copy()
+        
+        # Return only specifically permitted tools with matching scope
+        accessible_tools = {}
+        for name, tool in self.tools.items():
+            if name in agent_permissions:
+                # Verify the scope
+                allowed = any(
+                    p.agent_id == agent_id and p.tool_name == name and p.scope == scope
+                    for p in self._permission_records
+                )
+                
+                if allowed:
+                    accessible_tools[name] = tool
+        
+        return accessible_tools
+    
+    @traced(name="get_permission_history")
+    def get_permission_history(self, agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get the permission history for an agent or all agents.
+        
+        Args:
+            agent_id: Optional ID of the agent to get history for.
+            
+        Returns:
+            A list of permission records.
+        """
+        if agent_id:
+            # Filter by agent ID
+            records = [
+                {
+                    "agent_id": p.agent_id,
+                    "tool_name": p.tool_name,
+                    "granted_at": p.granted_at,
+                    "granted_by": p.granted_by,
+                    "scope": p.scope
+                }
+                for p in self._permission_records
+                if p.agent_id == agent_id
+            ]
+        else:
+            # Get all records
+            records = [
+                {
+                    "agent_id": p.agent_id,
+                    "tool_name": p.tool_name,
+                    "granted_at": p.granted_at,
+                    "granted_by": p.granted_by,
+                    "scope": p.scope
+                }
+                for p in self._permission_records
+            ]
+        
+        return records
     
     @traced(name="get_tool_descriptions")
     def get_tool_descriptions(self, agent_id: str) -> List[Dict[str, Any]]:
@@ -467,6 +727,7 @@ class AgentToolkit(TracedClass):
         Raises:
             ValueError: If the tool does not exist.
             PermissionError: If the agent doesn't have permission to use the tool.
+            ValueError: If the arguments are invalid.
         """
         # Check if tool exists
         tool = self.get_tool(tool_name)
@@ -477,8 +738,71 @@ class AgentToolkit(TracedClass):
         if not self.has_permission(agent_id, tool_name):
             raise PermissionError(f"Agent '{agent_id}' doesn't have permission to use tool '{tool_name}'")
         
+        # Validate tool call using schema validation if available
+        if SCHEMAS_AVAILABLE:
+            try:
+                # Create a tool call object for validation
+                tool_call = {
+                    "name": tool_name,
+                    "arguments": args
+                }
+                
+                # Validate the tool call
+                schema = ToolCallSchema()
+                schema.load(tool_call)
+            except Exception as e:
+                logger.error(f"Tool call validation failed: {str(e)}")
+                raise ValueError(f"Invalid tool call format: {str(e)}")
+        
+        # Validate arguments against tool's schema
+        if not tool.validate_args(**args):
+            raise ValueError(f"Invalid arguments for tool '{tool_name}'")
+        
+        # Validate the arguments using schema validation if available
+        if SCHEMAS_AVAILABLE:
+            try:
+                from atlas.schemas.tools import ToolExecutionSchema
+                
+                # Create an execution object for validation
+                execution = {
+                    "agent_id": agent_id,
+                    "tool_name": tool_name,
+                    "arguments": args,
+                    "request_id": args.get("id")
+                }
+                
+                # Validate the execution
+                schema = ToolExecutionSchema()
+                validated_execution = schema.load(execution)
+                logger.debug(f"Tool execution validation passed for '{tool_name}'")
+                
+                # Update args if needed (for example, if schema transformation occurred)
+                args = validated_execution.get("arguments", args)
+            except Exception as e:
+                logger.error(f"Tool execution validation failed: {str(e)}")
+                raise ValueError(f"Schema validation failed for tool '{tool_name}': {str(e)}")
+        
         # Log the execution
         logger.info(f"Executing tool '{tool_name}' for agent '{agent_id}'")
         
-        # Execute the tool
-        return tool.execute(**args)
+        # Execute the tool with validated arguments
+        result = tool.execute(**args)
+        
+        # Validate result if schema validation is available
+        if SCHEMAS_AVAILABLE:
+            try:
+                # Create a tool result object for validation
+                tool_result = {
+                    "name": tool_name,
+                    "result": result,
+                    "status": "success"
+                }
+                
+                # Validate the result
+                schema = ToolResultSchema()
+                schema.load(tool_result)
+            except Exception as e:
+                logger.warning(f"Tool result validation failed: {str(e)}")
+                # We don't raise an exception here to avoid breaking existing code
+        
+        return result

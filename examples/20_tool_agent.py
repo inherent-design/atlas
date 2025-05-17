@@ -191,42 +191,143 @@ def main():
     print_example_header("Tool Agent Example")
 
     try:
-        # Create provider directly to avoid model_name setter issue
-        from atlas.providers.implementations.mock import MockProvider
-        
-        # Use mock provider for testing
-        provider = MockProvider(model_name="mock-standard")
+        # Create provider from command line arguments
+        provider = create_provider_from_args(args)
         logger.info(f"Created provider: {provider.name} with model {provider.model_name}")
 
-        # Create tool agent directly with the provider
+        # Define worker ID for this agent
+        worker_id = "tool_worker"
+        
+        # Create instance of tools
         tools = [Calculator(), WeatherTool()]
+        
+        # Two alternative approaches for creating a tool agent:
+        
+        # Method 1: Pre-configure toolkit and pass it to create_tool_agent
+        # This approach gives more control over registration and permissions
         toolkit = AgentToolkit()
         
-        # Register tools in the toolkit
+        # Register tools in toolkit with proper validation
         for tool in tools:
-            toolkit.register_tool(tool)
+            # Validate the tool schema before registration
+            from atlas.schemas.tools import validate_tool_schema
+            try:
+                # Validate the tool schema
+                validate_tool_schema(tool.schema.to_dict())
+                logger.info(f"Tool schema for {tool.name} is valid")
+                
+                # Register the tool
+                toolkit.register_tool(tool)
+                logger.info(f"Successfully registered tool: {tool.name}")
+            except Exception as e:
+                logger.error(f"Failed to validate or register tool {tool.name}: {e}")
+                raise
+        
+        # Grant permissions with detailed tracking
+        try:
+            # 1. Grant calculator tool permission with admin as granter and execute scope
+            toolkit.grant_permission(
+                agent_id=worker_id, 
+                tool_name="calculator",
+                granted_by="admin",
+                scope="execute"
+            )
+            logger.info(f"Granted 'execute' permission for 'calculator' tool to agent '{worker_id}'")
             
-        # Create tool agent with the provider directly
-        tool_agent = ToolCapableAgent(
-            worker_id="tool_worker",
+            # 2. Grant weather tool permission with system as granter and execute scope
+            toolkit.grant_permission(
+                agent_id=worker_id, 
+                tool_name="weather",
+                granted_by="system",
+                scope="execute"
+            )
+            logger.info(f"Granted 'execute' permission for 'weather' tool to agent '{worker_id}'")
+            
+            # 3. Grant additional permission with read scope (demonstration only)
+            toolkit.grant_permission(
+                agent_id=worker_id, 
+                tool_name="calculator",
+                granted_by="system",
+                scope="read"
+            )
+            logger.info(f"Granted 'read' permission for 'calculator' tool to agent '{worker_id}'")
+        except Exception as e:
+            logger.error(f"Failed to grant tool permissions: {e}")
+            raise
+        
+        # Create agent with pre-configured toolkit
+        tool_agent = create_tool_agent(
+            worker_id=worker_id,
             specialization="Tool Execution and Augmented Reasoning",
-            toolkit=toolkit,
-            provider=provider
+            provider=provider,
+            toolkit=toolkit
         )
         
+        # Method 2 (alternative, not used here):
+        # Let create_tool_agent handle registration
+        # This would automatically register tools and grant permissions
+        #
+        # tool_agent = create_tool_agent(
+        #     worker_id=worker_id,
+        #     specialization="Tool Execution and Augmented Reasoning",
+        #     provider=provider,
+        #     tools=tools  # Pass tools directly instead of toolkit
+        # )
+        
         # Display registered tools
-        tools = tool_agent.toolkit.get_accessible_tools(tool_agent.worker_id)
-        if not tools:
+        accessible_tools = tool_agent.toolkit.get_accessible_tools(worker_id)
+        if not accessible_tools:
             print("\n🧰 No tools registered or accessible.")
         else:
-            tool_names = list(tools.keys())
-            print(f"\n🧰 Registered Tools: {', '.join(tool_names)}")
+            accessible_tool_names = list(accessible_tools.keys())
+            print(f"\n🧰 Accessible Tools: {', '.join(accessible_tool_names)}")
             
-        # Print all tools from the toolkit as an alternative
-        all_tools = [tool.name for tool in toolkit.tools if hasattr(tool, 'name')]
-        if all_tools:
-            print(f"💼 Available Tools: {', '.join(all_tools)}")
-
+        # Print permission information for clarity
+        permissions = tool_agent.toolkit.permissions.get(worker_id, set())
+        print(f"🔑 Tool Permissions for {worker_id}: {permissions}")
+        
+        # Get and display detailed permission history with improved formatting
+        permission_history = tool_agent.toolkit.get_permission_history(worker_id)
+        print("\n📋 Permission History:")
+        
+        # Sort permissions by tool name and scope for clarity
+        sorted_history = sorted(
+            permission_history, 
+            key=lambda x: (x.get("tool_name", ""), x.get("scope", ""))
+        )
+        
+        # Format timestamp to readable format
+        import datetime
+        for record in sorted_history:
+            granted_time = record.get("granted_at")
+            tool = record.get("tool_name")
+            granted_by = record.get("granted_by", "unknown")
+            scope = record.get("scope")
+            
+            # Convert timestamp to human-readable format
+            timestamp = datetime.datetime.fromtimestamp(granted_time).strftime('%Y-%m-%d %H:%M:%S')
+            
+            print(f"  - {tool}: granted by {granted_by} with scope '{scope}' at {timestamp}")
+        
+        # Demonstrate scope-based permissions
+        print("\n🔍 Permission Scopes Verification:")
+        # Check for calculator permissions with different scopes
+        print(f"  - has execute permission for calculator: {toolkit.has_permission(worker_id, 'calculator', 'execute')}")
+        print(f"  - has read permission for calculator: {toolkit.has_permission(worker_id, 'calculator', 'read')}")
+        print(f"  - has manage permission for calculator: {toolkit.has_permission(worker_id, 'calculator', 'manage')}")
+        
+        # Check for weather permissions with different scopes
+        print(f"  - has execute permission for weather: {toolkit.has_permission(worker_id, 'weather', 'execute')}")
+        print(f"  - has read permission for weather: {toolkit.has_permission(worker_id, 'weather', 'read')}")
+        
+        # Get accessible tools for the agent based on execute permission
+        accessible_tools = toolkit.get_accessible_tools(worker_id, scope="execute")
+        print(f"\n🛠️ Tools accessible with 'execute' scope: {', '.join(accessible_tools.keys())}")
+        
+        # Get accessible tools for the agent based on read permission
+        readable_tools = toolkit.get_accessible_tools(worker_id, scope="read")
+        print(f"📖 Tools accessible with 'read' scope: {', '.join(readable_tools.keys()) if readable_tools else 'None'}")
+        
         # Example queries for the tool agent
         queries = [
             "What is 234 * 456 + 789?",
@@ -247,7 +348,7 @@ def main():
         print("\nProcessing query with tool agent...")
 
         # Execute the query with tools
-        response = tool_agent.process_message(query, capabilities={"tool_use": True})
+        response = tool_agent.run_with_tools(query)
         
         print(f"\n📝 Response:\n{response}")
 
@@ -259,7 +360,7 @@ def main():
             print(f"\n🔎 Follow-up Query: \"{query2}\"")
             print("\nProcessing follow-up query with tool agent...")
             
-            response2 = tool_agent.process_message(query2, capabilities={"tool_use": True})
+            response2 = tool_agent.run_with_tools(query2)
             
             print(f"\n📝 Response:\n{response2}")
 
