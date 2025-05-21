@@ -14,8 +14,7 @@ This directory contains critical project management documentation for the Atlas 
 ### Active Documents
 
 #### Planning
-- [Schema Service Plan](./planning/schema_service_plan.md): Core services implementation plan
-- [Service Architecture Plan](./planning/service_architecture_plan.md): Core service architecture design
+- [Feature-Driven Architecture Plan](./planning/feature_driven_architecture.md): Feature-driven implementation with vertical slices
 
 #### Roadmap
 - [Product Roadmap](./roadmap/product_roadmap.md): Comprehensive roadmap covering both MVP and beyond-MVP features with June 30, 2025 completion target
@@ -31,7 +30,6 @@ This directory contains critical project management documentation for the Atlas 
 <!-- Marketing section removed as it didn't fit our current use case -->
 
 #### Tracking
-- [Proposed Structure](./tracking/proposed_structure.md): Current project structure with status indicators
 - [Proposed Structure](./tracking/proposed_structure.md): Current project structure with status indicators
 
 #### Audit

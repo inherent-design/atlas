@@ -2,7 +2,7 @@
 title: Schema & Type System Architecture Plan
 ---
 
-# Schema & Type System Architecture Plan
+# Schema & Type System Architecture Plan - May 20, 2025
 
 ::: danger CLEAN BREAK ARCHITECTURE WITH VERTICAL FEATURES
 This document outlines our comprehensive plan for implementing the clean break architecture approach with a focus on type variables, protocols, primitives, and schemas. This architecture prioritizes type safety, runtime verification, clear interfaces, and extensibility while delivering value through vertical feature slices.
@@ -80,14 +80,14 @@ The type variables system provides a consistent foundation for type safety throu
 
 Our type variables are organized into logical categories:
 
-| Category | Examples | Purpose |
-|----------|----------|---------|
-| General Purpose | `T`, `K`, `V`, `R` | Generic type parameters for polymorphic functions |
-| Service-Specific | `DataT`, `StateT`, `EventT` | Specialized type parameters for services |
-| Variance-Specific | `T_co`, `DataT_co`, `T_contra` | Type parameters with explicit variance |
-| Container-Specific | `KeyT`, `ValueT`, `ItemT` | Type parameters for container types |
-| Functional | `CallableT`, `InputT`, `OutputT` | Type parameters for functional operations |
-| Feature-Specific | `ProviderT`, `AgentT`, `DocumentT` | Type parameters for domain components |
+| Category           | Examples                           | Purpose                                           |
+| ------------------ | ---------------------------------- | ------------------------------------------------- |
+| General Purpose    | `T`, `K`, `V`, `R`                 | Generic type parameters for polymorphic functions |
+| Service-Specific   | `DataT`, `StateT`, `EventT`        | Specialized type parameters for services          |
+| Variance-Specific  | `T_co`, `DataT_co`, `T_contra`     | Type parameters with explicit variance            |
+| Container-Specific | `KeyT`, `ValueT`, `ItemT`          | Type parameters for container types               |
+| Functional         | `CallableT`, `InputT`, `OutputT`   | Type parameters for functional operations         |
+| Feature-Specific   | `ProviderT`, `AgentT`, `DocumentT` | Type parameters for domain components             |
 
 ### 2.3 Protocol System
 
@@ -135,18 +135,18 @@ The primitives system defines core interfaces and types for all service componen
 
 We've implemented primitive definitions for these core service areas:
 
-| Domain | Purpose | Key Primitives |
-|--------|---------|---------------|
-| buffer | Data flow control | BufferProtocol, FlowControlProtocol |
-| commands | Command pattern | CommandProtocol, CommandProcessorProtocol |
-| component | Base components | ComponentProtocol, LifecycleProtocol |
-| events | Event communication | EventBusProtocol, EventSubscriberProtocol |
-| middleware | Pipeline processing | MiddlewareProtocol, PipelineProtocol |
-| registry | Service registration | RegistryProtocol, DiscoveryProtocol |
-| resources | Resource management | ResourceProtocol, LifecycleManagerProtocol |
-| state | State containers | StateProtocol, VersionedStateProtocol |
-| transitions | State transitions | TransitionProtocol, StateMachineProtocol |
-| validation | Data validation | ValidatorProtocol, SchemaProtocol |
+| Domain      | Purpose              | Key Primitives                             |
+| ----------- | -------------------- | ------------------------------------------ |
+| buffer      | Data flow control    | BufferProtocol, FlowControlProtocol        |
+| commands    | Command pattern      | CommandProtocol, CommandProcessorProtocol  |
+| component   | Base components      | ComponentProtocol, LifecycleProtocol       |
+| events      | Event communication  | EventBusProtocol, EventSubscriberProtocol  |
+| middleware  | Pipeline processing  | MiddlewareProtocol, PipelineProtocol       |
+| registry    | Service registration | RegistryProtocol, DiscoveryProtocol        |
+| resources   | Resource management  | ResourceProtocol, LifecycleManagerProtocol |
+| state       | State containers     | StateProtocol, VersionedStateProtocol      |
+| transitions | State transitions    | TransitionProtocol, StateMachineProtocol   |
+| validation  | Data validation      | ValidatorProtocol, SchemaProtocol          |
 
 ### 3.3 Feature-Specific Primitive Selection
 

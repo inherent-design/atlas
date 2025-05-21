@@ -2,10 +2,10 @@
 title: Service Architecture Plan
 ---
 
-# Service Architecture Plan
+# Service Architecture Plan - May 20, 2025
 
 ::: info CORE ARCHITECTURE DESIGN WITH FEATURE-FIRST APPROACH
-This document outlines the service-oriented architecture design for Atlas v2, implementing principles from the [Clean Break Architecture Manifesto](./clean_break_manifest.md) and integrating the NERV (Neural Event-Reactive Virtualization) architecture with Inner Universe persistence. It focuses on architectural clarity, service separation, protocol-first design, and reactive event-driven patterns while prioritizing feature-driven vertical slices.
+This document outlines the service-oriented architecture design for Atlas v2, implementing principles from the [Clean Break Architecture Manifesto](../clean_break_manifest.md) and integrating the NERV (Neural Event-Reactive Virtualization) architecture with Inner Universe persistence. It focuses on architectural clarity, service separation, protocol-first design, and reactive event-driven patterns while prioritizing feature-driven vertical slices.
 :::
 
 ::: tip Current Status (May 20, 2025)
@@ -167,7 +167,7 @@ The EventBus serves as the communication backbone across components:
 - **Integration Points**: Provider streaming, user interface updates
 - **Extensions**: Add middleware, history tracking for later features
 
-### 3.2 Buffer System 
+### 3.2 Buffer System
 
 The Buffer System manages streaming data flow:
 

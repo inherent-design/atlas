@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Learn More
-      link: /v2/nerv/
+      link: /project-management/planning/feature_driven_architecture
     - theme: alt
       text: Reference
       link: /api
@@ -86,7 +86,7 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 
 #### Project Management
 - **[Product Roadmap](./project-management/roadmap/product_roadmap.md)**: Comprehensive development roadmap
-- **[Implementation Plan](./project-management/planning/schema_service_plan.md)**: Core services implementation plan
+- **[Implementation Plan](./project-management/planning/feature_driven_architecture.md)**: Feature-driven architecture implementation plan
 - **[Progress Tracking](./project-management/tracking/proposed_structure.md)**: Current implementation status
 - **[Project Overview](./project-management/index.md)**: Project management documentation
 

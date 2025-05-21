@@ -34,7 +34,7 @@ Our documentation is organized into these main sections:
 
 3. **Project Management**: Project planning and tracking:
    - **[Product Roadmap](../project-management/roadmap/product_roadmap.md)**: Development roadmap
-   - **[Implementation Plan](../project-management/planning/schema_service_plan.md)**: Execution plan
+   - **[Implementation Plan](../project-management/planning/feature_driven_architecture.md)**: Execution plan
    - **[Progress Tracking](../project-management/tracking/proposed_structure.md)**: Implementation status
 
 4. **Reference**: Reference documentation:
