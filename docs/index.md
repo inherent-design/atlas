@@ -10,16 +10,16 @@ hero:
   tagline: Advanced Multi-Modal Learning & Guidance Framework
   actions:
     - theme: brand
-      text: Learn More
-      link: /project-management/planning/feature_driven_architecture
-    - theme: alt
-      text: Reference
-      link: /api
-    - theme: alt
       text: Project Status
+      link: /project-management/tracking/todo
+    - theme: alt
+      text: Proposed Structure
       link: /project-management/tracking/proposed_structure
     - theme: alt
-      text: Contributing
+      text: API Reference
+      link: /api
+    - theme: alt
+      text: Contribution Guidelines
       link: /contributing
 
 features:

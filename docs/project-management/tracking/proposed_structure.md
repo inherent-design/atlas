@@ -4,6 +4,201 @@ title: Feature-Driven Implementation Plan
 
 # Atlas Feature-Driven Implementation Plan
 
+## Consolidated File Structure
+
+### Status Legend
+- ✅ Complete - Implementation finished and tested
+- 🚧 In Progress - Implementation actively being worked on
+- 🔄 Planned (Short-term) - Next items in the implementation queue
+- 🔲 Planned (Long-term) - Designed but scheduled for later implementation
+
+### Feature Priority Legend
+- 🔴 Primary Features - Core functionality that must be delivered first
+- 🟠 Secondary Features - Important functionality built on primary features
+- 🟢 Tertiary Features - Additional functionality that enhances the system
+- 🔵 Future Features - Planned for future releases
+
+```
+atlas/
+├── core/                                     # Core abstractions and primitives
+│   ├── primitives/                           # Foundational protocols and types
+│   │   ├── buffer/                           # Stream buffering system          🔴
+│   │   │   ├── __init__.py                   # Package initialization           ✅
+│   │   │   ├── protocol.py                   # Buffer protocol definitions      ✅
+│   │   │   ├── state.py                      # Buffer state enumerations        ✅
+│   │   │   └── types.py                      # Buffer-related type definitions  ✅
+│   │   ├── commands/                         # Command system                   🟠
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # Command protocol definitions     🔄
+│   │   │   └── types.py                      # Command-related type definitions 🔄
+│   │   ├── events/                           # Event system                     🔴
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # Event protocol definitions       🔄
+│   │   │   ├── types.py                      # Event-related type definitions   🔄
+│   │   │   └── filter.py                     # Event filtering capabilities     🔄
+│   │   ├── perspective/                      # Perspective-shifting system      🟠
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # Perspective protocol definitions 🔄
+│   │   │   └── types.py                      # Perspective-related definitions  🔄
+│   │   ├── registry/                         # Registration system              🟠
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # Registry protocol definitions    🔄
+│   │   │   └── types.py                      # Registry-related definitions     🔄
+│   │   ├── resources/                        # Resource management system       🔴
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # Resource protocol definitions    🔄
+│   │   │   └── types.py                      # Resource-related definitions     🔄
+│   │   ├── state/                            # State management system          🔴
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── protocol.py                   # State protocol definitions       🔄
+│   │   │   ├── container.py                  # State container protocol         🔄
+│   │   │   ├── transition.py                 # State transition protocol        🔄
+│   │   │   └── types.py                      # State-related type definitions   🔄
+│   │   └── transitions/                      # Transition management system     🔴
+│   │       ├── __init__.py                   # Package initialization           🔄
+│   │       ├── protocol.py                   # Transition protocol definitions  🔄
+│   │       └── types.py                      # Transition-related definitions   🔄
+│   ├── components/                           # NERV architectural components    
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── aspect_weaver.py                  # Aspect-oriented programming      🔲
+│   │   ├── container.py                      # Dependency injection container   🔲
+│   │   ├── diff_synchronizer.py              # State diffing and synchronization🔲
+│   │   ├── effect_monad.py                   # Effect tracking and management   🔄
+│   │   ├── event_bus.py                      # Reactive event communication     🔄
+│   │   ├── perspective_aware.py              # Context-specific views           🔄
+│   │   ├── quantum_partitioner.py            # Parallel execution system        🔲
+│   │   ├── state_projector.py                # Efficient state evolution        🔄
+│   │   └── temporal_store.py                 # Temporal state tracking          🔄
+│   ├── patterns/                             # Design patterns implementation   
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── command.py                        # Command pattern                  🔄
+│   │   ├── dependency_injection.py           # Dependency injection pattern     🔄
+│   │   ├── perspective.py                    # Perspective shifting pattern     🔄
+│   │   ├── pub_sub.py                        # Publish-subscribe pattern        🔄
+│   │   ├── reactive.py                       # Reactive programming pattern     🔄
+│   │   └── resource_management.py            # Resource management pattern      🔄
+│   └── composites/                           # Composite architectural patterns 
+│       ├── __init__.py                       # Package initialization           🔄
+│       ├── adaptive_state_management.py      # Adaptive state management        🔲
+│       ├── event_driven.py                   # Event-driven architecture        🔄
+│       └── parallel_workflow_engine.py       # Dependency-based parallel exec   🔲
+├── services/                                 # Core service implementations     
+│   ├── buffer/                               # Buffer service                   🔴
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── buffer.py                         # Buffer implementation            🔄
+│   │   ├── flow_control.py                   # Flow control capabilities        🔲
+│   │   └── monitoring.py                     # Buffer health monitoring         🔲
+│   ├── commands/                             # Command service                  🟠
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── command.py                        # Command base implementation      🔲
+│   │   └── executor.py                       # Command executor                 🔲
+│   ├── events/                               # Event service                    🔴
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── event.py                          # Event base classes               🚧
+│   │   ├── event_bus.py                      # Event bus implementation         🔄
+│   │   └── subscription.py                   # Subscription management          🔄
+│   ├── perspective/                          # Perspective service              🟠
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── perspective.py                    # Perspective implementation       🔲
+│   │   └── context.py                        # Context management               🔲
+│   ├── registry/                             # Registry service                 🟠
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── discovery.py                      # Service discovery mechanisms     🔲
+│   │   ├── registry.py                       # Service registry                 🔲
+│   │   └── factory.py                        # Service factory implementation   🔲
+│   ├── resources/                            # Resource service                 🔴
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── lifecycle.py                      # Resource lifecycle management    🔲
+│   │   └── manager.py                        # Resource manager implementation  🔲
+│   ├── state/                                # State service                    🔴
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── container.py                      # State container implementation   🔄
+│   │   ├── history.py                        # State history tracking           🔲
+│   │   └── versioning.py                     # State versioning mechanism       🔲
+│   └── transitions/                          # Transition service               🔴
+│       ├── __init__.py                       # Package initialization           🔄
+│       └── state_machine.py                  # State machine implementation     🔲
+├── providers/                                # LLM provider implementations     🔴
+│   ├── services/                             # Provider service interfaces      
+│   │   ├── __init__.py                       # Package initialization           🔄
+│   │   ├── base.py                           # Service-enabled provider base    🔲
+│   │   ├── capability_registry.py            # Provider capability registry     🔲
+│   │   ├── selection.py                      # Provider selection strategies    🔲
+│   │   ├── group.py                          # Provider group implementation    🔲
+│   │   ├── streaming/                        # Streaming capabilities           
+│   │   │   ├── __init__.py                   # Package initialization           🔄
+│   │   │   ├── buffer.py                     # Provider streaming buffer        🔲
+│   │   │   ├── control.py                    # Streaming control interface      🔲
+│   │   │   └── metrics.py                    # Streaming performance metrics    🔲
+│   │   └── types/                            # Provider type definitions        
+│   │       ├── __init__.py                   # Package initialization           🔄
+│   │       ├── streaming.py                  # Streaming response types         🔄
+│   │       └── options.py                    # Provider options types           🔄
+│   └── implementations/                      # Specific provider implementations
+│       ├── anthropic.py                      # Anthropic provider               🔄
+│       ├── openai.py                         # OpenAI provider                  🔄
+│       └── ollama.py                         # Ollama provider                  🔄
+├── agents/                                   # Agent system implementation      🔴
+│   ├── services/                             # Agent service interfaces         
+│   │   ├── base.py                           # Service-enabled agent base       🔄
+│   │   ├── controller.py                     # Agent controller implementation  🔄
+│   │   └── registry.py                       # Agent registry service           🔲
+│   ├── messaging/                            # Agent messaging system           
+│   │   ├── message.py                        # Structured message implementation🔄
+│   │   └── routing.py                        # Message routing with EventBus    🔲
+│   └── specialized/                          # Specialized agent implementations
+│       ├── task_aware_agent.py               # Task-aware agent implementation  🔲
+│       └── tool_agent.py                     # Tool-enabled agent implementation🔲
+├── knowledge/                                # Knowledge system implementation  🔴
+│   ├── services/                             # Knowledge service interfaces     
+│   │   ├── chunking.py                       # Document chunking system         🔄
+│   │   ├── embedding.py                      # Embedding service                🔄
+│   │   ├── retrieval.py                      # Retrieval service                🔲
+│   │   └── hybrid_search.py                  # Hybrid search implementation     🔲
+│   └── persistence/                          # Storage implementation           
+│       ├── storage.py                        # Storage abstraction              🔲
+│       └── chromadb.py                       # ChromaDB adapter                 🔲
+├── orchestration/                            # Workflow orchestration           🟠
+│   ├── workflow/                             # Workflow system                  
+│   │   ├── engine.py                         # Workflow engine implementation   🔲
+│   │   ├── task.py                           # Task implementation              🔲
+│   │   └── dependency.py                     # Dependency management            🔲
+│   └── parallel/                             # Parallel execution system        
+│       ├── executor.py                       # Parallel executor implementation 🔲
+│       └── scheduler.py                      # Task scheduler implementation    🔲
+├── cli/                                      # Command line interface           🟠
+│   ├── __init__.py                           # Package initialization           🔄
+│   ├── config.py                             # Configuration utilities          🔄
+│   ├── parser.py                             # Command-line argument parsing    🔄
+│   └── textual/                              # Textual CLI components           
+│       ├── __init__.py                       # Package initialization           🔄
+│       ├── app.py                            # Main application class           🔲
+│       ├── commands.py                       # Command execution system         🔲
+│       ├── schema.py                         # Command schema definitions       🔲
+│       ├── config.py                         # Configuration management         🔲
+│       ├── screens/                          # Screen implementations           
+│       │   ├── __init__.py                   # Package initialization           🔲
+│       │   ├── main.py                       # Main application screen          🔲
+│       │   ├── provider.py                   # Provider selection screen        🔲
+│       │   ├── ingest.py                     # Document ingestion screen        🔲
+│       │   └── tools.py                      # Tool management screen           🔲
+│       └── widgets/                          # Custom widget components         
+│           ├── __init__.py                   # Package initialization           🔲
+│           ├── command_bar.py                # Command input bar                🔲
+│           ├── conversation.py               # Message display area             🔲
+│           ├── status.py                     # Status and metrics display       🔲
+│           └── stream_controls.py            # Streaming control widgets        🔲
+└── examples/                                 # Example implementations          
+    ├── __init__.py                           # Package initialization           🔄
+    ├── 02_streaming_chat.py                  # Streaming chat example           🔲
+    ├── 04_multi_provider_routing.py          # Multi-provider routing example   🔲
+    ├── 08_agent_delegation.py                # Agent delegation example         🔲
+    ├── 12_knowledge_retrieval.py             # Knowledge retrieval example      🔲
+    ├── 15_workflow_execution.py              # Workflow execution example       🔲
+    └── 20_command_cli.py                     # Command CLI example              🔲
+```
+
+
 ::: danger CLEAN BREAK WITH VERTICAL FEATURE SLICES
 This document outlines a revised implementation approach for Atlas that maintains the clean break architecture vision while focusing on delivering complete functional features through vertical slices. Rather than building the entire architecture layer by layer, we will implement the minimal necessary components of each layer needed to deliver specific features, allowing us to demonstrate functional value earlier and reduce implementation risk.
 :::
@@ -13,9 +208,10 @@ This document outlines a revised implementation approach for Atlas that maintain
 - ✅ Established centralized type variable system with variance control
 - ✅ Implemented core protocol designs for service interfaces
 - ✅ Created domain-specific primitive definitions for service areas
+- ✅ Implemented buffer primitives with proper variance and protocols
 - 🚧 Shifting from horizontal layer implementation to vertical feature slices
 - 🚧 Prioritizing core services required for streaming chat functionality
-- 🚧 Implementing event system and buffer components for streaming support
+- 🚧 Implementing event system components for streaming support
 :::
 
 ## Status Legend
