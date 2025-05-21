@@ -122,59 +122,106 @@ Streaming Chat enables real-time, token-by-token streaming of LLM responses to p
 
 ### 2.2 Implementation Status
 
-- ✅ Defined buffer protocol for streaming data
-- ✅ Implemented event primitives for pub/sub pattern
-- ✅ Created streaming response model
-- 🚧 Implementing EventBus for event communication
-- 🚧 Creating Buffer service for streaming
-- 🚧 Building service-enabled provider implementation
-- 🔄 Integrating with provider implementations
-- 🔄 Building streaming chat example
+- 🔄 Defining buffer protocol and types
+- 🔄 Defining event primitives and protocols
+- 🔄 Defining state container protocols
+- 🔄 Designing event bus interface
+- 🔄 Creating streaming response model
+- 🔄 Planning buffer service implementation
+- 🔄 Designing service-enabled provider interface
+- 🔲 Implementing buffer service
+- 🔲 Implementing event system
+- 🔲 Implementing state container
+- 🔲 Implementing provider streaming capabilities
+- 🔲 Building streaming chat example
 
 ### 2.3 Implementation Components
 
 ```
 atlas/
-├── primitives/
-│   ├── buffer/                                ✅  Buffer protocol definitions
-│   ├── events/                                ✅  Event protocol definitions
-│   └── state/                                 ✅  State protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── buffer/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Buffer protocol definitions
+│   │   │   ├── state.py                       🔄  Buffer state enumerations
+│   │   │   └── types.py                       🔄  Buffer-related type definitions
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   ├── types.py                       🔄  Event-related type definitions
+│   │   │   └── filter.py                      🔄  Event filtering capabilities
+│   │   └── state/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  State protocol definitions
+│   │       ├── container.py                   🔄  State container protocol
+│   │       └── transition.py                  🔄  State transition protocol
 │   ├── components/
-│   │   ├── event_bus.py                       🚧  Reactive event communication
-│   │   └── state_projector.py                 🚧  Efficient state evolution
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event_bus.py                       🔄  Reactive event communication
+│   │   └── state_projector.py                 🔄  Efficient state evolution
+│   ├── patterns/
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── pub_sub.py                         🔄  Publish-subscribe pattern
+│   │   └── reactive.py                        🔄  Reactive programming pattern
+│   └── composites/
+│       ├── __init__.py                        🔄  Package initialization
+│       └── event_driven.py                    🔄  Event-driven architecture composite
 ├── services/
 │   ├── buffer/
-│   │   ├── buffer.py                          🚧  Buffer implementation
-│   │   └── flow_control.py                    🔄  Flow control capabilities
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── buffer.py                          🔄  Buffer implementation
+│   │   ├── flow_control.py                    🔲  Flow control capabilities
+│   │   └── monitoring.py                      🔲  Buffer health monitoring
 │   ├── events/
-│   │   ├── event.py                           🚧  Event base classes
-│   │   └── event_bus.py                       🚧  Event bus implementation
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event.py                           🔄  Event base classes
+│   │   ├── event_bus.py                       🔄  Event bus implementation
+│   │   └── subscription.py                    🔄  Subscription management
 │   └── state/
-│       └── container.py                       🔄  State container implementation
+│       ├── __init__.py                        🔄  Package initialization
+│       ├── container.py                       🔲  State container implementation
+│       └── versioning.py                      🔲  State versioning mechanism
 ├── providers/
 │   ├── services/
-│   │   ├── base.py                            🔄  Service-enabled provider base
-│   │   └── streaming/
-│   │       ├── buffer.py                      🔄  Provider streaming buffer
-│   │       └── control.py                     🔄  Streaming control interface
+│   │   ├── __init__.py                        🔄  Package initialization  
+│   │   ├── base.py                            🔲  Service-enabled provider base
+│   │   ├── streaming/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── buffer.py                      🔲  Provider streaming buffer
+│   │   │   ├── control.py                     🔲  Streaming control interface
+│   │   │   └── metrics.py                     🔲  Streaming performance metrics
+│   │   └── types/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── streaming.py                   🔄  Streaming response types
+│   │       └── options.py                     🔄  Provider options types
 └── examples/
-    └── 02_streaming_chat.py                   🔄  Streaming chat example
+    ├── __init__.py                            🔄  Package initialization
+    └── 02_streaming_chat.py                   🔲  Streaming chat example
 ```
 
 ### 2.4 Implementation Roadmap
 
-::: timeline Foundation: Event & Buffer System
-- **May 20-21, 2025** 🚧
-- Complete EventBus implementation using Blinker
-- Implement Buffer service with flow control
-- Create state container for response tracking
+::: timeline Foundation: Protocol Definitions
+- **May 20-21, 2025** 🔄
+- Define buffer, event, and state protocols
+- Create type definitions and enumerations
+- Design protocol interactions
+- Document protocol behaviors
+- Implement protocol validation utilities
+:::
+
+::: timeline Core Service Implementation
+- **May 21-22, 2025** 🔲
+- Implement EventBus using Blinker
+- Create Buffer service with flow control
+- Build state container with versioning
 - Implement thread safety mechanisms
 - Add event middleware pipeline
 :::
 
-::: timeline Streaming Provider
-- **May 21-22, 2025** 🔄
+::: timeline Streaming Provider Implementation
+- **May 22-23, 2025** 🔲
 - Implement ServiceEnabledProvider with EventBus
 - Create provider-specific streaming commands
 - Build streaming buffer adapter for providers
@@ -183,7 +230,7 @@ atlas/
 :::
 
 ::: timeline Provider Implementations & Example
-- **May 22-23, 2025** 🔄
+- **May 23-24, 2025** 🔲
 - Implement Anthropic provider with streaming
 - Create OpenAI provider with streaming
 - Build Ollama provider with streaming
@@ -204,11 +251,11 @@ Agent Delegation enables task delegation and coordination between specialized ag
 
 ### 3.2 Implementation Status
 
-- ✅ Defined agent messaging protocols
-- ✅ Created agent state model
-- 🚧 Implementing controller agent architecture
-- 🔄 Building message routing system
-- 🔄 Designing task delegation patterns
+- 🔄 Defining agent messaging protocols
+- 🔄 Creating agent state model
+- 🔲 Implementing controller agent architecture
+- 🔲 Building message routing system
+- 🔲 Designing task delegation patterns
 - 🔲 Creating specialized agent implementations
 - 🔲 Building agent delegation example
 
@@ -291,11 +338,11 @@ Knowledge Retrieval enables semantic search and retrieval of documents to enhanc
 
 ### 4.2 Implementation Status
 
-- ✅ Defined chunking and embedding protocols
-- ✅ Created retrieval service interface
-- 🚧 Implementing document chunking strategies
-- 🔄 Building embedding service
-- 🔄 Designing vector store integration
+- 🔄 Defining chunking and embedding protocols
+- 🔄 Creating retrieval service interface
+- 🔲 Implementing document chunking strategies
+- 🔲 Building embedding service
+- 🔲 Designing vector store integration
 - 🔲 Creating hybrid search implementation
 - 🔲 Building knowledge retrieval example
 
@@ -377,8 +424,8 @@ Multi-Provider Routing enables intelligent selection and fallback between differ
 
 ### 5.2 Implementation Status
 
-- ✅ Defined provider service interfaces
-- ✅ Created capability registry protocols
+- 🔄 Defining provider service interfaces
+- 🔄 Creating capability registry protocols
 - 🔲 Implementing provider registry
 - 🔲 Building capability-based selection
 - 🔲 Designing fallback strategies
@@ -461,8 +508,8 @@ Workflow Execution enables complex multi-step workflows with dependency manageme
 
 ### 6.2 Implementation Status
 
-- ✅ Defined workflow primitives
-- ✅ Created task execution protocols
+- 🔄 Defining workflow primitives
+- 🔄 Creating task execution protocols
 - 🔲 Implementing workflow engine
 - 🔲 Building dependency management
 - 🔲 Designing parallel execution
@@ -548,8 +595,8 @@ Command CLI provides a Textual-based rich terminal interface for interacting wit
 
 ### 7.2 Implementation Status
 
-- ✅ Defined command primitives
-- ✅ Created CLI interface protocols
+- 🔄 Defining command primitives
+- 🔄 Creating CLI interface protocols
 - 🔲 Implementing command execution
 - 🔲 Building Textual UI components
 - 🔲 Designing perspective-based views
@@ -631,6 +678,8 @@ Despite shifting to a feature-driven approach, we maintain these core architectu
 5. **Explicit Effect Tracking**: Side effects are captured and controlled
 6. **Perspective Shifting**: Different contexts have appropriate views of the same data
 7. **Quantum Partitioning**: Complex tasks are decomposed for parallel execution
+8. **Flat Abstraction Hierarchy**: Core abstractions exist at the same conceptual level without artificial nesting
+9. **Composable Architecture**: Higher-level components built from compositions of simpler patterns
 
 ## 9. Implementation Timeline
 
@@ -640,7 +689,7 @@ Despite shifting to a feature-driven approach, we maintain these core architectu
 - Build agent delegation feature slice
 - Create examples demonstrating both features
 - Implement core services: event, buffer, state
-- Core NERV components: EventBus, StateProjector
+- Core components: EventBus, StateProjector
 :::
 
 ::: timeline Phase 2: Knowledge Retrieval & Provider Routing
@@ -649,7 +698,7 @@ Despite shifting to a feature-driven approach, we maintain these core architectu
 - Build multi-provider routing feature slice
 - Create examples demonstrating both features
 - Implement core services: registry, resources
-- Core NERV components: TemporalStore, Container
+- Core components: TemporalStore, Container
 :::
 
 ::: timeline Phase 3: Workflow & CLI
@@ -658,7 +707,7 @@ Despite shifting to a feature-driven approach, we maintain these core architectu
 - Build command CLI feature slice
 - Create examples demonstrating both features
 - Implement core services: commands, perspective
-- Core NERV components: QuantumPartitioner, PerspectiveAware
+- Core components: QuantumPartitioner, PerspectiveAware
 :::
 
 ::: timeline Phase 4: Integration & Polish
