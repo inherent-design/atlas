@@ -263,23 +263,39 @@ Agent Delegation enables task delegation and coordination between specialized ag
 
 ```
 atlas/
-├── primitives/
-│   ├── events/                                ✅  Event protocol definitions
-│   ├── state/                                 ✅  State protocol definitions
-│   └── transitions/                           ✅  Transition protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   └── types.py                       🔄  Event-related type definitions
+│   │   ├── state/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  State protocol definitions
+│   │   │   └── types.py                       🔄  State-related type definitions
+│   │   └── transitions/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  Transition protocol definitions
+│   │       └── types.py                       🔄  Transition-related type definitions
 │   ├── components/
-│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event_bus.py                       🔄  Reactive event communication
 │   │   ├── temporal_store.py                  🔄  Temporal state tracking
 │   │   └── effect_monad.py                    🔄  Effect tracking system
+│   └── patterns/
+│       ├── __init__.py                        🔄  Package initialization
+│       └── pub_sub.py                         🔄  Publish-subscribe pattern
 ├── services/
 │   ├── events/
-│   │   ├── event.py                           🚧  Event base classes
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event.py                           🔄  Event base classes
 │   │   └── subscription.py                    🔄  Event subscription system
 │   ├── state/
+│   │   ├── __init__.py                        🔄  Package initialization
 │   │   ├── container.py                       🔄  State container implementation
 │   │   └── history.py                         🔲  State history tracking
 │   └── transitions/
+│       ├── __init__.py                        🔄  Package initialization
 │       └── state_machine.py                   🔲  State machine implementation
 ├── agents/
 │   ├── services/
@@ -350,23 +366,39 @@ Knowledge Retrieval enables semantic search and retrieval of documents to enhanc
 
 ```
 atlas/
-├── primitives/
-│   ├── buffer/                                ✅  Buffer protocol definitions
-│   ├── events/                                ✅  Event protocol definitions
-│   └── resources/                             ✅  Resource protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── buffer/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Buffer protocol definitions
+│   │   │   └── types.py                       🔄  Buffer-related type definitions
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   └── types.py                       🔄  Event-related type definitions
+│   │   └── resources/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  Resource protocol definitions
+│   │       └── types.py                       🔄  Resource-related type definitions
 │   ├── components/
-│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event_bus.py                       🔄  Reactive event communication
 │   │   ├── perspective_aware.py               🔄  Context-specific views
 │   │   └── temporal_store.py                  🔄  Temporal state tracking
+│   └── patterns/
+│       ├── __init__.py                        🔄  Package initialization
+│       └── resource_management.py             🔄  Resource management pattern
 ├── services/
 │   ├── buffer/
-│   │   ├── buffer.py                          🚧  Buffer implementation
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── buffer.py                          🔄  Buffer implementation
 │   │   └── flow_control.py                    🔄  Flow control capabilities
 │   ├── events/
-│   │   ├── event.py                           🚧  Event base classes
+│   │   ├── __init__.py                        🔄  Package initialization
+│   │   ├── event.py                           🔄  Event base classes
 │   │   └── subscription.py                    🔄  Event subscription system
 │   └── resources/
+│       ├── __init__.py                        🔄  Package initialization
 │       ├── lifecycle.py                       🔲  Resource lifecycle management
 │       └── manager.py                         🔲  Resource manager implementation
 ├── knowledge/
@@ -436,15 +468,28 @@ Multi-Provider Routing enables intelligent selection and fallback between differ
 
 ```
 atlas/
-├── primitives/
-│   ├── events/                                ✅  Event protocol definitions
-│   ├── registry/                              ✅  Registry protocol definitions
-│   └── commands/                              ✅  Command protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   └── types.py                       🔄  Event-related type definitions
+│   │   ├── registry/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Registry protocol definitions
+│   │   │   └── types.py                       🔄  Registry-related type definitions
+│   │   └── commands/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  Command protocol definitions
+│   │       └── types.py                       🔄  Command-related type definitions
 │   ├── components/
+│   │   ├── __init__.py                        🔄  Package initialization
 │   │   ├── container.py                       🔄  Dependency management
 │   │   ├── quantum_partitioner.py             🔲  Parallel execution system
 │   │   └── effect_monad.py                    🔄  Effect tracking system
+│   └── patterns/
+│       ├── __init__.py                        🔄  Package initialization
+│       └── dependency_injection.py            🔄  Dependency injection pattern
 ├── services/
 │   ├── registry/
 │   │   ├── discovery.py                       🔲  Service discovery mechanisms
@@ -520,16 +565,27 @@ Workflow Execution enables complex multi-step workflows with dependency manageme
 
 ```
 atlas/
-├── primitives/
-│   ├── events/                                ✅  Event protocol definitions
-│   ├── commands/                              ✅  Command protocol definitions
-│   └── state/                                 ✅  State protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   └── types.py                       🔄  Event-related type definitions
+│   │   ├── commands/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Command protocol definitions
+│   │   │   └── types.py                       🔄  Command-related type definitions
+│   │   └── state/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  State protocol definitions
+│   │       └── types.py                       🔄  State-related type definitions
 │   ├── components/
+│   │   ├── __init__.py                        🔄  Package initialization
 │   │   ├── quantum_partitioner.py             🔲  Parallel execution system
-│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   ├── event_bus.py                       🔄  Reactive event communication
 │   │   └── temporal_store.py                  🔄  Temporal state tracking
 │   └── composites/
+│       ├── __init__.py                        🔄  Package initialization
 │       └── parallel_workflow_engine.py        🔲  Dependency-based parallel execution
 ├── services/
 │   ├── commands/
@@ -607,15 +663,29 @@ Command CLI provides a Textual-based rich terminal interface for interacting wit
 
 ```
 atlas/
-├── primitives/
-│   ├── commands/                              ✅  Command protocol definitions
-│   ├── events/                                ✅  Event protocol definitions
-│   └── perspective/                           ✅  Perspective protocol definitions
-├── nerv/
+├── core/
+│   ├── primitives/
+│   │   ├── commands/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Command protocol definitions
+│   │   │   └── types.py                       🔄  Command-related type definitions
+│   │   ├── events/
+│   │   │   ├── __init__.py                    🔄  Package initialization
+│   │   │   ├── protocol.py                    🔄  Event protocol definitions
+│   │   │   └── types.py                       🔄  Event-related type definitions
+│   │   └── perspective/
+│   │       ├── __init__.py                    🔄  Package initialization
+│   │       ├── protocol.py                    🔄  Perspective protocol definitions
+│   │       └── types.py                       🔄  Perspective-related type definitions
 │   ├── components/
+│   │   ├── __init__.py                        🔄  Package initialization
 │   │   ├── perspective_aware.py               🔄  Context-specific views
 │   │   ├── effect_monad.py                    🔄  Effect tracking system
-│   │   └── event_bus.py                       🚧  Reactive event communication
+│   │   └── event_bus.py                       🔄  Reactive event communication
+│   └── patterns/
+│       ├── __init__.py                        🔄  Package initialization
+│       ├── command.py                         🔄  Command pattern
+│       └── perspective.py                     🔄  Perspective pattern
 ├── services/
 │   ├── commands/
 │   │   ├── command.py                         🔲  Command base implementation
@@ -669,7 +739,7 @@ atlas/
 
 ## 8. Key Architectural Principles
 
-Despite shifting to a feature-driven approach, we maintain these core architectural principles from NERV and the clean break design:
+Despite shifting to a feature-driven approach, we maintain these core architectural principles from the clean break design:
 
 1. **Protocol-First Design**: All interfaces are defined as protocols before implementation
 2. **Type-Safe Foundations**: Strong typing throughout with centralized type variable system
