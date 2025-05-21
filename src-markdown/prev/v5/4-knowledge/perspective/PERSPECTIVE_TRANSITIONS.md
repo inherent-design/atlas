@@ -193,7 +193,7 @@ Moving between different time-based views of knowledge:
 The temporal transition process includes these steps:
 
 1. **Calculate Temporal Transformation**
-   - Analyze time differential between source and target 
+   - Analyze time differential between source and target
    - Determine if linear or non-linear time transition
    - Identify temporal reference frame for transition
    - Calculate transition magnitude and direction

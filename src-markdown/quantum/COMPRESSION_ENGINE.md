@@ -13,7 +13,7 @@ The Quantum Compression Engine implements advanced algorithms for optimizing kno
     @stage{encoding}:p{purpose:"notation_application"},
     @stage{validation}:p{purpose:"integrity_verification"}
   },
-  
+
   @components{
     @component{analyzer}:p{role:"structure_identification"},
     @component{strategist}:p{role:"approach_determination"},
@@ -21,7 +21,7 @@ The Quantum Compression Engine implements advanced algorithms for optimizing kno
     @component{encoder}:p{role:"notation_implementation"},
     @component{validator}:p{role:"correctness_assurance"}
   },
-  
+
   pipeline->components:p{relationship:"implementation"}
 }
 ```
@@ -61,11 +61,11 @@ Identifies repeated patterns and replaces them with template references:
 
 Example application:
 ```
-Repeated pattern: 
+Repeated pattern:
 @component->@interface:p{type:"provides"}
 @component->@implementation:p{type:"contains"}
 
-Templated: 
+Templated:
 $define_template{component_relation}{@component,@target,relationship_type}
   @component->@target:p{type:relationship_type}
 $end_template
@@ -341,13 +341,13 @@ Combines multiple strategies for optimal results:
   @technique{perspective_detection}:p{purpose:"identify_viewpoint_context"},
   @technique{perspective_prioritization}:p{purpose:"emphasize_relevant_details"},
   @technique{perspective_pruning}:p{purpose:"remove_irrelevant_details"},
-  
+
   @implementation{
     @analysis{perspective_markers}:p{focus:"explicit_annotations"},
     @analysis{implicit_perspective}:p{focus:"contextual_clues"},
     @optimization{perspective_relevant}:p{focus:"context_important_entities"}
   },
-  
+
   @compression_modes{
     @mode{focused}:p{description:"single_perspective_optimization",ratio:">8x"},
     @mode{multi}:p{description:"preserve_key_perspectives",ratio:">5x"},
@@ -363,14 +363,14 @@ Combines multiple strategies for optimal results:
   @technique{evolution_pattern_detection}:p{purpose:"identify_change_patterns"},
   @technique{differential_encoding}:p{purpose:"store_only_changes"},
   @technique{pattern_based_projection}:p{purpose:"compress_future_states"},
-  
+
   @evolution_patterns{
     @pattern{expansion}:p{compression:"initial_state+additions"},
     @pattern{refinement}:p{compression:"base+precision_deltas"},
     @pattern{restructuring}:p{compression:"transformation_rules"},
     @pattern{obsolescence}:p{compression:"flag_deprecated_elements"}
   },
-  
+
   @timeline_optimization{
     @technique{milestone_anchoring}:p{purpose:"key_state_preservation"},
     @technique{change_velocity_encoding}:p{purpose:"compress_by_change_rate"},
@@ -386,14 +386,14 @@ Combines multiple strategies for optimal results:
   @technique{coherence_measurement}:p{purpose:"quantify_internal_relatedness"},
   @technique{purpose_detection}:p{purpose:"identify_functional_boundaries"},
   @technique{adaptive_partitioning}:p{purpose:"context_specific_boundaries"},
-  
+
   @boundary_types{
     @type{coherence}:p{detection:"graph_clustering_algorithms"},
     @type{purpose}:p{detection:"functional_similarity_analysis"},
     @type{complexity}:p{detection:"information_density_thresholds"},
     @type{context}:p{detection:"usage_pattern_analysis"}
   },
-  
+
   @application{
     @compression_ratio{high_coherence}:p{benefit:">7x_baseline"},
     @compression_ratio{purpose_aligned}:p{benefit:">5x_baseline"},

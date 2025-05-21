@@ -7,7 +7,7 @@ This file contains essential instructions and guidelines for Claude Code when wo
 ### Project Timeline
 
 - **Project Start**: Late April 2025
-- **Current Date**: May 10, 2025
+- **Current Date**: May 17, 2025
 - **Completion Deadline**: June 30, 2025
 - **Commercial Launch**: July 2025
 
@@ -20,35 +20,38 @@ This file contains essential instructions and guidelines for Claude Code when wo
 - ✅ **Robust Provider Implementation**: Added retry mechanism with exponential backoff and circuit breaker pattern
 - ✅ **Enhanced Provider System**: Implemented Provider Registry with capability-based selection and ProviderGroup with fallback strategies
 
-### Current Focus (May 10-17, 2025)
+### Current Focus (May 17-24, 2025)
 
-Per the [Accelerated Implementation Plan](./docs/project-management/planning/accelerated_implementation_plan.md), we are currently in Phase 1 focused on Provider System Finalization:
+Per the [Accelerated Implementation Plan](./docs/project-management/planning/accelerated_implementation_plan.md), we are currently in Phase 1 focused on Core Services & Textual CLI Implementation:
 
-1. **Enhanced Streaming Infrastructure**:
-   - Updating BaseStreamHandler with standardized StreamControl interface
-   - Implementing stream control capabilities (pause, resume, cancel)
-   - Adding performance metrics tracking during streaming
-   - Ensuring proper resource cleanup and consistent error handling
+1. **Core Services Implementation**:
+   - Creating core services module foundation
+   - Implementing thread-safe buffer system with flow control
+   - Developing event-based communication system with subscription
+   - Adding state management with versioning and transitions
+   - Creating resource lifecycle management and boundaries
 
-2. **Provider Lifecycle Management**:
-   - Adding connection pooling for providers
-   - Implementing connection reuse mechanisms
-   - Adding health checking and circuit breaking
-   - Enhancing error handling with detailed categorization
+2. **Textual CLI Implementation**:
+   - Designing serializable command schema and execution pattern
+   - Implementing UI components with command bar and message display
+   - Creating mode-specific screens for different functionality
+   - Building command execution system with streaming support
+   - Implementing configuration management and serialization
 
 See the [current TODO list](./docs/project-management/tracking/todo.md) for specific implementation tasks.
 
-### Next Steps (May 18-31, 2025)
+### Next Steps (May 25-31, 2025)
 
 Following our [Product Roadmap](./docs/project-management/roadmap/product_roadmap.md), upcoming phases include:
 
-1. **Agent-Provider Integration (May 18-24)**:
-   - Enhancing agent-provider interface with streaming controls
-   - Optimizing provider capability utilization in agents
-   - Updating controller-worker communication for streaming
-   - Creating enhanced streaming examples
+1. **Tool Framework Enhancement (May 25-28)**:
+   - Implementing tool chaining for sequential and parallel execution
+   - Creating result transformation capabilities between tools
+   - Developing conditional execution based on tool results
+   - Building knowledge-specific tool implementations
+   - Creating comprehensive tool examples
 
-2. **Knowledge System Enhancements (May 25-31)**:
+2. **Knowledge System Enhancements (May 28-31)**:
    - Implementing hybrid retrieval combining semantic and keyword search
    - Enhancing document chunking strategies with semantic boundaries
    - Adding advanced metadata filtering and extraction
@@ -105,6 +108,85 @@ The complete implementation timeline is detailed in our [Accelerated Implementat
 - Document all classes and functions with detailed docstrings.
 - Maintain consistent naming conventions: snake_case for variables/functions, PascalCase for classes.
 - Use meaningful variable and function names that clearly convey their purpose.
+
+### Python Typing Best Practices
+
+1. **Protocol Usage**: Enhance Protocol definitions with runtime_checkable
+   ```python
+   from typing import Protocol, runtime_checkable
+
+   @runtime_checkable
+   class BufferProtocol(Protocol):
+       def push(self, item: Dict[str, Any]) -> bool: ...
+       # ...
+   ```
+
+2. **Type Unions**: Use the `|` operator for unions in Python 3.13+
+   ```python
+   # Current/Legacy:
+   ContentDict = Union[TextContentDict, ImageContentDict, str]
+
+   # Modern (preferred):
+   ContentDict = TextContentDict | ImageContentDict | str
+   ```
+
+3. **Typed Class Attributes**: Add class variable typing with ClassVar
+   ```python
+   from typing import ClassVar
+
+   class StreamBuffer:
+       MAX_DEFAULT_SIZE: ClassVar[int] = 1024 * 1024
+   ```
+
+4. **Final Classes/Methods**: Use Final for immutable design patterns
+   ```python
+   from typing import Final
+
+   TOKEN_CHARSET: Final = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+   ```
+
+5. **Self Type**: Update method return types to use Self type for fluid interfaces
+   ```python
+   from typing import Self
+
+   class StreamBuffer:
+       def pause(self) -> Self:
+           self._paused = True
+           return self
+   ```
+
+6. **TypeAlias**: Define clearer type aliases
+   ```python
+   from typing import TypeAlias
+
+   StreamContent: TypeAlias = str
+   TokenCount: TypeAlias = int
+   ```
+
+7. **Required/NotRequired**: Use consistently throughout TypedDict definitions
+   ```python
+   from typing_extensions import TypedDict, NotRequired, Required
+
+   class ConfigDict(TypedDict):
+       name: str  # Required by default
+       version: str  # Required by default
+       options: NotRequired[Dict[str, Any]]  # Optional field
+   ```
+
+8. **TypeGuard**: Add type narrowing functions
+   ```python
+   from typing import TypeGuard
+
+   def is_string_content(content: ContentDict) -> TypeGuard[TextContentDict]:
+       return isinstance(content, dict) and content.get("type") == "text"
+   ```
+
+9. **Literal Types**: Use for constrained string values
+   ```python
+   from typing import Literal
+
+   StreamStateValue = Literal["initializing", "active", "paused", "cancelled", "completed", "error"]
+   ```
 
 ### Documentation
 
@@ -294,7 +376,19 @@ uv run python examples/streaming_example.py --provider openai
 
 The following areas represent the most important development directions for advancing Atlas capabilities:
 
-### 1. Enhanced Knowledge Management
+### 1. Textual CLI Implementation
+
+- **Priority**: High
+- **Status**: In Progress
+- **Goals**:
+  - Design and implement Textual-based rich terminal interface
+  - Create consistent command structure with serialization
+  - Build interactive conversation view with streaming support
+  - Implement specialized screens for different operational modes
+  - Develop configuration management with save/load capability
+  - Provide visual state indicators and performance metrics
+
+### 2. Enhanced Knowledge Management
 
 - **Priority**: High
 - **Status**: In Progress
@@ -305,7 +399,7 @@ The following areas represent the most important development directions for adva
   - Create caching mechanisms for frequent queries
   - Support multimedia document types (beyond markdown)
 
-### 2. Advanced Multi-Agent Orchestration
+### 3. Advanced Multi-Agent Orchestration
 
 - **Priority**: Medium
 - **Status**: Planned
@@ -316,7 +410,7 @@ The following areas represent the most important development directions for adva
   - Enhance message passing with structured formats and metadata
   - Build visualization tools for agent interactions
 
-### 3. Provider Performance Optimization
+### 4. Provider Performance Optimization
 
 - **Priority**: High
 - **Status**: In Progress
@@ -327,7 +421,7 @@ The following areas represent the most important development directions for adva
   - Create provider switching based on cost/performance needs
   - Implement health monitoring and diagnostics
 
-### 4. Interactive Documentation & Examples
+### 5. Interactive Documentation & Examples
 
 - **Priority**: High
 - **Status**: In Progress
@@ -405,6 +499,30 @@ pnpm dev    # Start dev server
 pnpm build  # Build documentation
 ```
 
+### Development Tools Usage
+
+With the project's enhanced configuration in pyproject.toml, you can now use simplified commands for testing and development:
+
+```bash
+# Testing with pytest (includes coverage automatically)
+uv run pytest                                 # Run all tests with coverage
+uv run pytest atlas/tests/core/services/     # Run specific tests with coverage
+uv run pytest -k "test_buffer"               # Run tests matching pattern with coverage
+
+# Pre-commit hooks
+uv run pre-commit run --all-files            # Run all pre-commit hooks
+```
+
+For more granular coverage control, you can still use the explicit coverage module:
+
+```bash
+# Advanced coverage options
+uv run python -m coverage html                # Generate HTML report
+uv run python -m coverage report              # View coverage report in terminal
+```
+
+Thanks to the improved pyproject.toml configuration, test commands are now simpler while still providing all the necessary functionality.
+
 ### Using Atlas Without API Keys
 
 For development without API keys, use the MockProvider:
@@ -431,6 +549,333 @@ uv run python examples/query_example.py --provider anthropic
 
 # Run with Ollama provider (requires local Ollama server)
 uv run python examples/query_example.py --provider ollama
+```
+
+### Textual CLI Implementation
+
+The Atlas Textual CLI enhances the traditional command-line interface with a rich terminal UI:
+
+```bash
+# Run Atlas with the Textual interface
+uv run python main.py --tui
+
+# Run with specific initial mode
+uv run python main.py --tui --mode query
+
+# Run with saved configuration
+uv run python main.py --tui --config /path/to/config.json
+```
+
+#### Textual CLI Architecture
+
+The Textual CLI is organized in a modular structure:
+
+```
+atlas/
+├── cli/
+│   ├── __init__.py
+│   ├── config.py            # Existing - Configuration utilities
+│   ├── parser.py            # Existing - Command-line argument parsing
+│   └── textual/             # New - Textual CLI components
+│       ├── __init__.py
+│       ├── app.py           # Main application class
+│       ├── commands.py      # Command execution system
+│       ├── schema.py        # Command schema definitions
+│       ├── config.py        # Configuration management
+│       ├── screens/         # Screen implementations
+│       │   ├── __init__.py
+│       │   ├── main.py      # Main application screen
+│       │   ├── provider.py  # Provider selection screen
+│       │   ├── ingest.py    # Document ingestion screen
+│       │   └── tools.py     # Tool management screen
+│       └── widgets/         # Custom widget components
+│           ├── __init__.py
+│           ├── command_bar.py    # Command input bar
+│           ├── conversation.py   # Message display area
+│           ├── status.py         # Status and metrics display
+│           └── stream_controls.py # Streaming control widgets
+```
+
+#### Key Implementation Components
+
+1. **Main Application**:
+
+```python
+# atlas/cli/textual/app.py
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer
+from atlas.cli.textual.screens.main import MainScreen
+
+class AtlasApp(App):
+    """Atlas Textual TUI application."""
+
+    CSS_PATH = "atlas.css"
+    TITLE = "Atlas Framework"
+    SUB_TITLE = "Advanced Multi-Modal Agent System"
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        yield MainScreen()
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Initialize the app when mounted."""
+        # Load configuration
+        self.load_config()
+
+        # Initialize providers
+        self.initialize_providers()
+
+        # Set up key bindings
+        self.setup_keybindings()
+
+    def setup_keybindings(self) -> None:
+        """Configure application key bindings."""
+        self.bind("q", "quit", "Quit")
+        self.bind("ctrl+p", "command_palette", "Command Palette")
+        self.bind("ctrl+s", "toggle_sidebar", "Toggle Sidebar")
+        self.bind("f1", "push_screen('help')", "Help")
+```
+
+2. **Command Schema and Execution**:
+
+```python
+# atlas/cli/textual/schema.py
+from dataclasses import dataclass, field
+from typing import Dict, Any, List, Optional, Union, Type
+
+@dataclass
+class CommandSchema:
+    """Schema definition for Atlas commands."""
+
+    name: str
+    description: str
+    parameters: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    returns: Dict[str, Any] = field(default_factory=dict)
+    examples: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the schema to a dictionary."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "parameters": self.parameters,
+            "returns": self.returns,
+            "examples": self.examples,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CommandSchema":
+        """Create a schema from a dictionary."""
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            parameters=data.get("parameters", {}),
+            returns=data.get("returns", {}),
+            examples=data.get("examples", []),
+        )
+```
+
+3. **Command Execution**:
+
+```python
+# atlas/cli/textual/commands.py
+import asyncio
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List, Callable, Awaitable
+
+from atlas.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+class Command(ABC):
+    """Base class for Atlas commands in the Textual interface."""
+
+    name: str = ""
+    description: str = ""
+
+    def __init__(self, app: Any = None) -> None:
+        """Initialize the command."""
+        self.app = app
+        self.logger = get_logger(f"{__name__}.{self.name}")
+
+    @abstractmethod
+    async def execute(self, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Execute the command with the given parameters."""
+        pass
+
+    async def validate(self, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Validate command parameters before execution."""
+        # Default implementation just returns validated parameters
+        return parameters or {}
+
+class QueryCommand(Command):
+    """Command for executing queries."""
+
+    name = "query"
+    description = "Execute a query with the selected provider"
+
+    async def execute(self, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Execute a query with the given parameters."""
+        params = await self.validate(parameters)
+
+        query_text = params.get("query")
+        provider_name = params.get("provider")
+        model_name = params.get("model")
+        stream = params.get("stream", True)
+
+        # Create query client
+        from atlas.query import AtlasQuery
+        query_client = AtlasQuery(
+            provider_name=provider_name,
+            model_name=model_name,
+        )
+
+        # Execute the query
+        if stream:
+            return await self._execute_stream(query_client, query_text)
+        else:
+            return await self._execute_basic(query_client, query_text)
+
+    async def _execute_stream(self, query_client, query_text):
+        """Execute a streaming query."""
+        # Implementation for streaming query
+        pass
+
+    async def _execute_basic(self, query_client, query_text):
+        """Execute a basic non-streaming query."""
+        # Implementation for basic query
+        pass
+```
+
+4. **Main Screen**:
+
+```python
+# atlas/cli/textual/screens/main.py
+from textual.screen import Screen
+from textual.widgets import Static, Input, Button
+from textual.containers import Container, Horizontal, Vertical
+from textual.reactive import reactive
+
+from atlas.cli.textual.widgets.command_bar import CommandBar
+from atlas.cli.textual.widgets.conversation import ConversationView
+from atlas.cli.textual.widgets.status import StatusBar
+
+class MainScreen(Screen):
+    """Main application screen."""
+
+    BINDINGS = [
+        ("escape", "refocus", "Focus Command Bar"),
+        ("ctrl+c", "copy_selection", "Copy Selection"),
+    ]
+
+    # Reactive state
+    provider_name = reactive("anthropic")
+    model_name = reactive("claude-3-haiku-20240307")
+
+    def compose(self):
+        """Create child widgets for the screen."""
+        with Container(id="app-grid"):
+            with Container(id="sidebar"):
+                yield Static("Providers", id="sidebar-header")
+                # Provider list would go here
+
+            with Container(id="main-content"):
+                yield ConversationView(id="conversation")
+
+                with Horizontal(id="input-area"):
+                    yield CommandBar(id="command-bar")
+                    yield Button("Send", id="send-button")
+
+                yield StatusBar(id="status-bar")
+
+    def on_button_pressed(self, event):
+        """Handle button press events."""
+        if event.button.id == "send-button":
+            self.send_command()
+
+    def action_refocus(self):
+        """Action to refocus the command bar."""
+        self.query_one("#command-bar").focus()
+
+    def send_command(self):
+        """Send the current command."""
+        command_bar = self.query_one("#command-bar")
+        command_text = command_bar.value
+
+        if not command_text:
+            return
+
+        # Clear the command bar
+        command_bar.value = ""
+
+        # Process the command
+        self.app.run_command(command_text)
+```
+
+5. **Conversation View Widget**:
+
+```python
+# atlas/cli/textual/widgets/conversation.py
+from textual.widgets import RichLog
+from textual.reactive import reactive
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.text import Text
+
+class ConversationView(RichLog):
+    """Widget for displaying conversations."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the conversation view."""
+        super().__init__(*args, **kwargs)
+        self.messages = []
+
+    def add_user_message(self, text):
+        """Add a user message to the conversation."""
+        self.messages.append({"role": "user", "content": text})
+
+        # Format and display the message
+        user_text = Text(f"You: {text}")
+        user_text.stylize("bold magenta")
+        self.write(user_text)
+        self.write("")  # Add blank line
+
+    def add_assistant_message(self, text, streaming=False):
+        """Add an assistant message to the conversation."""
+        if streaming:
+            # Start a new message for streaming
+            self.write(Text("Atlas: ", style="bold cyan"), end="")
+            self._streaming_content = ""
+            return
+
+        # For non-streaming, add the complete message
+        self.messages.append({"role": "assistant", "content": text})
+
+        # Format and display the message
+        assistant_text = Text(f"Atlas: {text}")
+        assistant_text.stylize("bold cyan")
+        self.write(assistant_text)
+        self.write("")  # Add blank line
+
+    def update_streaming(self, delta):
+        """Update the current streaming message with new content."""
+        self._streaming_content += delta
+
+        # Replace the current line with updated content
+        self.update(Text(delta, style="cyan"), append=True)
+
+    def complete_streaming(self):
+        """Complete the current streaming message."""
+        # Add the full message to history
+        self.messages.append({
+            "role": "assistant",
+            "content": self._streaming_content
+        })
+
+        # Add a blank line after the message
+        self.write("")
 ```
 
 ### Developing New Features

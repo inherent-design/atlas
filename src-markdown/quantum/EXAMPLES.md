@@ -283,7 +283,7 @@ Version 3.0 (2022):
 - Knowledge fusion from diverse sources
 
 Future Vision (2024+):
-- Autonomous knowledge acquisition 
+- Autonomous knowledge acquisition
 - Real-time knowledge evolution
 - Cognitive reasoning capabilities
 ```
@@ -424,8 +424,8 @@ Data Layer:
 Atlas Knowledge Framework Documentation:
 
 Core Identity:
-Atlas is an adaptive knowledge framework designed to facilitate structured guidance 
-and organic learning. It operates through multi-perspective representation of knowledge 
+Atlas is an adaptive knowledge framework designed to facilitate structured guidance
+and organic learning. It operates through multi-perspective representation of knowledge
 and employs trimodal principles for comprehensive understanding.
 
 Key Capabilities:
@@ -442,7 +442,7 @@ The system employs trimodal tree development methodology:
 - Holistic integration for system coherence
 
 Version Evolution:
-The framework has evolved through several versions, each expanding 
+The framework has evolved through several versions, each expanding
 its capabilities and refining its conceptual foundations.
 ```
 
@@ -614,8 +614,8 @@ This example shows how a complete knowledge domain (Agile Development Methodolog
 ```
 Agile Software Development Methodology:
 
-Agile is an iterative approach to software development that emphasizes flexibility, 
-customer collaboration, and rapid delivery of working software. It emerged as a response 
+Agile is an iterative approach to software development that emphasizes flexibility,
+customer collaboration, and rapid delivery of working software. It emerged as a response
 to traditional waterfall methodologies.
 
 Core Values (from Agile Manifesto):
@@ -674,18 +674,18 @@ q{frameworks}[
     roles:["product_owner","scrum_master","development_team"],
     artifacts:["product_backlog","sprint_backlog","increment"]
   },
-  
+
   @framework{kanban}:p{
     focus:"visual_workflow",
     principle:"limit_wip",
     practice:"continuous_flow"
   },
-  
+
   @framework{xp}:p{
     focus:"technical_excellence",
     practices:["pair_programming","tdd","refactoring","simple_design"]
   },
-  
+
   @framework{lean}:p{
     principle:"minimize_waste",
     focus:"value_stream",

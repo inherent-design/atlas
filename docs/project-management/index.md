@@ -14,8 +14,8 @@ This directory contains critical project management documentation for the Atlas 
 ### Active Documents
 
 #### Planning
-- [Accelerated Implementation Plan](./planning/accelerated_implementation_plan.md): Week-by-week execution plan to complete Atlas by June 30, 2025
-- [Architecture Planning](./planning/architecture_planning.md): Core architecture design and technical planning
+- [Schema Service Plan](./planning/schema_service_plan.md): Core services implementation plan
+- [Service Architecture Plan](./planning/service_architecture_plan.md): Core service architecture design
 
 #### Roadmap
 - [Product Roadmap](./roadmap/product_roadmap.md): Comprehensive roadmap covering both MVP and beyond-MVP features with June 30, 2025 completion target
@@ -32,7 +32,7 @@ This directory contains critical project management documentation for the Atlas 
 
 #### Tracking
 - [Proposed Structure](./tracking/proposed_structure.md): Current project structure with status indicators
-- [Todo](./tracking/todo.md): Active implementation tasks prioritized for completion
+- [Proposed Structure](./tracking/proposed_structure.md): Current project structure with status indicators
 
 #### Audit
 - Contains audit reports and analysis of project components

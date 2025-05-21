@@ -80,7 +80,7 @@ Some properties become invisible or irrelevant at certain scales:
 
 Some properties transform in nature across scales:
 - Data structures transform into information architecture
-- Method calls transform into service interactions 
+- Method calls transform into service interactions
 - User inputs transform into system events
 
 ## Scale Navigation

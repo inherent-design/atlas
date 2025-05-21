@@ -17,7 +17,7 @@ This document outlines the MVP (Minimum Viable Product) for the Quantum notation
 ### 1. Command Line Interface
 
 - **Functionality**:
-  - Process individual `.qt` files 
+  - Process individual `.qt` files
   - Convert between formats with simple syntax
   - Parse Markdown files to extract and process Quantum blocks
   - Output to stdout or files
@@ -26,22 +26,22 @@ This document outlines the MVP (Minimum Viable Product) for the Quantum notation
   ```bash
   # Process Quantum file
   quantum parse file.qt
-  
+
   # Convert Markdown to Quantum
   quantum convert --from md --to qt document.md > compressed.qt
-  
+
   # Convert Quantum to Markdown
   quantum convert --from qt --to md file.qt > expanded.md
-  
+
   # Convert Quantum to Mermaid
   quantum convert --from qt --to mermaid file.qt > diagram.md
-  
+
   # Extract and process Quantum blocks from Markdown
   quantum extract --output-format mermaid document.md
-  
+
   # Compress knowledge into Quantum notation
   quantum compress --level basic document.md > compressed.qt
-  
+
   # Decompress Quantum notation
   quantum decompress compressed.qt
   ```
@@ -79,7 +79,7 @@ This document outlines the MVP (Minimum Viable Product) for the Quantum notation
   - OAuth integration
   - JWT tokens
   - Password management
-  
+
   # Generated Quantum
   @system{authentication}:p{purpose:"user_verification"}
   @system{authentication}->@component{oauth}:p{relationship:"integration"}
@@ -99,7 +99,7 @@ This document outlines the MVP (Minimum Viable Product) for the Quantum notation
   ```
   # Quantum
   @concept{knowledge}->@concept{application}:p{type:"implementation"}
-  
+
   # Generated Mermaid
   flowchart LR
     knowledge["knowledge"]

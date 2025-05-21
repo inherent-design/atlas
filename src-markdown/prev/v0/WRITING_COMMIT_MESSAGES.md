@@ -6,7 +6,7 @@ This guide outlines the commit message format standards for the inherent.design 
 
 Each commit message consists of two parts:
 
-1. **Subject Line**: A concise, descriptive header 
+1. **Subject Line**: A concise, descriptive header
 2. **Body**: Optional detailed explanation (separated by a blank line)
 
 ```
@@ -106,7 +106,7 @@ refactor: ESLint configuration for modern plugins
 Don't write commit messages like these:
 
 - ❌ `"Fixed stuff"`
-- ❌ `"WIP"`  
+- ❌ `"WIP"`
 - ❌ `"Updates"`
 - ❌ `"Minor changes"`
 - ❌ `"Addressing PR feedback"`

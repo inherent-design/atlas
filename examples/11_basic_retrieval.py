@@ -14,51 +14,58 @@ relevant information in a knowledge base.
 """
 
 import sys
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 # Import common utilities for Atlas examples
-from common import setup_example, create_provider_from_args, print_example_footer, ensure_example_data, handle_example_error
+from common import (
+    create_provider_from_args,
+    ensure_example_data,
+    handle_example_error,
+    print_example_footer,
+    setup_example,
+)
+
+from atlas import create_query_client
 from atlas.core import logging
 
 # Import atlas modules
-from atlas.knowledge.retrieval import KnowledgeBase, RetrievalSettings, RetrievalFilter
-from atlas import create_query_client
+from atlas.knowledge.retrieval import KnowledgeBase, RetrievalFilter, RetrievalSettings
 
 
 def format_document(doc: Any, index: int) -> None:
     """Format and print a document in a readable way.
-    
+
     Args:
         doc: Document object or dictionary
         index: Result number for display
     """
     # Handle both dictionary and RetrievalResult objects
-    if hasattr(doc, 'metadata'):
+    if hasattr(doc, "metadata"):
         # It's a RetrievalResult object
-        source = doc.metadata.get('source', 'Unknown')
-        doc_id = doc.id if hasattr(doc, 'id') else 'Unknown'
+        source = doc.metadata.get("source", "Unknown")
+        doc_id = doc.id if hasattr(doc, "id") else "Unknown"
         relevance = doc.relevance_score
         content = doc.content
         metadata = doc.metadata
     else:
         # It's a dictionary
-        source = doc['metadata'].get('source', 'Unknown')
-        doc_id = doc.get('id', 'Unknown')
-        relevance = doc['relevance_score']
-        content = doc['content']
-        metadata = doc['metadata']
-    
+        source = doc["metadata"].get("source", "Unknown")
+        doc_id = doc.get("id", "Unknown")
+        relevance = doc["relevance_score"]
+        content = doc["content"]
+        metadata = doc["metadata"]
+
     print(f"\nResult {index}:")
     print(f"- Source: {source}")
     print(f"- Document ID: {doc_id}")
     print(f"- Relevance: {relevance:.4f}")
-    
+
     # Print key metadata if available
-    if 'chunk_id' in metadata:
+    if "chunk_id" in metadata:
         print(f"- Chunk ID: {metadata.get('chunk_id')}")
-    if 'filename' in metadata:
+    if "filename" in metadata:
         print(f"- Filename: {metadata.get('filename')}")
-    
+
     # Print content preview
     print(f"- Content preview: {content[:150]}...")
 
@@ -69,21 +76,16 @@ def add_example_arguments(parser):
 
     # Retrieval options
     parser.add_argument(
-        "--query",
-        type=str,
-        help="Specific query to use instead of example queries"
+        "--query", type=str, help="Specific query to use instead of example queries"
     )
     parser.add_argument(
-        "--n-results",
-        type=int,
-        default=5,
-        help="Number of results to return (default: 5)"
+        "--n-results", type=int, default=5, help="Number of results to return (default: 5)"
     )
     parser.add_argument(
         "--threshold",
         type=float,
         default=0.0,
-        help="Relevance threshold for filtering results (default: 0.0)"
+        help="Relevance threshold for filtering results (default: 0.0)",
     )
 
 
@@ -123,51 +125,54 @@ def main():
             print("  python examples/10_document_ingestion.py")
             sys.exit(1)
 
-        logger.info(f"Knowledge base ready: Collection: {kb.collection_name}, Document count: {collection_count}")
+        logger.info(
+            f"Knowledge base ready: Collection: {kb.collection_name}, Document count: {collection_count}"
+        )
         print(f"\nKnowledge base ready:")
         print(f"- Collection: {kb.collection_name}")
         print(f"- Document count: {collection_count}")
-        
+
         # Example 1: Basic retrieval
-        print("\n" + "-"*50)
+        print("\n" + "-" * 50)
         print("Example 1: Basic Retrieval")
-        print("-"*50)
-        
+        print("-" * 50)
+
         query = args.query or "What is the trimodal methodology in Atlas?"
         logger.info(f"Performing basic retrieval for query: {query}")
         print(f"\nQuery: {query}")
         print(f"Retrieving top {args.n_results} results...")
-        
+
         results = kb.retrieve(query, n_results=args.n_results)
         print(f"\nFound {len(results)} results")
-        
+
         for i, doc in enumerate(results, 1):
             format_document(doc, i)
-        
+
         # Example 2: Retrieval with threshold filtering
-        print("\n" + "-"*50)
+        print("\n" + "-" * 50)
         print("Example 2: Retrieval with Relevance Threshold")
-        print("-"*50)
-        
+        print("-" * 50)
+
         threshold = args.threshold or 0.6  # Higher threshold for more relevant results
         query = "How does Atlas handle error management?"
         logger.info(f"Performing retrieval with threshold {threshold} for query: {query}")
         print(f"\nQuery: {query}")
         print(f"Retrieving results with relevance threshold of {threshold}...")
-        
+
         # Use settings for threshold
         from atlas.knowledge.settings import RetrievalSettings
+
         settings = RetrievalSettings(num_results=args.n_results, min_relevance_score=threshold)
         results = kb.retrieve(query, n_results=args.n_results, settings=settings)
         print(f"\nFound {len(results)} results meeting the threshold")
-        
+
         for i, doc in enumerate(results, 1):
             format_document(doc, i)
-        
+
         # Example 3: Retrieval with metadata filtering
-        print("\n" + "-"*50)
+        print("\n" + "-" * 50)
         print("Example 3: Retrieval with Metadata Filtering")
-        print("-"*50)
+        print("-" * 50)
 
         query = "What are the core components of Atlas?"
 
@@ -177,13 +182,12 @@ def main():
         print(f"Available metadata fields: {', '.join(metadata_fields)}")
 
         # Create settings and filter for the query
-        from atlas.knowledge.settings import RetrievalSettings
         from atlas.knowledge.retrieval import RetrievalFilter
+        from atlas.knowledge.settings import RetrievalSettings
 
         # Initialize settings
         settings = RetrievalSettings(
-            num_results=args.n_results,
-            rerank_results=True  # Apply reranking for better results
+            num_results=args.n_results, rerank_results=True  # Apply reranking for better results
         )
 
         # Initialize a basic filter using the RetrievalFilter class
@@ -208,7 +212,7 @@ def main():
                     "docs/components/core",
                     "docs/components/knowledge",
                     "docs/components/agents",
-                    "docs/components/models"
+                    "docs/components/models",
                 ]
 
                 # Start with these known paths that should work with our example data
@@ -219,10 +223,7 @@ def main():
                 for path in test_paths:
                     try:
                         # Check if this exact path exists
-                        results = kb.collection.get(
-                            where={"source": path},
-                            limit=1
-                        )
+                        results = kb.collection.get(where={"source": path}, limit=1)
                         if results["ids"] and len(results["ids"]) > 0:
                             existing_sources.append(path)
                     except Exception as source_err:
@@ -264,11 +265,7 @@ def main():
                     filter.add_in_filter("source", sources)
 
                 # Retrieve with our filter
-                results = kb.retrieve(
-                    query,
-                    filter=filter,
-                    settings=settings
-                )
+                results = kb.retrieve(query, filter=filter, settings=settings)
 
                 print(f"\nFound {len(results)} results with metadata filter")
                 for i, doc in enumerate(results, 1):
@@ -280,11 +277,7 @@ def main():
                 filter.add_filter("source", "docs/components")
 
                 # Retrieve with our filter
-                results = kb.retrieve(
-                    query,
-                    filter=filter,
-                    settings=settings
-                )
+                results = kb.retrieve(query, filter=filter, settings=settings)
 
                 print(f"\nFound {len(results)} results with exact 'docs/components' filter")
                 for i, doc in enumerate(results, 1):
@@ -296,9 +289,7 @@ def main():
                     # Try a known path that should exist in our example data
                     where_filter = {"source": "docs/components"}
                     results = kb.collection.query(
-                        query_texts=[query],
-                        n_results=args.n_results,
-                        where=where_filter
+                        query_texts=[query], n_results=args.n_results, where=where_filter
                     )
 
                     # Format results from ChromaDB's native format to our RetrievalResult format
@@ -326,7 +317,9 @@ def main():
                             )
 
                     if formatted_results:
-                        print(f"\nFound {len(formatted_results)} results with direct ChromaDB query")
+                        print(
+                            f"\nFound {len(formatted_results)} results with direct ChromaDB query"
+                        )
                         for i, doc in enumerate(formatted_results, 1):
                             format_document(doc, i)
                     else:
@@ -339,60 +332,62 @@ def main():
             print(f"  - Collection name: {kb.collection_name}")
             print(f"  - Document count: {kb.collection.count()}")
             print(f"  - Available metadata fields: {', '.join(metadata_fields)}")
-            print("\nThis might happen if your ChromaDB version doesn't support this filtering syntax")
+            print(
+                "\nThis might happen if your ChromaDB version doesn't support this filtering syntax"
+            )
             print("Try using version 1.0.8 or later of ChromaDB")
-        
+
         # Example 4: Integration with query client
-        print("\n" + "-"*50)
+        print("\n" + "-" * 50)
         print("Example 4: Integration with Query Client")
-        print("-"*50)
-        
+        print("-" * 50)
+
         try:
             # Create provider from command line arguments
             provider = create_provider_from_args(args)
             logger.info(f"Created provider: {provider.name} with model {provider.model_name}")
             print(f"\nCreating provider: {provider.name} with model {provider.model_name}")
-            
+
             # Create query client
             client = create_query_client(
-                provider_name=provider.name, 
+                provider_name=provider.name,
                 model_name=provider.model_name,
                 collection_name=collection_name,
-                db_path=db_path
+                db_path=db_path,
             )
-            
+
             # Query with context
             query = "How does Atlas handle knowledge graph structure?"
             logger.info(f"Performing query with context: {query}")
             print(f"\nQuery: {query}")
-            
+
             result = client.query_with_context(query)
             print(f"\nResponse with {len(result['context']['documents'])} context documents:")
             print(result["response"])
-            
+
             print("\nSupporting Documents:")
-            for i, doc in enumerate(result['context']['documents'][:3], 1):
+            for i, doc in enumerate(result["context"]["documents"][:3], 1):
                 # Convert to consistent format for printing
                 formatted_doc = {
-                    'metadata': {'source': doc.get('source', 'Unknown')},
-                    'relevance_score': doc.get('relevance_score', 0.0),
-                    'content': doc.get('content', '')
+                    "metadata": {"source": doc.get("source", "Unknown")},
+                    "relevance_score": doc.get("relevance_score", 0.0),
+                    "content": doc.get("content", ""),
                 }
                 format_document(formatted_doc, i)
-                
+
         except Exception as e:
             logger.exception(f"Error creating query client: {e}")
             print(f"\nError creating query client: {e}")
             print("Try using '--provider mock' for testing without API keys")
-    
+
     except Exception as e:
         logger.exception(f"Error during retrieval: {e}")
         print(f"Error during retrieval: {e}")
         sys.exit(1)
-    
+
     # Print footer
     print_example_footer()
-    
+
     # Print additional information
     print("Additional Information:")
     print("\nRetrieval Methods:")
@@ -400,12 +395,14 @@ def main():
     print("- Supports filtering by metadata to narrow results")
     print("- Relevance threshold can be used to ensure quality")
     print("- The query client integrates retrieval with LLM responses")
-    
+
     print("\nAdvanced Techniques:")
-    print("- For hybrid retrieval combining semantic and keyword search, see example 12_hybrid_retrieval.py")
+    print(
+        "- For hybrid retrieval combining semantic and keyword search, see example 12_hybrid_retrieval.py"
+    )
     print("- For multi-retriever workflows, see example 22_agent_workflows.py")
     print("- The default embedding model is text-embedding-ada-002 but can be configured")
-    
+
     print("\nUsage Tips:")
     print("- More specific queries typically yield better results")
     print("- Adjust the relevance threshold based on your application needs")

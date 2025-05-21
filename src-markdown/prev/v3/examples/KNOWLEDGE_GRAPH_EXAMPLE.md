@@ -58,7 +58,7 @@ This document demonstrates how a knowledge graph approach transforms documentati
   - Criticality: High
 
 **Authorization System**
-- **Type**: System Component  
+- **Type**: System Component
 - **Description**: System for managing permissions and access control
 - **Properties**:
   - Status: Active
@@ -153,7 +153,7 @@ This document demonstrates how a knowledge graph approach transforms documentati
 
 **System Scale**
 1. Authentication System
-2. → User Management System 
+2. → User Management System
 3. → Authorization System
 4. → Security Auditing
 

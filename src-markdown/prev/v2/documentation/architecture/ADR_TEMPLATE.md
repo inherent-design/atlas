@@ -4,7 +4,7 @@
 
 [One of: Proposed | Accepted | Superseded by ADR-XXX | Deprecated]
 
-**Date**: YYYY-MM-DD  
+**Date**: YYYY-MM-DD
 **Last Modified**: YYYY-MM-DD
 
 ### History

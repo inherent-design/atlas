@@ -1,6 +1,6 @@
 # Feature: [Feature Name]
 
-**Status**: [Pending | In Progress | Complete]  
+**Status**: [Pending | In Progress | Complete]
 **Target Milestone**: [Release X.Y]
 
 ## Description
@@ -45,6 +45,6 @@
 - [ ] [API documentation updates]
 - [ ] [Architecture documentation changes]
 
-**Stakeholders**: [List of stakeholders]  
-**Technical Lead**: [Person]  
+**Stakeholders**: [List of stakeholders]
+**Technical Lead**: [Person]
 **Estimated Completion**: [Date range or sprint]

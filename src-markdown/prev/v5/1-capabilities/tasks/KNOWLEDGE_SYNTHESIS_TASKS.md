@@ -238,7 +238,7 @@ Tracking knowledge changes over time:
 - [Concept 1]: [Brief definition]
   - Related Concepts: [List of related concepts]
   - Key Sources: [Authoritative sources]
-  
+
 - [Concept 2]: [Brief definition]
   - Related Concepts: [List of related concepts]
   - Key Sources: [Authoritative sources]
@@ -248,7 +248,7 @@ Tracking knowledge changes over time:
   - Examples:
     - [Concept A] → [Concept B]: [Explanation]
     - [Concept C] → [Concept D]: [Explanation]
-    
+
 - [Relationship Type 2]: [Description]
   - Examples:
     - [Concept E] → [Concept F]: [Explanation]
@@ -258,7 +258,7 @@ Tracking knowledge changes over time:
 - [Boundary Concept 1]: [Brief definition]
   - Connected Domains: [List of connected domains]
   - Bridging Relationships: [How it connects domains]
-  
+
 - [Boundary Concept 2]: [Brief definition]
   - Connected Domains: [List of connected domains]
   - Bridging Relationships: [How it connects domains]
@@ -267,7 +267,7 @@ Tracking knowledge changes over time:
 - [Path Name 1]: [Purpose of this navigation path]
   - Path: [Concept A] → [Concept B] → [Concept C]
   - Appropriate For: [User types/contexts]
-  
+
 - [Path Name 2]: [Purpose of this navigation path]
   - Path: [Concept D] → [Concept E] → [Concept F]
   - Appropriate For: [User types/contexts]

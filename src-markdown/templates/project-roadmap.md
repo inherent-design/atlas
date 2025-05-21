@@ -1,7 +1,7 @@
 # Project Roadmap: [Project Name]
 
-**Version**: [1.0]  
-**Last Updated**: [YYYY-MM-DD]  
+**Version**: [1.0]
+**Last Updated**: [YYYY-MM-DD]
 **Status**: [Draft | Approved | In Progress]
 
 ## Project Vision

@@ -13,7 +13,7 @@ The Quantum Decompression Engine is responsible for expanding compressed Quantum
     @stage{expansion}:p{purpose:"full_representation_generation"},
     @stage{verification}:p{purpose:"integrity_confirmation"}
   },
-  
+
   @components{
     @component{bootstrap_loader}:p{role:"recovery_mechanism"},
     @component{parser}:p{role:"notation_interpretation"},
@@ -21,7 +21,7 @@ The Quantum Decompression Engine is responsible for expanding compressed Quantum
     @component{expander}:p{role:"detailed_generation"},
     @component{verifier}:p{role:"consistency_checking"}
   },
-  
+
   pipeline->components:p{relationship:"implementation"}
 }
 ```
@@ -69,7 +69,7 @@ The parsing stage converts compressed notation into a structured representation:
 Example parsing:
 ```
 Input: "@c{k}:p{d:\"core\"}->@c{a}"
-Parsed structure: 
+Parsed structure:
 {
   entity: {id: "c:k", properties: {d: "core"}},
   relation: "->",
@@ -223,10 +223,10 @@ function expand_quantum_partitions(parsed_structure):
   for each quantum in quanta:
     expanded_content = expand_content(quantum.content)
     apply_quantum_properties(expanded_content, quantum.properties)
-  
+
   for each relationship in quantum_relationships:
     connect_quantum_partitions(relationship)
-  
+
   return integrated_structure(quanta)
 ```
 
@@ -246,12 +246,12 @@ Example:
 function expand_templates(parsed_structure):
   templates = extract_template_definitions(parsed_structure)
   instances = identify_template_instances(parsed_structure)
-  
+
   for each instance in instances:
     template = find_matching_template(instance, templates)
     expanded = apply_parameters(template, instance.parameters)
     replace_instance_with_expansion(parsed_structure, instance, expanded)
-  
+
   return parsed_structure
 ```
 
@@ -404,14 +404,14 @@ Utilizes backup information for critical elements:
   @function{perspective_detection}:p{purpose:"identify_target_perspective"},
   @function{perspective_filtering}:p{purpose:"extract_relevant_components"},
   @function{perspective_adaptation}:p{purpose:"reshape_for_viewpoint"},
-  
+
   @expansion_modes{
     @mode{single_perspective}:p{description:"optimize_for_specific_viewpoint"},
     @mode{perspective_transition}:p{description:"show_shift_between_perspectives"},
     @mode{perspective_comparison}:p{description:"parallel_viewpoint_expansion"},
     @mode{perspective_blending}:p{description:"integrated_multi_perspective_view"}
   },
-  
+
   @application_examples{
     @example{technical_to_business}:p{purpose:"transform_technical_details_to_business_impact"},
     @example{user_to_developer}:p{purpose:"translate_user_experience_to_implementation_details"},
@@ -427,14 +427,14 @@ Utilizes backup information for critical elements:
   @function{evolution_pattern_recognition}:p{purpose:"identify_change_patterns"},
   @function{temporal_navigation}:p{purpose:"move_through_timeline"},
   @function{state_reconstruction}:p{purpose:"rebuild_specific_time_points"},
-  
+
   @temporal_operations{
     @operation{point_in_time}:p{description:"extract_specific_version"},
     @operation{evolution_trace}:p{description:"show_development_sequence"},
     @operation{delta_analysis}:p{description:"highlight_changes_between_states"},
     @operation{timeline_projection}:p{description:"extend_trends_to_future_states"}
   },
-  
+
   @evolution_patterns{
     @pattern{expansion}:p{decompression:"show_growth_sequence"},
     @pattern{refinement}:p{decompression:"reveal_precision_improvements"},
@@ -451,14 +451,14 @@ Utilizes backup information for critical elements:
   @function{context_detection}:p{purpose:"identify_usage_context"},
   @function{boundary_adaptation}:p{purpose:"adjust_boundaries_to_purpose"},
   @function{coherence_optimization}:p{purpose:"maximize_internal_consistency"},
-  
+
   @boundary_types{
     @type{purpose_boundaries}:p{expansion:"function_oriented_grouping"},
     @type{coherence_boundaries}:p{expansion:"consistency_based_grouping"},
     @type{complexity_boundaries}:p{expansion:"detail_level_partitioning"},
     @type{contextual_boundaries}:p{expansion:"situation_specific_division"}
   },
-  
+
   @focus_operations{
     @operation{zoom}:p{description:"adjust_boundary_detail_level"},
     @operation{shift}:p{description:"change_boundary_perspective"},

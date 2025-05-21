@@ -92,13 +92,13 @@ Identifying natural clusters within the graph:
 function detectCommunities(graph, perspective) {
   // Initialize communities as individual nodes
   let communities = graph.nodes.map(n => new Set([n]))
-  
+
   // Iteratively merge communities
   while (canOptimizeFurther(communities, perspective)) {
     let best = findBestMerge(communities, perspective)
     communities = mergeCommunities(communities, best.a, best.b)
   }
-  
+
   return communities
 }
 ```
@@ -112,14 +112,14 @@ function measureCoherence(partition, graph, perspective) {
   // Internal edge density
   let internalEdges = countInternalEdges(partition, graph)
   let possibleInternalEdges = calculatePossibleInternalEdges(partition)
-  
+
   // External edge count
   let externalEdges = countExternalEdges(partition, graph)
-  
+
   // Weighted by perspective
   return calculateCoherenceScore(
-    internalEdges, 
-    externalEdges, 
+    internalEdges,
+    externalEdges,
     possibleInternalEdges,
     perspective.weights
   )
@@ -134,13 +134,13 @@ Adapting partitioning to the current perspective:
 function applyPerspective(partitioning, perspective) {
   // Filter nodes by relevance to perspective
   let relevantNodes = filterNodesByRelevance(graph.nodes, perspective)
-  
+
   // Adjust partition boundaries
   let adjustedPartitions = recalculatePartitions(partitioning, relevantNodes)
-  
+
   // Apply perspective-specific weighting to relationships
   let weightedPartitions = applyRelationshipWeights(adjustedPartitions, perspective)
-  
+
   return weightedPartitions
 }
 ```
@@ -153,10 +153,10 @@ Identifying where partitions should naturally form:
 function detectNaturalBoundaries(graph) {
   // Calculate edge betweenness centrality
   let betweenness = calculateEdgeBetweenness(graph)
-  
+
   // Identify edges with high betweenness
   let boundaryEdges = findHighBetweennessEdges(betweenness)
-  
+
   // Create partitions by removing boundary edges
   return createPartitionsFromBoundaries(graph, boundaryEdges)
 }
@@ -182,19 +182,19 @@ class DynamicModule {
     this.perspective = null;
     this.intent = null;
   }
-  
+
   applyPerspective(perspective) {
     this.perspective = perspective;
     this.recalculateBoundaries();
     return this;
   }
-  
+
   setIntent(intent) {
     this.intent = intent;
     this.recalculateBoundaries();
     return this;
   }
-  
+
   recalculateBoundaries() {
     this.currentBoundary = calculateBoundary(
       this.coreNodes,

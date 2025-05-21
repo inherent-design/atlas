@@ -131,9 +131,11 @@ MANIFEST
 
 # Testing
 **/.pytest_cache/
-.coverage
-**/htmlcov/
-**/.tox/
+
+# Coverage
+**/coverage_html/
+**/coverage.xml
+**/coverage.json
 
 # Custom
 **/.claude/

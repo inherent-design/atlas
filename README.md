@@ -137,7 +137,7 @@ The testing framework includes:
 
 1. **Unit Tests** (`atlas/tests/test_*.py`):
    - Tests for specific modules (e.g., `test_models.py`, `test_env.py`, `test_schema_message_validation.py`)
-   - Uses Python's unittest framework 
+   - Uses Python's unittest framework
    - Includes mocked components to avoid external dependencies
 
 2. **Mock Tests** (`atlas/tests/test_mock.py`) - Recommended for routine development:

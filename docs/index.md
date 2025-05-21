@@ -10,14 +10,17 @@ hero:
   tagline: Advanced Multi-Modal Learning & Guidance Framework
   actions:
     - theme: brand
-      text: Getting Started
+      text: Learn More
       link: /v2/nerv/
     - theme: alt
-      text: Architecture
-      link: /v2/nerv/patterns/
+      text: Reference
+      link: /api
     - theme: alt
-      text: Implementation
-      link: /v2/inner-universe/
+      text: Project Status
+      link: /project-management/tracking/proposed_structure
+    - theme: alt
+      text: Contributing
+      link: /contributing
 
 features:
   - icon: 🤖
@@ -83,8 +86,8 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 
 #### Project Management
 - **[Product Roadmap](./project-management/roadmap/product_roadmap.md)**: Comprehensive development roadmap
-- **[Implementation Plan](./project-management/planning/accelerated_implementation_plan.md)**: Week-by-week execution plan
-- **[Progress Tracking](./project-management/tracking/todo.md)**: Current implementation status
+- **[Implementation Plan](./project-management/planning/schema_service_plan.md)**: Core services implementation plan
+- **[Progress Tracking](./project-management/tracking/proposed_structure.md)**: Current implementation status
 - **[Project Overview](./project-management/index.md)**: Project management documentation
 
 #### Reference

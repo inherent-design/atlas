@@ -274,7 +274,7 @@ Atlas requires ChromaDB 1.0.7 or later:
 
 ## Related Documentation
 
-- [Design Principles](./design_principles.md) - Overview of Atlas design philosophy 
+- [Design Principles](./design_principles.md) - Overview of Atlas design philosophy
 - Environment Variables Reference - Detailed list of configuration options (deprecated)
 - CLI Reference - Command-line interface documentation (deprecated)
 - Testing Guide - Testing approach and instructions (deprecated)

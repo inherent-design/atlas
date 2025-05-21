@@ -4,7 +4,7 @@
     "useDefaultPatterns": true,
     "useGitignore": true
   },
-  "include": [],
+  "include": ["atlas"],
   "input": {
     "maxFileSize": 52428800
   },

@@ -206,7 +206,7 @@ $dictionary{
     "parameters:name, type, constraints, default values",
     "authentication:required permissions and methods",
     "response:structure, status codes, and examples",
-    "errors:possible error codes with troubleshooting", 
+    "errors:possible error codes with troubleshooting",
     "rate_limits:usage constraints and quotas",
     "examples:complete request/response pairs"
   ],
@@ -215,7 +215,7 @@ $dictionary{
 
 @tmpl{process_documentation}:p{
   sections:[
-    "purpose:clear objective and value proposition", 
+    "purpose:clear objective and value proposition",
     "actors:roles and responsibilities of participants",
     "prerequisites:required resources, permissions, states",
     "sequence:step-by-step progression with decision points",

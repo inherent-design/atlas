@@ -238,7 +238,7 @@ export const quantumPlugin = () => ({
         const code = getText(node);
         const processor = new QuantumProcessor();
         const mermaidCode = processor.transform(
-          processor.parse(code), 
+          processor.parse(code),
           { format: 'mermaid' }
         );
         return createNode('div', {

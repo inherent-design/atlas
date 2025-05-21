@@ -238,7 +238,7 @@ TEMPORAL    ::= 't' [':' TEMPORAL_TYPE] ['{' TEMPORAL_PARAMS '}'] '[' CONTENT ']
 ### Production Rules
 
 ```
-expression        ::= entity | relationship | property_assignment | context_block | quantum_block | 
+expression        ::= entity | relationship | property_assignment | context_block | quantum_block |
                       perspective_block | temporal_block
 entity            ::= ENTITY [PROPERTY] [TAG] [INHERITANCE]
 relationship      ::= source RELATION_OP target [PROPERTY]

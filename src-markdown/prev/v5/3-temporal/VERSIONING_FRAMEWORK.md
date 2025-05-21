@@ -126,7 +126,7 @@ Version {
 ### Change Magnitudes
 - **Major**: Fundamental changes with significant impact
 - **Moderate**: Substantial changes with limited impact scope
-- **Minor**: Small enhancements or clarifications 
+- **Minor**: Small enhancements or clarifications
 - **Trivial**: Cosmetic or insignificant adjustments
 
 ### Change Contexts

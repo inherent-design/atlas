@@ -66,17 +66,17 @@ async function authenticateUser(username: string, password: string): Promise<Aut
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password })
   });
-  
+
   if (!response.ok) {
     throw new AuthenticationError(await response.text());
   }
-  
+
   const { token, refreshToken } = await response.json();
-  
+
   // Store tokens securely
   tokenStorage.saveToken(token);
   tokenStorage.saveRefreshToken(refreshToken);
-  
+
   return decodeToken(token);
 }
 ```
@@ -104,13 +104,13 @@ async function verifyToken(token: string): Promise<TokenPayload> {
 // Example Express middleware for API protection
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).send('Authentication required');
   }
-  
+
   const token = authHeader.split(' ')[1];
-  
+
   try {
     const payload = verifyToken(token);
     req.user = payload;
@@ -142,47 +142,47 @@ This guide helps operations teams diagnose and resolve issues with the authentic
 
 **Monitoring Dashboards:**
 - Authentication Service Health: [link]
-- Token Issuance Metrics: [link] 
+- Token Issuance Metrics: [link]
 - Authentication Failure Rates: [link]
 
 **Common Issues and Resolutions:**
 
 1. **Sudden Increase in Authentication Failures**
-   
+
    **Symptoms:**
    - Spike in 401 responses
    - Increased failed login attempts
    - User reports of being unexpectedly logged out
-   
+
    **Possible Causes:**
    - JWT signing key rotation
    - Clock drift between services
    - External identity provider outage
-   
+
    **Diagnostic Steps:**
    1. Check authentication service logs for specific error patterns
    2. Verify JWT signing key status and rotation schedule
    3. Confirm external identity provider status
    4. Check for time synchronization issues across services
-   
+
    **Resolution Paths:**
    - If key rotation issue: Verify proper key distribution
    - If clock drift: Synchronize time or adjust leeway settings
    - If external provider: Implement fallback authentication or escalate to provider
 
 2. **Authentication Service High Latency**
-   
+
    **Symptoms:**
    - Increased authentication response times
    - Login timeouts reported by users
    - Authentication queue buildup
-   
+
    **Diagnostic Steps:**
    1. Check system resource utilization (CPU, memory, connections)
    2. Analyze authentication service response time metrics
    3. Inspect database connection pool status
    4. Verify external identity provider response times
-   
+
    **Resolution Paths:**
    - If resource contention: Scale authentication service instances
    - If database bottleneck: Optimize queries or scale database
@@ -239,7 +239,7 @@ This security evaluation examines the authentication implementation against indu
 - **OWASP ASVS Level 2**: 94% compliant
   - Non-compliant: 2.2.7 - Re-authentication for sensitive operations
   - Non-compliant: 2.8.5 - Session revocation on all devices
-  
+
 - **NIST 800-63B AAL2**: Compliant
 
 - **PCI-DSS 4.0**: Compliant for authentication requirements

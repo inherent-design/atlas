@@ -21,7 +21,7 @@ v5/
 │   ├── README.md                            # Overview of capabilities approach
 │   ├── tasks/                               # Task-specific guidelines
 │   │   ├── DOCUMENTATION_TASKS.md           # Guide for documentation creation tasks
-│   │   ├── PROJECT_MANAGEMENT_TASKS.md      # Guide for project management tasks  
+│   │   ├── PROJECT_MANAGEMENT_TASKS.md      # Guide for project management tasks
 │   │   ├── KNOWLEDGE_SYNTHESIS_TASKS.md     # Guide for knowledge synthesis tasks
 │   │   └── CODE_ASSISTANCE_TASKS.md         # Guide for code-related tasks
 │   ├── strategies/                          # Strategic approaches

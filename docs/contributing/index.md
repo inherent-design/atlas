@@ -4,7 +4,7 @@ title: Contributing
 
 # Contributing to Atlas Documentation
 
-This section outlines the guidelines and standards for contributing to the Atlas project documentation. Our documentation follows the structure of the [Trimodal Methodology Framework](../project-management/planning/architecture_planning.md), combining top-down design, bottom-up implementation, and holistic system integration perspectives.
+This section outlines the guidelines and standards for contributing to the Atlas project documentation. Our documentation follows the structure of the Trimodal Methodology Framework, combining top-down design, bottom-up implementation, and holistic system integration perspectives.
 
 ## Core Documentation Principles
 
@@ -34,8 +34,8 @@ Our documentation is organized into these main sections:
 
 3. **Project Management**: Project planning and tracking:
    - **[Product Roadmap](../project-management/roadmap/product_roadmap.md)**: Development roadmap
-   - **[Implementation Plan](../project-management/planning/accelerated_implementation_plan.md)**: Execution plan
-   - **[Progress Tracking](../project-management/tracking/todo.md)**: Implementation status
+   - **[Implementation Plan](../project-management/planning/schema_service_plan.md)**: Execution plan
+   - **[Progress Tracking](../project-management/tracking/proposed_structure.md)**: Implementation status
 
 4. **Reference**: Reference documentation:
    - **[Licensing](../reference/licensing.md)**: Licensing information
@@ -54,6 +54,11 @@ These guides provide detailed standards and best practices for specific aspects 
    - Implementation syntax and examples
 4. **[Code Examples](./code-examples.md)**: Standards for code samples and snippets
 5. **[Style Guide](./style-guide.md)**: Writing style, terminology, and voice guidelines
+6. **[Development Environment](./development-environment.md)**: Setting up and using the development environment
+   - Environment setup with uv
+   - Running development tools correctly
+   - Test execution and coverage
+   - Code quality tools
 
 ### Type System and Schema Validation
 

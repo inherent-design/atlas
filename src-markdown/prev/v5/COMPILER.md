@@ -158,23 +158,23 @@ Compress multiple viewpoints by shared elements:
   @layer{core}:p{purpose:"identity and principles"},
   @layer{temporal}:p{purpose:"evolution tracking"},
   @layer{knowledge}:p{purpose:"information representation"},
-  
+
   capabilities->core:p{relationship:"implements"},
   core->knowledge:p{relationship:"organizes"},
   temporal->[capabilities,core,knowledge]:p{relationship:"tracks"},
-  
+
   @perspective{trimodal}[
     @mode{bottom_up}:p{focus:"implementation"},
     @mode{top_down}:p{focus:"design"},
     @mode{holistic}:p{focus:"integration"}
   ],
-  
+
   knowledge->perspective:p{relationship:"uses"},
-  
+
   q{core_concepts}[capabilities,core,knowledge],
   q{methodologies}[perspective,trimodal],
   q{core_concepts}><q{methodologies}:p{relationship:"mutual implementation"},
-  
+
   t:history{
     v1:p{focus:"core identity"},
     v2:p{focus:"structured guidance"},
@@ -190,7 +190,7 @@ Compress multiple viewpoints by shared elements:
 The compression system operates through:
 
 1. **Tokenization**: Breaking knowledge into atomic units
-2. **Relationship Mapping**: Identifying connections between units 
+2. **Relationship Mapping**: Identifying connections between units
 3. **Inheritance Analysis**: Finding patterns that enable property inheritance
 4. **Context Partitioning**: Grouping related elements by coherence boundaries
 5. **Compression Application**: Applying optimal notation based on patterns

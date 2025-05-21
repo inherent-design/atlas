@@ -12,7 +12,7 @@ The parser operates as a bidirectional translation system with the following com
   @module{analyzer}:p{role:"structure_mapping"},
   @module{generator}:p{role:"output_creation"},
   @module{validator}:p{role:"integrity_checking"},
-  
+
   tokenizer->analyzer->generator:p{flow:"compression"},
   generator<-analyzer<-tokenizer:p{flow:"decompression"},
   validator<->[tokenizer,analyzer,generator]:p{role:"verification"}
@@ -30,7 +30,7 @@ The tokenizer breaks input into atomic elements:
   @phase{lexical}:p{purpose:"character_sequence_recognition"},
   @phase{syntactic}:p{purpose:"pattern_identification"},
   @phase{semantic}:p{purpose:"meaning_assignment"},
-  
+
   @token_types{
     @type{entity}:p{pattern:"@[a-z_]+({[^}]*})?"},
     @type{reference}:p{pattern:"#[a-z_]+"},
@@ -58,7 +58,7 @@ The analyzer builds a structural representation:
   @phase{dependency}:p{purpose:"relationship_mapping"},
   @phase{hierarchy}:p{purpose:"inheritance_resolution"},
   @phase{context}:p{purpose:"boundary_determination"},
-  
+
   @structures{
     @structure{entity_map}:p{role:"definition_registry"},
     @structure{relation_graph}:p{role:"connection_network"},
@@ -88,7 +88,7 @@ The generator produces output in target format:
   @phase{template}:p{purpose:"pattern_application"},
   @phase{optimization}:p{purpose:"redundancy_removal"},
   @phase{formatting}:p{purpose:"readability_adjustment"},
-  
+
   @targets{
     @target{quantum}:p{format:"compressed"},
     @target{expanded}:p{format:"detailed"},
@@ -112,7 +112,7 @@ The validator ensures correctness:
   @check{syntax}:p{purpose:"well_formedness"},
   @check{references}:p{purpose:"link_integrity"},
   @check{semantics}:p{purpose:"meaning_preservation"},
-  
+
   @error_handling{
     @strategy{recovery}:p{approach:"best_effort_continuation"},
     @strategy{reporting}:p{approach:"detailed_diagnostics"}
@@ -155,8 +155,8 @@ The validator ensures correctness:
 
 4. **Property Inheritance Expansion**
    ```
-   @child^parent:p{specific:value} 
-   → 
+   @child^parent:p{specific:value}
+   →
    @child:p{inherited_prop1:value1,...,specific:value}
    ```
 
@@ -215,19 +215,19 @@ The validator ensures correctness:
 function compress(knowledge_representation):
   tokens = tokenize(knowledge_representation)
   structure = analyze(tokens)
-  
+
   // Optimization phase
   optimize_entities(structure)
   optimize_relationships(structure)
   build_dictionary(structure)
   identify_patterns(structure)
   create_templates(structure)
-  
+
   // Generation phase
   compressed = generate_compressed(structure)
   add_bootstrap_key(compressed)
   add_integrity_checks(compressed)
-  
+
   return compressed
 ```
 
@@ -238,18 +238,18 @@ function decompress(quantum_representation):
   verify_bootstrap(quantum_representation)
   tokens = tokenize(quantum_representation)
   structure = analyze(tokens)
-  
+
   // Expansion phase
   expand_abbreviations(structure)
   resolve_references(structure)
   expand_templates(structure)
   resolve_inheritance(structure)
   restore_contexts(structure)
-  
+
   // Generation phase
   expanded = generate_expanded(structure)
   validate_integrity(expanded)
-  
+
   return expanded
 ```
 
@@ -277,7 +277,7 @@ function decompress(quantum_representation):
   @category{syntax}:p{recovery:"attempt_correction"},
   @category{reference}:p{recovery:"create_placeholder"},
   @category{semantic}:p{recovery:"best_effort_interpretation"},
-  
+
   @reporting{
     @level{warning}:p{action:"log"},
     @level{error}:p{action:"log_and_report"},

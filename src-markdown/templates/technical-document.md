@@ -71,7 +71,7 @@
 
 ## Metadata
 
-**Status**: [Draft | In Review | Approved | Deprecated]  
-**Version**: 1.0  
-**Last Updated**: YYYY-MM-DD  
+**Status**: [Draft | In Review | Approved | Deprecated]
+**Version**: 1.0
+**Last Updated**: YYYY-MM-DD
 **Owner**: [Owner name or role]

@@ -38,7 +38,7 @@ Located in the `atlas/schemas/definitions/` directory, these schemas define stru
 # Example from atlas/schemas/definitions/messages.py
 class TextContentSchema(AtlasSchema):
     """Schema for text content in messages."""
-    
+
     type = fields.Constant("text", required=True)
     text = fields.String(required=True)
 ```
@@ -51,7 +51,7 @@ Located in the main `atlas/schemas/` directory, these extend the base definition
 # Example from atlas/schemas/messages.py
 class TextContentSchema(base_text_content_schema.__class__):
     """Schema for text content in messages with implementation conversion."""
-    
+
     @post_load
     def make_object(self, data: Dict[str, Any], **kwargs) -> Any:
         """Convert loaded data into a TextContent object."""
@@ -112,11 +112,11 @@ from atlas.schemas.messages import message_content_schema
 @create_schema_validated(message_content_schema)
 class MessageContent:
     """Content of a message, which can be text or other media."""
-    
+
     type: str
     text: Optional[str] = None
     image_url: Optional[Dict[str, Any]] = None
-    
+
     @classmethod
     def create_text(cls, text: str) -> "MessageContent":
         """Create a text content message."""

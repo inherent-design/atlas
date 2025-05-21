@@ -43,6 +43,6 @@
 - [ ] [Integration test requirement]
 - [ ] [Edge case test requirement]
 
-**Owner**: [Person/Team]  
-**Priority**: [High | Medium | Low]  
+**Owner**: [Person/Team]
+**Priority**: [High | Medium | Low]
 **Estimated Effort**: [Small | Medium | Large]

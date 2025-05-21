@@ -30,28 +30,44 @@ See the documentation for more details:
 - Composite Systems: /docs/project-management/planning/nerv/composite/
 """
 
-# Standard library imports
-from typing import TypeVar, Generic, Protocol, Callable, Dict, List, Any, Optional, Union, Set, Tuple
-from dataclasses import dataclass, field
-from enum import Enum, auto
-from datetime import datetime
-import uuid
 import copy
-import time
-import threading
 import queue
-from collections import defaultdict
+import threading
+import time
+import uuid
 from abc import ABC, abstractmethod
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum, auto
+
+# Standard library imports
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Protocol,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+from aspectlib import Aspect, Proceed, Return, weave
 
 # Third-party imports
 from blinker import Signal
-from taskmap import create_graph, execute_parallel
-from effect import Effect as EffectBase, TypedEffect, sync_performer, ComposedPerformer
-from marshmallow import Schema, fields, post_load, pre_dump
-from diffsync import DiffSync, DiffSyncModel
-from eventsourcing.domain import Aggregate, event
-from aspectlib import Aspect, weave, Proceed, Return
 from dependency_injector import containers, providers
+from diffsync import DiffSync, DiffSyncModel
+from effect import ComposedPerformer
+from effect import Effect as EffectBase
+from effect import TypedEffect, sync_performer
+from eventsourcing.domain import Aggregate, event
+from marshmallow import Schema, fields, post_load, pre_dump
+from taskmap import create_graph, execute_parallel
 
 # -----------------------------------------------------------------------------
 # Core Type Variables
@@ -495,18 +511,18 @@ class EventBus:
 
 class TemporalStore:
     """Store for versioned data with complete history."""
-    
+
     def __init__(self):
         self._versions = {}
         self._current_version_id = None
 
     def commit(self, data, description=""):
         """Create a new version of the data.
-        
+
         Args:
             data: The data to store
             description: Description of the change
-            
+
         Returns:
             The version ID of the new version
         """
@@ -523,10 +539,10 @@ class TemporalStore:
 
     def get(self, version_id=None):
         """Get the data for a specific version.
-        
+
         Args:
             version_id: The version to retrieve, or None for current
-            
+
         Returns:
             The data for the requested version
         """
@@ -536,7 +552,7 @@ class TemporalStore:
 
     def get_history(self):
         """Get the complete version history.
-        
+
         Returns:
             List of VersionedState objects
         """
@@ -1324,32 +1340,32 @@ class QuantumPartitioner(Generic[S, R]):
 if __name__ == "__main__":
     # Simple smoke test
     print("Running NERV verification...")
-    
+
     # Create an event
     event = Event(type=EventType.STREAM_STARTED, data="Stream started")
     print(f"Created event: {event}")
-    
+
     # Create a resource
     resource = Resource(id=str(uuid.uuid4()), type=ResourceType.CONNECTION)
     print(f"Created resource: {resource}")
-    
+
     # Create an effect
     effect = Effect(type=EffectType.MODEL_CALL, description="Called LLM")
     print(f"Created effect: {effect}")
-    
+
     # Create an effect monad
     monad = EffectMonad.pure("Hello, world!").with_effect(effect)
     print(f"Created effect monad with value: {monad.value} and effects: {monad.effects}")
-    
+
     # Create a quantum unit and execution plan
     partitioner = QuantumPartitioner()
     unit1 = partitioner.add_unit(lambda ctx: f"Result 1: {ctx}", name="Unit1")
     unit2 = partitioner.add_unit(lambda ctx: f"Result 2: {ctx}", dependencies=[unit1], name="Unit2")
     plan = partitioner.build_execution_plan()
     print(f"Created execution plan with {plan.get_level_count()} levels")
-    
+
     # Execute the plan
     results = partitioner.execute("test context")
     print(f"Execution results: {results}")
-    
+
     print("NERV verification complete!")

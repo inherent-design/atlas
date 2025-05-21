@@ -88,10 +88,10 @@ def main():
     # Set up the example (logging, CLI parsing)
     args = setup_example("Example Title", add_example_arguments)
     logger = logging.get_logger(__name__)
-    
+
     # Example implementation
     # ...
-    
+
     # Print standardized footer
     print_example_footer()
 

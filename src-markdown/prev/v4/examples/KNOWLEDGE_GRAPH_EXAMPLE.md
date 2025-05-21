@@ -247,16 +247,16 @@ Edge contracts define clear interfaces between components:
 interface TokenService {
   // Generate new authentication token
   generateToken(userId: string, claims: Map<string, any>): Promise<Token>;
-  
+
   // Validate an existing token
   validateToken(token: string): Promise<TokenValidationResult>;
-  
+
   // Refresh an existing token
   refreshToken(refreshToken: string): Promise<TokenPair>;
-  
+
   // Revoke a specific token
   revokeToken(token: string): Promise<boolean>;
-  
+
   // Revoke all tokens for a user
   revokeAllUserTokens(userId: string): Promise<boolean>;
 }
@@ -265,10 +265,10 @@ interface TokenService {
 interface AuthenticationProvider {
   // Authenticate a user with credentials
   authenticate(credentials: Credentials): Promise<AuthenticationResult>;
-  
+
   // Check if this provider supports a credential type
   supportsCredentialType(type: CredentialType): boolean;
-  
+
   // Get provider capabilities
   getCapabilities(): ProviderCapabilities;
 }

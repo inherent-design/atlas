@@ -22,7 +22,7 @@ Intent operates across multiple dimensions that influence knowledge representati
 The fundamental goal driving information seeking:
 
 - **Learning**: Understanding concepts, principles, or systems
-- **Implementing**: Applying knowledge to create or modify 
+- **Implementing**: Applying knowledge to create or modify
 - **Troubleshooting**: Diagnosing and resolving issues
 - **Extending**: Building upon or enhancing existing systems
 - **Evaluating**: Assessing options or measuring outcomes

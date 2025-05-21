@@ -33,7 +33,8 @@ Examples are numbered to create a logical learning progression:
 |---------|--------|-------------|
 | [20_tool_agent.py](./20_tool_agent.py) | ✅ Complete | Tool usage with agents |
 | [21_multi_agent.py.todo](./21_multi_agent.py.todo) | 🚧 Planned | Multi-agent communication |
-| [22_agent_workflows.py.todo](./22_agent_workflows.py.todo) | 🚧 Planned | Agent workflows with LangGraph |
+| [22_event_middleware.py](./22_event_middleware.py) | ✅ Complete | Middleware pipeline for event processing |
+| [23_agent_workflows.py.todo](./23_agent_workflows.py.todo) | 🚧 Planned | Agent workflows with LangGraph |
 
 ## Running Examples
 

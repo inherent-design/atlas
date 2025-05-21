@@ -31,7 +31,7 @@ atlas/v3/
 │   │   ├── KNOWLEDGE_SCALES.md          # Multi-scale knowledge representation
 │   │   └── KNOWLEDGE_EVOLUTION.md       # Temporal knowledge progression
 │   │
-│   ├── reasoning/                       # Reasoning frameworks 
+│   ├── reasoning/                       # Reasoning frameworks
 │   │   ├── MENTAL_MODELS.md             # Core mental model patterns
 │   │   ├── DIALECTIC_REASONING.md       # Thesis-antithesis-synthesis patterns
 │   │   ├── SCALE_SHIFTING.md            # Moving between abstraction levels

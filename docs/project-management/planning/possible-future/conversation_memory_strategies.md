@@ -76,7 +76,7 @@ Conversation
 ```python
 class ConversationMemoryManager:
     """Manages conversation history across multiple tiers."""
-    
+
     def __init__(
         self,
         immediate_context_size: int = 10,
@@ -95,39 +95,39 @@ class ConversationMemoryManager:
             "created_at": datetime.now().isoformat(),
             "last_updated": datetime.now().isoformat(),
         }
-    
+
     def add_message(self, message: Dict[str, Any]) -> None:
         """Add a new message to the conversation history."""
         # Update metadata
         self.metadata["last_updated"] = datetime.now().isoformat()
         self.metadata["message_count"] = self.metadata.get("message_count", 0) + 1
-        
+
         # Add to immediate context
         self.immediate_messages.append(message)
-        
+
         # If immediate context is full, summarize oldest messages into working memory
         if len(self.immediate_messages) > self.immediate_context_size:
             to_summarize = self.immediate_messages[0:5]  # Summarize in batches of 5
             summary = self._create_summary(to_summarize)
             self.working_memory.append(summary)
             self.immediate_messages = self.immediate_messages[5:]
-            
+
             # If working memory is full, extract knowledge and prune
             if len(self.working_memory) > self.working_memory_size:
                 oldest_summaries = self.working_memory[0:5]
                 if self.knowledge_base:
                     self._extract_knowledge(oldest_summaries)
                 self.working_memory = self.working_memory[5:]
-        
+
         # Periodically save to session storage
         if self.session_storage and self.metadata["message_count"] % 10 == 0:
             self.save_session()
-    
+
     def get_context_for_prompt(self, max_tokens: int = 4000) -> List[Dict[str, Any]]:
         """Get optimized conversation history for the prompt context."""
         # Always include all immediate messages
         context = self.immediate_messages.copy()
-        
+
         # Add working memory summaries until we approach token limit
         # (Implementation would need actual token counting)
         for summary in reversed(self.working_memory):
@@ -136,20 +136,20 @@ class ConversationMemoryManager:
                 context.insert(0, summary)
             else:
                 break
-        
+
         return context
-    
+
     def _create_summary(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create a summary of a sequence of messages."""
         # In a real implementation, this would use an LLM to create a summary
         # For now, we'll just create a placeholder
         user_messages = [m["content"] for m in messages if m["role"] == "user"]
         assistant_messages = [m["content"] for m in messages if m["role"] == "assistant"]
-        
+
         summary_content = f"Summary of {len(messages)} messages: "
         summary_content += f"User discussed {', '.join(user_messages[:50])}... "
         summary_content += f"Assistant responded with {', '.join(assistant_messages[:50])}..."
-        
+
         return {
             "role": "system",
             "content": summary_content,
@@ -159,16 +159,16 @@ class ConversationMemoryManager:
                 "timestamp": datetime.now().isoformat()
             }
         }
-    
+
     def _extract_knowledge(self, summaries: List[Dict[str, Any]]) -> None:
         """Extract knowledge from summaries into the knowledge base."""
         # This would use an LLM to extract key facts, decisions, code snippets, etc.
         # Then store them in the knowledge base with appropriate metadata
         if not self.knowledge_base:
             return
-        
+
         combined_content = "\n\n".join([s["content"] for s in summaries])
-        
+
         # Extract entities, facts, and relationships
         # This is a placeholder for the actual extraction logic
         extracted_knowledge = {
@@ -179,43 +179,43 @@ class ConversationMemoryManager:
                 "type": "conversation_knowledge"
             }
         }
-        
+
         # Add to knowledge base
         self.knowledge_base.add_document(
             content=extracted_knowledge["content"],
             metadata=extracted_knowledge["metadata"]
         )
-    
+
     def save_session(self) -> str:
         """Save the current session to storage."""
         if not self.session_storage:
             return ""
-        
+
         session_data = {
             "session_id": self.session_id,
             "metadata": self.metadata,
             "immediate_messages": self.immediate_messages,
             "working_memory": self.working_memory,
         }
-        
+
         return self.session_storage.save_session(session_data)
-    
+
     def load_session(self, session_id: str) -> bool:
         """Load a session from storage."""
         if not self.session_storage:
             return False
-        
+
         session_data = self.session_storage.load_session(session_id)
         if not session_data:
             return False
-        
+
         self.session_id = session_data["session_id"]
         self.metadata = session_data["metadata"]
         self.immediate_messages = session_data["immediate_messages"]
         self.working_memory = session_data["working_memory"]
-        
+
         return True
-    
+
     def reset(self) -> None:
         """Reset the conversation memory."""
         self.immediate_messages = []
@@ -356,35 +356,35 @@ For persisting conversations between application runs:
 ```python
 class FileSessionStorage:
     """Store sessions as JSON files in a local directory."""
-    
+
     def __init__(self, storage_dir: str = ".atlas/sessions"):
         self.storage_dir = storage_dir
         os.makedirs(storage_dir, exist_ok=True)
-    
+
     def save_session(self, session_data: Dict[str, Any]) -> str:
         """Save session data to a file."""
         session_id = session_data["session_id"]
         file_path = os.path.join(self.storage_dir, f"{session_id}.json")
-        
+
         with open(file_path, "w") as f:
             json.dump(session_data, f, indent=2)
-        
+
         return session_id
-    
+
     def load_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Load session data from a file."""
         file_path = os.path.join(self.storage_dir, f"{session_id}.json")
-        
+
         if not os.path.exists(file_path):
             return None
-        
+
         with open(file_path, "r") as f:
             return json.load(f)
-    
+
     def list_sessions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """List available sessions, sorted by last updated."""
         sessions = []
-        
+
         for filename in os.listdir(self.storage_dir):
             if filename.endswith(".json"):
                 file_path = os.path.join(self.storage_dir, filename)
@@ -396,10 +396,10 @@ class FileSessionStorage:
                         "message_count": session_data["metadata"].get("message_count", 0),
                         "title": session_data["metadata"].get("title", "Untitled Session")
                     })
-        
+
         # Sort by last updated (descending)
         sessions.sort(key=lambda s: s["last_updated"], reverse=True)
-        
+
         return sessions[:limit]
 ```
 
@@ -410,23 +410,23 @@ For larger deployments, a database storage approach would be more appropriate:
 ```python
 class DatabaseSessionStorage:
     """Store sessions in a database for better scaling."""
-    
+
     def __init__(self, db_connection_string: str):
         # This would connect to a database (SQLite, PostgreSQL, etc.)
         self.connection = self._connect_to_db(db_connection_string)
         self._create_tables_if_needed()
-    
+
     def save_session(self, session_data: Dict[str, Any]) -> str:
         """Save session data to the database."""
         session_id = session_data["session_id"]
         # Implementation would serialize and store in appropriate tables
         return session_id
-    
+
     def load_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Load session data from the database."""
         # Implementation would query and reconstruct session data
         return None  # Placeholder
-    
+
     def list_sessions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """List available sessions, sorted by last updated."""
         # Implementation would query for most recent sessions
@@ -442,13 +442,13 @@ def run_cli_mode(args: Dict[str, Any]) -> bool:
     """Run Atlas in interactive CLI mode with session management."""
     logger.info("\nAtlas CLI Mode")
     logger.info("-------------")
-    
+
     # Create session storage
     session_storage = FileSessionStorage()
-    
+
     # Handle session continuation if requested
     session_id = args.get('continue_session')
-    
+
     if session_id == "last":
         # Get the most recent session
         sessions = session_storage.list_sessions(limit=1)
@@ -458,10 +458,10 @@ def run_cli_mode(args: Dict[str, Any]) -> bool:
         else:
             session_id = None
             logger.info("No previous sessions found, starting new session")
-    
+
     # Create provider and agent as usual
     # (Provider creation code omitted for brevity)
-    
+
     # Initialize agent with conversation memory
     agent = AtlasAgent(
         system_prompt_file=args.get('system_prompt'),
@@ -469,41 +469,41 @@ def run_cli_mode(args: Dict[str, Any]) -> bool:
         config=config,
         provider=provider,
     )
-    
+
     # Initialize conversation memory manager
     memory_manager = ConversationMemoryManager(
         knowledge_base=agent.knowledge_base,
         session_storage=session_storage
     )
-    
+
     # Load existing session if specified
     if session_id:
         if memory_manager.load_session(session_id):
             logger.info(f"Successfully loaded session {session_id}")
-            
+
             # Set the agent's messages from the memory manager
             agent.messages = memory_manager.get_context_for_prompt()
         else:
             logger.warning(f"Failed to load session {session_id}, starting new session")
-    
+
     # CLI interaction loop
     logger.info("Atlas is ready. Type 'exit' or 'quit' to end the session.")
     logger.info("Special commands: !clear (reset conversation), !save (save session), !help")
     logger.info("---------------------------------------------------")
-    
+
     while True:
         # Get user input
         try:
             print("\nYou: ", end="", flush=True)
             user_input = sys.stdin.readline().strip()
-            
+
             # Check for exit command
             if user_input.lower() in ["exit", "quit"]:
                 # Save session before exiting
                 memory_manager.save_session()
                 print("\nSession saved. Goodbye!")
                 break
-            
+
             # Check for special commands
             if user_input.startswith("!"):
                 if user_input == "!clear":
@@ -522,26 +522,26 @@ def run_cli_mode(args: Dict[str, Any]) -> bool:
                     print("  !help - Show this help message")
                     print("  exit/quit - Exit Atlas")
                     continue
-            
+
             # Add user message to memory
             memory_manager.add_message({"role": "user", "content": user_input})
-            
+
             # Update agent messages with optimized context
             agent.messages = memory_manager.get_context_for_prompt()
-            
+
             # Process the message through the agent
             response = agent.process_message(user_input)
-            
+
             # Add assistant response to memory
             memory_manager.add_message({"role": "assistant", "content": response})
-            
+
             # Display the response
             print(f"\nAtlas: {response}")
-            
+
             # Periodically save session automatically
             if random.random() < 0.2:  # 20% chance to auto-save
                 memory_manager.save_session()
-            
+
         except KeyboardInterrupt:
             print("\nSession interrupted. Saving before exit...")
             memory_manager.save_session()
@@ -552,7 +552,7 @@ def run_cli_mode(args: Dict[str, Any]) -> bool:
             print("Let's continue with a fresh conversation.")
             memory_manager.reset()
             agent.reset_conversation()
-    
+
     return True
 ```
 
@@ -569,31 +569,31 @@ def extract_knowledge_from_conversation(
     # Group messages into conversation chunks
     chunks = []
     current_chunk = []
-    
+
     for msg in messages:
         current_chunk.append(msg)
         if len(current_chunk) >= 6:  # Process in groups of 6 messages (3 turns)
             chunks.append(current_chunk)
             current_chunk = []
-    
+
     # Add any remaining messages
     if current_chunk:
         chunks.append(current_chunk)
-    
+
     # Process each chunk to extract knowledge
     extracted_items = []
-    
+
     for chunk in chunks:
         # Format the conversation for analysis
         conversation_text = "\n".join([
             f"{msg['role'].upper()}: {msg['content']}"
             for msg in chunk
         ])
-        
+
         # This would use an LLM to extract knowledge
         # For now, we'll just use a placeholder approach
         extracted_text = f"Knowledge extracted from conversation:\n{conversation_text[:300]}..."
-        
+
         # Create metadata
         metadata = {
             "source": "conversation",
@@ -601,11 +601,11 @@ def extract_knowledge_from_conversation(
             "source_messages": len(chunk),
             "extraction_method": "conversation_analysis"
         }
-        
+
         # Add to knowledge base
         document_id = knowledge_base.add_document(extracted_text, metadata)
         extracted_items.append(document_id)
-    
+
     return extracted_items
 ```
 
@@ -624,25 +624,25 @@ def create_conversation_summary(
         f"{msg['role'].upper()}: {msg['content']}"
         for msg in messages
     ])
-    
+
     # Create prompt for summarization
     prompt = f"""
     Summarize the following conversation segment concisely, preserving key information:
-    
+
     {conversation_text}
-    
+
     SUMMARY:
     """
-    
+
     # Request summary from model
     request = ModelRequest.create_direct(
         messages=[ModelMessage.user(prompt)],
         max_tokens=200
     )
-    
+
     response = provider.generate(request)
     summary = response.content
-    
+
     # Create summary message
     return {
         "role": "system",

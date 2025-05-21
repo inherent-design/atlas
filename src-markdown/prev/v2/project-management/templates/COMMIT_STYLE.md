@@ -190,7 +190,7 @@ When commits relate to tracked issues:
 fix: resolve intermittent test failures on CI #123
 
 - increase timeout for async operations
-- add retry logic for flaky network tests 
+- add retry logic for flaky network tests
 - improve error logging for failed assertions
 ```
 

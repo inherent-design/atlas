@@ -99,11 +99,11 @@ class TemporalNode {
     ];
     this.currentVersion = 0;
   }
-  
+
   evolve(newProperties, changeTime, reason) {
     // Set end time for current version
     this.versions[this.currentVersion].validTo = changeTime;
-    
+
     // Create new version
     const newVersion = {
       properties: {...this.versions[this.currentVersion].properties, ...newProperties},
@@ -112,19 +112,19 @@ class TemporalNode {
       predecessor: this.currentVersion,
       changeReason: reason
     };
-    
+
     // Update current version reference
     this.versions[this.currentVersion].successor = this.versions.length;
     this.versions.push(newVersion);
     this.currentVersion = this.versions.length - 1;
-    
+
     return this;
   }
-  
+
   // Get node state at specific time
   getVersionAt(time) {
     for (const version of this.versions) {
-      if (version.validFrom <= time && 
+      if (version.validFrom <= time &&
           (version.validTo === null || version.validTo > time)) {
         return version;
       }
@@ -155,18 +155,18 @@ class TemporalEdge {
     ];
     this.currentVersion = 0;
   }
-  
+
   evolve(newProperties, changeTime, reason) {
     // Similar to node evolution
     // ...
   }
-  
+
   // Handle relationship type changes
   changeType(newType, changeTime, reason) {
-    return this.evolve({...this.versions[this.currentVersion].properties, type: newType}, 
+    return this.evolve({...this.versions[this.currentVersion].properties, type: newType},
                      changeTime, reason);
   }
-  
+
   // Handle relationship dissolution
   dissolve(dissolveTime, reason) {
     this.versions[this.currentVersion].validTo = dissolveTime;
@@ -187,14 +187,14 @@ class TemporalGraph {
     this.edges = new Map(); // edgeId -> TemporalEdge
     this.currentTime = Date.now();
   }
-  
+
   // Get graph state at specific time
   getStateAt(timestamp) {
     const graphState = {
       nodes: new Map(),
       edges: new Map()
     };
-    
+
     // Collect nodes valid at specified time
     for (const [id, node] of this.nodes.entries()) {
       const versionAtTime = node.getVersionAt(timestamp);
@@ -205,12 +205,12 @@ class TemporalGraph {
         });
       }
     }
-    
+
     // Collect edges valid at specified time
     for (const [id, edge] of this.edges.entries()) {
       const versionAtTime = edge.getVersionAt(timestamp);
-      if (versionAtTime && 
-          graphState.nodes.has(edge.sourceId) && 
+      if (versionAtTime &&
+          graphState.nodes.has(edge.sourceId) &&
           graphState.nodes.has(edge.targetId)) {
         graphState.edges.set(id, {
           sourceId: edge.sourceId,
@@ -220,10 +220,10 @@ class TemporalGraph {
         });
       }
     }
-    
+
     return graphState;
   }
-  
+
   // Track changes between timepoints
   getDelta(startTime, endTime) {
     return {
@@ -235,13 +235,13 @@ class TemporalGraph {
       changedEdges: this.getEdgesChangedBetween(startTime, endTime)
     };
   }
-  
+
   // Traverse the graph through time
   temporalTraversal(startNodeId, startTime, traversalStrategy) {
     // Implementation depends on traversal strategy
     // Could be forward-in-time, backward-in-time, or time-window constrained
   }
-  
+
   // Detect evolutionary patterns
   detectPatterns(patternType, timeWindow) {
     // Implementation for detecting common evolutionary patterns

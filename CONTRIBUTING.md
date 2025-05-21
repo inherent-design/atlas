@@ -33,7 +33,7 @@ This project and everyone participating in it is governed by the [Atlas Code of 
    # Create a virtual environment
    uv venv
    source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-   
+
    # Install dependencies in development mode
    uv pip install -e ".[dev]"
    ```

@@ -441,21 +441,21 @@ Core architectural framework for systematic result integration:
     - Validates source data integrity
     - Prepares source data for downstream processing
     - Records source metadata for provenance
-  
+
   - **Transformation Node Processing**
     - Retrieves appropriate input data
     - Selects registered transformer component
     - Validates transformer availability
     - Applies transformation with provided parameters
     - Records transformation metadata
-  
+
   - **Aggregation Node Processing**
     - Collects all required input results
     - Selects registered aggregator component
     - Validates aggregator availability
     - Applies aggregation with provided parameters
     - Tracks aggregation provenance
-  
+
   - **Result Node Processing**
     - Gathers all inputs to final result node
     - Applies final integration if multiple inputs exist

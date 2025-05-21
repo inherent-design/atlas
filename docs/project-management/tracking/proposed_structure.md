@@ -1,968 +1,685 @@
 ---
-
-title: Proposed Project
-
+title: Feature-Driven Implementation Plan
 ---
 
+# Atlas Feature-Driven Implementation Plan
 
-# Proposed Project Structure
-
-::: tip CURRENT STRUCTURE
-This document outlines the current Atlas project structure as of May 16, 2025. The structure has been updated to reflect the NERV documentation port, V0/V1/V2 architecture organization, and the planned Textual CLI implementation.
+::: danger CLEAN BREAK WITH VERTICAL FEATURE SLICES
+This document outlines a revised implementation approach for Atlas that maintains the clean break architecture vision while focusing on delivering complete functional features through vertical slices. Rather than building the entire architecture layer by layer, we will implement the minimal necessary components of each layer needed to deliver specific features, allowing us to demonstrate functional value earlier and reduce implementation risk.
 :::
 
-This document outlines the refined structure for the Atlas project, focusing on clean architecture, minimal dependencies, and clear component boundaries. This structure represents a clean-break approach that simplifies the codebase while ensuring all required functionality is maintained.
-
-::: tip Core Principles
-Atlas follows a **clean break philosophy** with a focus on best-in-class API design over backward compatibility. This structure prioritizes modularity, clear interfaces, and maintainable code.
-:::
-
-::: warning Current Focus (May 17-24, 2025)
-We are currently focused on **Core Services Layer**, **Tool Execution Framework**, and **Tool Agent Enhancements**. Our immediate priority is implementing the foundational services that enable robust tool execution, event-driven communication, and improved state management. See the [current TODO list](./todo.md) for specific implementation tasks.
+::: tip Current Status (May 20, 2025)
+- ✅ Defined the clean break architecture and NERV component strategy
+- ✅ Established centralized type variable system with variance control
+- ✅ Implemented core protocol designs for service interfaces
+- ✅ Created domain-specific primitive definitions for service areas
+- 🚧 Shifting from horizontal layer implementation to vertical feature slices
+- 🚧 Prioritizing core services required for streaming chat functionality
+- 🚧 Implementing event system and buffer components for streaming support
 :::
 
 ## Status Legend
-- ✅ Existing and complete
-- 🚧 Partially implemented or in progress
-- 🔲 Planned but not yet implemented
-- 🗑️ To be removed or refactored
+- ✅ Complete - Implementation finished and tested
+- 🚧 In Progress - Implementation actively being worked on
+- 🔄 Planned (Short-term) - Next items in the implementation queue
+- 🔲 Planned (Long-term) - Designed but scheduled for later implementation
 
-## Implementation Priority Legend
-- 🔴 Core MVP - Essential for core user/developer experience
-- 🟠 Next Phase - Important for established product with users
-- 🟢 Future - Enhances capabilities for mature product
+## Feature Priority Legend
+- 🔴 Primary Features - Core functionality that must be delivered first
+- 🟠 Secondary Features - Important functionality built on primary features
+- 🟢 Tertiary Features - Additional functionality that enhances the system
+- 🔵 Future Features - Planned for future releases
 
-## Core Directory Structure
+## 1. Feature-Driven Vertical Slices
+
+Rather than building complete horizontal layers of the architecture, we are reorganizing our implementation strategy around vertical feature slices that deliver functional value while maintaining architectural integrity.
+
+Each feature slice:
+1. Implements the minimum necessary components from each architecture layer
+2. Delivers complete end-to-end functionality that users can test and validate
+3. Follows the clean break architecture principles within its scope
+4. Enables incremental adoption and testing of the architecture
+
+### 1.1 Feature Slice Diagram
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                        FEATURE SLICE ARCHITECTURE                         │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│          │ │          │ │          │ │          │ │          │ │          │
+│ Streaming│ │  Agent   │ │Knowledge │ │  Multi-  │ │ Workflow │ │ Command  │
+│   Chat   │ │Delegation│ │Retrieval │ │ Provider │ │Execution │ │   CLI    │
+│          │ │          │ │          │ │ Routing  │ │          │ │          │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+    ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓
+┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐
+│Components│ │Components│ │Components│ │Components│ │Components│ │Components│
+│          │ │          │ │          │ │          │ │          │ │          │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+    ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓
+┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐
+│ Services │ │ Services │ │ Services │ │ Services │ │ Services │ │ Services │
+│          │ │          │ │          │ │          │ │          │ │          │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+    ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓
+┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐
+│   NERV   │ │   NERV   │ │   NERV   │ │   NERV   │ │   NERV   │ │   NERV   │
+│Components│ │Components│ │Components│ │Components│ │Components│ │Components│
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+    ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓          ↑│↓
+┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐ ┌────┴─────┐
+│  Inner   │ │  Inner   │ │  Inner   │ │  Inner   │ │  Inner   │ │  Inner   │
+│ Universe │ │ Universe │ │ Universe │ │ Universe │ │ Universe │ │ Universe │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+```
+
+### 1.2 Key Feature Slices
+
+We have identified six key feature slices that will drive our implementation:
+
+1. **Streaming Chat** 🔴
+   - Real-time streaming conversation with LLM providers
+   - Includes provider interaction, streaming buffer, and response parsing
+   - Demonstrates event-driven architecture and buffer system
+
+2. **Agent Delegation** 🔴
+   - Task delegation between multiple specialized agents
+   - Includes agent messaging, state tracking, and task coordination
+   - Demonstrates event-driven communication and state management
+
+3. **Knowledge Retrieval** 🔴
+   - Document chunking, embedding, and semantic search
+   - Includes vector storage, hybrid search, and context integration
+   - Demonstrates persistence layer and state projection
+
+4. **Multi-Provider Routing** 🟠
+   - Intelligent routing between different LLM providers
+   - Includes capability matching, fallback strategies, and cost optimization
+   - Demonstrates registry pattern and effect tracking
+
+5. **Workflow Execution** 🟠
+   - Complex multi-step workflow orchestration
+   - Includes parallel execution, dependency management, and error handling
+   - Demonstrates quantum partitioning and reactive event mesh
+
+6. **Command CLI** 🟠
+   - Textual-based command-line interface
+   - Includes command parsing, execution, and response formatting
+   - Demonstrates command pattern and perspective shifting
+
+## 2. Feature Slice 1: Streaming Chat
+
+### 2.1 Feature Overview
+
+Streaming Chat enables real-time, token-by-token streaming of LLM responses to provide an interactive chat experience. This is our highest priority feature because it:
+
+- Provides immediate user value
+- Demonstrates key architectural patterns
+- Establishes patterns for provider integration
+- Enables testing of core services (event, buffer, state)
+
+### 2.2 Implementation Status
+
+- ✅ Defined buffer protocol for streaming data
+- ✅ Implemented event primitives for pub/sub pattern
+- ✅ Created streaming response model
+- 🚧 Implementing EventBus for event communication
+- 🚧 Creating Buffer service for streaming
+- 🚧 Building service-enabled provider implementation
+- 🔄 Integrating with provider implementations
+- 🔄 Building streaming chat example
+
+### 2.3 Implementation Components
 
 ```
 atlas/
-├── __init__.py                      ✅  🔴  Main entry point exports
-├── agent.py                         ✅  🔴  Base agent functionality
-├── agents/                          🚧  🔴  Agent system module
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── registry.py                  ✅  🔴  Agent registry for dynamic discovery
-│   ├── messaging.py                 ✅  🔴  Unified messaging system (consolidation)
-│   ├── controller.py                🚧  🔴  Controller agent implementation
-│   ├── worker.py                    🚧  🔴  Worker agent implementation
-│   └── specialized/                 🚧  🔴  Specialized agent implementations
-│       ├── __init__.py              ✅  🔴  Module initialization
-│       ├── task_aware.py            ✅  🔴  Task-aware agent implementation
-│       └── tool_agent.py            🚧  🔴  Tool-using agent implementation
-├── cli/                             🚧  🔴  Command-line interface
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── config.py                    ✅  🔴  CLI configuration utilities
-│   ├── parser.py                    🚧  🔴  Command-line argument parsing (needs Textual support)
-│   ├── utils.py                     🔲  🔴  Utility functions from common.py
-│   ├── formatting.py                🔲  🔴  Text formatting utilities from common.py
-│   └── textual/                     🔲  🔴  Textual CLI implementation (planned)
-│       ├── __init__.py              🔲  🔴  Module initialization
-│       ├── app.py                   🔲  🔴  Main Textual application
-│       ├── schema.py                🔲  🔴  Command and configuration schemas
-│       ├── commands.py              🔲  🔴  Command execution system
-│       ├── config.py                🔲  🔴  Configuration management
-│       ├── serialization.py         🔲  🔴  Serialization utilities
-│       ├── history.py               🔲  🔴  Command history management
-│       ├── flags.py                 🔲  🔴  CLI flags mapping
-│       ├── import_export.py         🔲  🔴  Configuration import/export
-│       ├── utils/                   🔲  🔴  Utility functions
-│       │   ├── __init__.py          🔲  🔴  Module initialization
-│       │   ├── markdown.py          🔲  🔴  Markdown rendering
-│       │   ├── color.py             🔲  🔴  Color utilities
-│       │   ├── formatting.py        🔲  🔴  Text formatting utilities
-│       │   └── streaming.py         🔲  🔴  Streaming utilities
-│       ├── widgets/                 🔲  🔴  UI components
-│       │   ├── __init__.py          🔲  🔴  Module initialization
-│       │   ├── command_bar.py       🔲  🔴  Command input widget
-│       │   ├── conversation.py      🔲  🔴  Conversation display
-│       │   ├── status.py            🔲  🔴  Status display
-│       │   ├── context.py           🔲  🔴  Context information panel
-│       │   ├── directory_browser.py 🔲  🔴  Directory selection browser
-│       │   ├── file_browser.py      🔲  🔴  File selection browser
-│       │   ├── provider_selector.py 🔲  🔴  Provider selection widget
-│       │   ├── stream_controls.py   🔲  🔴  Stream control buttons
-│       │   └── tool_list.py         🔲  🔴  Tool listing and management widget
-│       ├── screens/                 🔲  🔴  Screen implementations
-│       │   ├── __init__.py          🔲  🔴  Module initialization
-│       │   ├── main.py              🔲  🔴  Main application screen
-│       │   ├── provider.py          🔲  🔴  Provider selection screen
-│       │   ├── ingest.py            🔲  🔴  Document ingestion screen
-│       │   ├── tools.py             🔲  🔴  Tool management screen
-│       │   └── settings.py          🔲  🔴  Settings management screen
-│       └── commands/                🔲  🔴  Command implementations
-│           ├── __init__.py          🔲  🔴  Module initialization
-│           ├── base.py              🔲  🔴  Base command class
-│           ├── query.py             🔲  🔴  Query command
-│           ├── ingest.py            🔲  🔴  Ingest command
-│           ├── tool.py              🔲  🔴  Tool command
-│           └── controller.py        🔲  🔴  Controller command
-├── core/                            ✅  🔴  Core utilities and configuration
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── config.py                    ✅  🔴  Configuration management
-│   ├── env.py                       ✅  🔴  Environment variable handling
-│   ├── errors.py                    ✅  🔴  Error handling system
-│   ├── logging.py                   ✅  🔴  Logging configuration
-│   ├── prompts.py                   ✅  🔴  System prompt management
-│   ├── retry.py                     ✅  🔴  Retry mechanisms
-│   ├── telemetry.py                 ✅  🔴  Telemetry and metrics
-│   ├── types.py                     🚧  🔴  Type definitions
-│   ├── services/                    🔲  🔴  Service architecture components
-│   │   ├── __init__.py              🔲  🔴  Module initialization
-│   │   ├── base.py                  🔲  🔴  Base service interfaces
-│   │   ├── buffer.py                🔲  🔴  Thread-safe buffer implementations
-│   │   ├── events.py                🔲  🔴  Event system implementation
-│   │   ├── state.py                 🔲  🔴  State management utilities
-│   │   ├── commands.py              🔲  🔴  Command pattern implementation
-│   │   ├── boundaries.py            🔲  🔴  System boundary interfaces
-│   │   └── resources.py             🔲  🔴  Resource lifecycle management
-│   └── caching/                     🔲  🟠  Response caching system
-│       ├── __init__.py              🔲  🟠  Module initialization
-│       ├── cache.py                 🔲  🟠  Abstract cache interface
-│       ├── semantic_cache.py        🔲  🟠  Embedding-based similarity caching
-│       └── policies.py              🔲  🟠  Cache policies (TTL, eviction)
-├── graph/                           🚧  🔴  Workflow orchestration
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── state.py                     🚧  🔴  State management
-│   ├── edges.py                     ✅  🔴  Conditional edge routing
-│   ├── nodes.py                     ✅  🔴  Functional node definitions
-│   └── workflows.py                 🚧  🔴  Reusable workflow patterns
-├── knowledge/                       🚧  🔴  Knowledge management system
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── chunking.py                  🚧  🔴  Document chunking strategies
-│   ├── embedding.py                 ✅  🔴  Embedding generation
-│   ├── ingest.py                    ✅  🔴  Document ingestion
-│   ├── retrieval.py                 🚧  🔴  Document retrieval interface
-│   ├── hybrid_search.py             ✅  🔴  Hybrid semantic+keyword search
-│   ├── reranking.py                 🔲  🟠  Result reranking strategies
-│   ├── search_scoring.py            🔲  🟠  Configurable relevance scoring
-│   └── settings.py                  ✅  🔴  Retrieval settings configuration
-├── providers/                       ✅  🔴  Model provider system
-│   ├── __init__.py                  ✅  🔴  Module initialization and exports
-│   ├── base.py                      ✅  🔴  Core provider interface only
-│   ├── messages.py                  ✅  🔴  Message and request modeling
-│   ├── errors.py                    ✅  🔴  Provider-specific error classes
-│   ├── reliability.py               ✅  🔴  Retry and circuit breaker
-│   ├── helpers.py                   🔲  🔴  Provider creation utilities from common.py
-│   ├── streaming/                   ✅  🔴  Enhanced streaming infrastructure
-│   │   ├── __init__.py              ✅  🔴  Module initialization
-│   │   ├── base.py                  ✅  🔴  Base streaming interfaces
-│   │   ├── control.py               ✅  🔴  Stream control implementation
-│   │   └── buffer.py                ✅  🔴  Stream buffer management
-│   ├── implementations/             ✅  🔴  Provider implementations
-│   │   ├── __init__.py              ✅  🔴  Module initialization
-│   │   ├── anthropic.py             ✅  🔴  Anthropic provider
-│   │   ├── openai.py                ✅  🔴  OpenAI provider
-│   │   ├── ollama.py                ✅  🔴  Ollama provider
-│   │   └── mock.py                  ✅  🔴  Mock provider for testing
-│   ├── group.py                     ✅  🔴  Provider group implementation
-│   ├── registry.py                  ✅  🔴  Provider registry
-│   ├── factory.py                   ✅  🔴  Provider factory
-│   ├── resolver.py                  ✅  🔴  Provider auto-resolution
-│   ├── capabilities.py              ✅  🔴  Provider capabilities
-│   ├── options.py                   ✅  🔴  Provider options and configuration
-│   └── validation.py                ✅  🔴  Schema-based validation utilities
-├── query.py                         ✅  🔴  Query client interface
-├── schemas/                         🚧  🔴  Schema-based validation and types
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── base.py                      ✅  🔴  Base schema definitions and utilities
-│   ├── messages.py                  ✅  🔴  Message schema definitions
-│   ├── providers.py                 ✅  🔴  Provider schema definitions
-│   ├── options.py                   ✅  🔴  Options and capabilities schemas
-│   ├── config.py                    ✅  🔴  Configuration schemas
-│   ├── types.py                     ✅  🔴  Schema-compatible type annotations
-│   ├── agents.py                    🔲  🔴  Agent schema definitions
-│   ├── knowledge.py                 🔲  🔴  Knowledge system schemas
-│   ├── tools.py                     ✅  🔴  Tool schema definitions with validation
-│   ├── cli.py                       🔲  🔴  CLI command and configuration schemas
-│   └── validation.py                🔲  🔴  Validation utilities and decorators
-├── tools/                           🚧  🔴  Tools system
-│   ├── __init__.py                  ✅  🔴  Module initialization
-│   ├── base.py                      ✅  🔴  Base tool interface with enhanced validation
-│   ├── registry.py                  ✅  🔴  Tool registry and discovery
-│   ├── execution.py                 🔲  🔴  Tool execution framework
-│   ├── results.py                   🔲  🔴  Tool result processing
-│   ├── chaining.py                  🔲  🔴  Tool chaining and composition
-│   ├── standard/                    🚧  🔴  Standard built-in tools
-│   │   ├── __init__.py              ✅  🔴  Module initialization
-│   │   ├── knowledge_tools.py       🔲  🔴  Knowledge management tools
-│   │   │   ├── RetrievalTool        🔲  🔴  Retrieval tool for knowledge base
-│   │   │   ├── IngestTool           🔲  🔴  Document ingestion tool
-│   │   │   ├── FilteringTool        🔲  🔴  Metadata filtering tool
-│   │   │   └── SearchTool           🔲  🔴  Combined hybrid search tool
-│   │   └── system.py                🔲  🔴  System interaction tools
-│   │       ├── FileTool             🔲  🔴  File system interaction
-│   │       ├── CommandTool          🔲  🔴  Command execution
-│   │       └── EnvironmentTool      🔲  🔴  Environment variable access
-│   └── mcp/                         🔲  🟠  MCP integration tools
-│       └── __init__.py              ✅  🟠  Module initialization
-└── scripts/                         ✅  🔴  Utility scripts
-    ├── __init__.py                  ✅  🔴  Module initialization
-    └── debug/                       ✅  🔴  Debugging utilities
-        ├── __init__.py              ✅  🔴  Module initialization
-        ├── check_config.py          ✅  🔴  Configuration checker
-        ├── check_db.py              ✅  🔴  Database checker
-        └── check_models.py          ✅  🔴  Model checker
+├── primitives/
+│   ├── buffer/                                ✅  Buffer protocol definitions
+│   ├── events/                                ✅  Event protocol definitions
+│   └── state/                                 ✅  State protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   └── state_projector.py                 🚧  Efficient state evolution
+├── services/
+│   ├── buffer/
+│   │   ├── buffer.py                          🚧  Buffer implementation
+│   │   └── flow_control.py                    🔄  Flow control capabilities
+│   ├── events/
+│   │   ├── event.py                           🚧  Event base classes
+│   │   └── event_bus.py                       🚧  Event bus implementation
+│   └── state/
+│       └── container.py                       🔄  State container implementation
+├── providers/
+│   ├── services/
+│   │   ├── base.py                            🔄  Service-enabled provider base
+│   │   └── streaming/
+│   │       ├── buffer.py                      🔄  Provider streaming buffer
+│   │       └── control.py                     🔄  Streaming control interface
+└── examples/
+    └── 02_streaming_chat.py                   🔄  Streaming chat example
 ```
 
-## New Example Structure
+### 2.4 Implementation Roadmap
 
-```
-examples/
-├── 01_query_simple.py               ✅  🔴  Basic query 
-├── 02_query_streaming.py            ✅  🔴  Streaming query
-├── 03_provider_selection.py         ✅  🔴  Provider selection and options
-├── 04_provider_group.py             ✅  🔴  Provider group with fallback
-├── 05_agent_options_verification.py ✅  🔴  Agent options verification 
-├── 06_task_aware_providers.py       ✅  🔴  Task-aware provider selection
-├── 07_task_aware_agent.py           ✅  🔴  Task-aware agent implementation
-├── 08_multi_agent_providers.py      ✅  🔴  Multi-agent provider example
-├── 10_document_ingestion.py         ✅  🔴  Document ingestion
-├── 11_basic_retrieval.py            ✅  🔴  Basic retrieval
-├── 12_hybrid_retrieval.py           ✅  🔴  Hybrid retrieval
-├── 15_advanced_filtering.py         ✅  🔴  Advanced metadata and content filtering
-├── 16_schema_validation.py          ✅  🔴  Schema-based validation examples
-├── 20_tool_agent.py                 ✅  🔴  Tool agent usage with enhanced permissions
-├── 23_knowledge_tools.py            🔲  🔴  Knowledge tools implementation (planned)
-├── 24_tool_chaining.py              🔲  🔴  Tool chaining and composition (planned)
-├── 25_cli_commands.py               🔲  🔴  Command execution example (planned)
-├── 26_cli_config.py                 🔲  🔴  Configuration example (planned)
-├── 27_cli_batch.py                  🔲  🔴  Batch command example (planned)
-├── 28_custom_tool_development.py    🔲  🔴  Custom tool example (planned)
-├── common.py                        ✅  🔴  Shared utilities for examples (to be migrated)
-├── EXAMPLES.md                      ✅  🔴  Example implementation standards
-└── README.md                        ✅  🔴  Examples guide
-```
-
-## Key Simplifications and Enhancements
-
-### Core Functionality (MVP) 🔴
-
-#### 1. Textual CLI Implementation
-- Design and implement serializable command schema
-- Create command execution system with history
-- Build UI components for different modes
-- Implement dual-mode entry points (interactive and flags)
-- Add configuration management with import/export
-- Migrate utilities from common.py to appropriate modules
-
-#### 2. Tool Agent Implementation
-- Fix tool agent registration in examples (current focus)
-- Enhance tool registry with proper permissions handling
-- Improve tool discovery and initialization
-- Add schema validation for tool execution
-- Create knowledge tools integration
-- Implement automatic tool granting to worker agents
-
-#### 3. Core Services Layer
-- Define boundary interfaces for system components
-- Implement event system with subscription
-- Create buffer system with thread-safety
-- Add state management with versioning
-- Develop resource lifecycle management
-
-#### 4. Integration and Utilities
-- Port common.py utilities to appropriate modules
-- Enhance error handling and formatting
-- Create reusable UI components
-- Implement streaming display with controls
-- Add session management and persistence
-
-## Textual CLI Architecture
-
-### Command Schema Design
-
-The new CLI architecture is based on serializable commands and configurations that can be used in both interactive UI and command-line flag mode.
-
-```python
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Union
-from marshmallow import Schema, fields, validate, validates_schema, ValidationError
-
-from atlas.schemas.base import BaseSchema
-from atlas.providers.options import ProviderOptionsSchema
-
-
-class ExecutionConfigSchema(BaseSchema):
-    """Schema for base execution configuration."""
-    mode = fields.Str(required=True, validate=validate.OneOf([
-        "query", "ingest", "controller", "worker", "tool"
-    ]))
-    provider = fields.Nested(ProviderOptionsSchema)
-    collection = fields.Str(default="atlas_knowledge_base")
-    db_path = fields.Str(allow_none=True)
-    system_prompt_file = fields.Str(allow_none=True)
-
-
-class QueryConfigSchema(ExecutionConfigSchema):
-    """Schema for query mode configuration."""
-    mode = fields.Str(default="query", validate=validate.Equal("query"))
-    query = fields.Str(allow_none=True)
-    with_context = fields.Bool(default=True)
-    stream = fields.Bool(default=False)
-    include_sources = fields.Bool(default=True)
-    
-    
-class CommandSchema(BaseSchema):
-    """Schema for commands."""
-    command_id = fields.Str(required=True)
-    command_type = fields.Str(required=True)
-    config = fields.Nested(ExecutionConfigSchema)
-    timestamp = fields.DateTime()
-    
-    @validates_schema
-    def validate_config_type(self, data, **kwargs):
-        """Validate that config matches command_type."""
-        command_type = data.get("command_type")
-        config = data.get("config")
-        if command_type == "query" and config.get("mode") != "query":
-            raise ValidationError("Query command must have query config")
-
-
-@dataclass
-class ExecutionConfig:
-    """Base configuration for all execution modes."""
-    mode: str  # "query", "ingest", "controller", "worker", "tool"
-    provider: Dict[str, Any]
-    collection: str = "atlas_knowledge_base"
-    db_path: Optional[str] = None
-    system_prompt_file: Optional[str] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            "mode": self.mode,
-            "provider": self.provider,
-            "collection": self.collection,
-            "db_path": self.db_path,
-            "system_prompt_file": self.system_prompt_file
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ExecutionConfig":
-        """Create from dictionary."""
-        return cls(**data)
-
-
-@dataclass
-class QueryConfig(ExecutionConfig):
-    """Configuration for query mode."""
-    mode: str = "query"
-    query: Optional[str] = None
-    with_context: bool = True
-    stream: bool = False
-    include_sources: bool = True
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        base_dict = super().to_dict()
-        base_dict.update({
-            "query": self.query,
-            "with_context": self.with_context,
-            "stream": self.stream,
-            "include_sources": self.include_sources
-        })
-        return base_dict
-
-
-@dataclass
-class Command:
-    """Base class for all commands."""
-    command_id: str
-    command_type: str
-    config: ExecutionConfig
-    timestamp: Optional[str] = None
-    
-    def execute(self) -> Dict[str, Any]:
-        """Execute the command and return the result."""
-        raise NotImplementedError
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            "command_id": self.command_id,
-            "command_type": self.command_type,
-            "config": self.config.to_dict(),
-            "timestamp": self.timestamp
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Command":
-        """Create from dictionary."""
-        config_data = data.get("config", {})
-        mode = config_data.get("mode")
-        
-        if mode == "query":
-            config = QueryConfig.from_dict(config_data)
-        else:
-            config = ExecutionConfig.from_dict(config_data)
-            
-        return cls(
-            command_id=data["command_id"],
-            command_type=data["command_type"],
-            config=config,
-            timestamp=data.get("timestamp")
-        )
-
-
-@dataclass
-class CommandResult:
-    """Result of command execution."""
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    command_id: Optional[str] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            "success": self.success,
-            "data": self.data,
-            "error": self.error,
-            "command_id": self.command_id
-        }
-```
-
-### UI Component Architecture
-
-The UI follows a hierarchical design with screens, panels, and widgets:
-
-```python
-from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Header, Footer, Input, Static, Button
-from textual.reactive import reactive
-from textual.screen import Screen
-from textual import events
-from datetime import datetime
-import uuid
-
-from atlas.cli.textual.commands import Command, CommandResult
-from atlas.cli.textual.config import ConfigurationManager
-
-
-class CommandBar(Container):
-    """Command input widget with completion and history."""
-    
-    def __init__(self, history=None):
-        """Initialize command bar with history."""
-        super().__init__()
-        self.history = history or []
-        self.history_index = len(self.history)
-        
-    def compose(self) -> ComposeResult:
-        """Compose the command bar widget."""
-        with Horizontal():
-            yield Input(placeholder="Enter command...", id="command-input")
-            yield Button("Send", id="send-button")
-            
-    def on_button_pressed(self, event: events.Button.Pressed) -> None:
-        """Handle button press events."""
-        if event.button.id == "send-button":
-            self.submit_command()
-            
-    def on_input_submitted(self, event: events.Input.Submitted) -> None:
-        """Handle input submission."""
-        self.submit_command()
-        
-    def submit_command(self) -> None:
-        """Submit the current command."""
-        command_text = self.query_one("#command-input").value
-        if not command_text:
-            return
-            
-        # Add to history and reset index
-        self.history.append(command_text)
-        self.history_index = len(self.history)
-        
-        # Clear input
-        self.query_one("#command-input").value = ""
-        
-        # Post message to handle command
-        self.post_message(CommandSubmitted(command_text))
-        
-
-class ConversationDisplay(Container):
-    """Widget for displaying conversation messages."""
-    
-    def __init__(self):
-        """Initialize conversation display."""
-        super().__init__()
-        self.messages = []
-        
-    def compose(self) -> ComposeResult:
-        """Compose the conversation display widget."""
-        yield Static(id="conversation-content")
-        
-    def add_message(self, message: str, is_user: bool = False) -> None:
-        """Add a message to the conversation."""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        sender = "User" if is_user else "Atlas"
-        message_html = f"<{timestamp}> [{sender}]: {message}\n"
-        
-        self.messages.append((message, is_user, timestamp))
-        
-        # Update display
-        content = self.query_one("#conversation-content")
-        current = content.render()
-        content.update(current + message_html)
-        
-    def add_stream_chunk(self, chunk: str) -> None:
-        """Add a streaming chunk to the last message."""
-        if not self.messages:
-            # No message to append to, create new one
-            self.add_message(chunk)
-            return
-            
-        # Append to the last message
-        last_message, is_user, timestamp = self.messages[-1]
-        if is_user:
-            # Last message was from user, create new one
-            self.add_message(chunk)
-            return
-            
-        # Update last message
-        self.messages[-1] = (last_message + chunk, is_user, timestamp)
-        
-        # Update display
-        content = self.query_one("#conversation-content")
-        current = content.render().rsplit("\n", 2)[0]
-        message_html = f"<{timestamp}> [Atlas]: {last_message + chunk}\n"
-        content.update(current + message_html)
-
-
-class StreamControls(Container):
-    """Controls for streaming operations."""
-    
-    def compose(self) -> ComposeResult:
-        """Compose the stream controls widget."""
-        with Horizontal():
-            yield Button("Pause", id="stream-pause")
-            yield Button("Resume", id="stream-resume", disabled=True)
-            yield Button("Cancel", id="stream-cancel")
-            
-    def on_button_pressed(self, event: events.Button.Pressed) -> None:
-        """Handle button press events."""
-        button_id = event.button.id
-        
-        if button_id == "stream-pause":
-            self.post_message(StreamPaused())
-            self.query_one("#stream-pause").disabled = True
-            self.query_one("#stream-resume").disabled = False
-            
-        elif button_id == "stream-resume":
-            self.post_message(StreamResumed())
-            self.query_one("#stream-pause").disabled = False
-            self.query_one("#stream-resume").disabled = True
-            
-        elif button_id == "stream-cancel":
-            self.post_message(StreamCancelled())
-            
-
-class MainScreen(Screen):
-    """Main application screen with command bar and conversation display."""
-    
-    def compose(self) -> ComposeResult:
-        """Compose the main screen."""
-        yield Header()
-        with Container(id="main-container"):
-            with Horizontal(id="content-area"):
-                with Vertical(id="conversation-column"):
-                    yield ConversationDisplay()
-                    yield StreamControls()
-                with Vertical(id="context-column"):
-                    yield Static("Context Information", id="context-header")
-                    yield Static("", id="context-content")
-            with Horizontal(id="input-area"):
-                yield CommandBar()
-        yield Footer()
-        
-    def on_mount(self) -> None:
-        """Handle screen mounting."""
-        self.title = "Atlas CLI"
-        
-    def handle_command(self, command_text: str) -> None:
-        """Handle a submitted command."""
-        # Add to conversation
-        conversation = self.query_one(ConversationDisplay)
-        conversation.add_message(command_text, is_user=True)
-        
-        # Parse and execute command
-        # (This would call the command execution system)
-        
-        
-class AtlasApp(App):
-    """Main Atlas Textual application."""
-    CSS_PATH = "atlas.css"
-    BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("h", "help", "Help"),
-        ("c", "command", "Command Mode"),
-    ]
-    
-    def __init__(self):
-        """Initialize the application."""
-        super().__init__()
-        self.config_manager = ConfigurationManager()
-        self.command_executor = CommandExecutor()
-        
-    def on_mount(self):
-        """Handle application mounting."""
-        self.push_screen("main")
-```
-
-### Command Execution System
-
-The command execution system provides a clear flow from user input to execution and result presentation:
-
-```python
-import uuid
-import json
-import logging
-from typing import Dict, Any, Optional, List
-from datetime import datetime
-
-from atlas.cli.textual.schema import Command, CommandResult
-
-
-class CommandExecutor:
-    """Executes commands with proper context and error handling."""
-    
-    def __init__(self):
-        """Initialize command executor."""
-        self.history = CommandHistory()
-        self.logger = logging.getLogger(__name__)
-        
-    def execute_command(self, command: Command) -> CommandResult:
-        """Execute a command and return the result."""
-        try:
-            # Pre-execution validation
-            self.validate_command(command)
-            
-            # Log command execution
-            self.logger.info(f"Executing command: {command.command_type}")
-            
-            # Command execution
-            result = command.execute()
-            
-            # Create result object
-            command_result = CommandResult(
-                success=True,
-                data=result,
-                command_id=command.command_id
-            )
-            
-            # Post-execution actions
-            self.record_history(command, command_result)
-            
-            return command_result
-        except Exception as e:
-            # Log error
-            self.logger.error(f"Error executing command: {e}")
-            
-            # Create error result
-            error_result = CommandResult(
-                success=False,
-                error=str(e),
-                command_id=command.command_id
-            )
-            
-            # Record in history
-            self.record_history(command, error_result)
-            
-            return error_result
-            
-    def validate_command(self, command: Command) -> None:
-        """Validate command before execution."""
-        # Perform schema validation
-        schema = get_schema_for_command(command)
-        schema.load(command.to_dict())
-        
-    def record_history(self, command: Command, result: CommandResult) -> None:
-        """Record command and result in history."""
-        self.history.add_entry(command, result)
-        
-    def create_command(self, command_type: str, config: Dict[str, Any]) -> Command:
-        """Create a command from type and config."""
-        command_id = str(uuid.uuid4())
-        timestamp = datetime.now().isoformat()
-        
-        return Command(
-            command_id=command_id,
-            command_type=command_type,
-            config=config,
-            timestamp=timestamp
-        )
-
-
-class CommandHistory:
-    """Manages command execution history."""
-    
-    def __init__(self, max_entries: int = 100):
-        """Initialize command history."""
-        self.max_entries = max_entries
-        self.entries: List[Dict[str, Any]] = []
-        
-    def add_entry(self, command: Command, result: CommandResult) -> None:
-        """Add command and result to history."""
-        entry = {
-            "command": command.to_dict(),
-            "result": result.to_dict(),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        self.entries.append(entry)
-        
-        # Trim history if needed
-        if len(self.entries) > self.max_entries:
-            self.entries = self.entries[-self.max_entries:]
-            
-    def get_last_n_entries(self, n: int) -> List[Dict[str, Any]]:
-        """Get the last N entries from history."""
-        return self.entries[-n:]
-        
-    def save_to_file(self, filename: str) -> None:
-        """Save history to file."""
-        with open(filename, "w") as f:
-            json.dump(self.entries, f, indent=2)
-            
-    def load_from_file(self, filename: str) -> None:
-        """Load history from file."""
-        try:
-            with open(filename, "r") as f:
-                data = json.load(f)
-                # Validate entries
-                if not isinstance(data, list):
-                    raise ValueError("Invalid history format")
-                self.entries = data
-        except Exception as e:
-            logging.error(f"Error loading history: {e}")
-
-
-class ConfigurationManager:
-    """Manages configuration storage, loading, and validation."""
-    
-    def __init__(self, config_dir: Optional[str] = None):
-        """Initialize configuration manager."""
-        self.config_dir = config_dir or os.path.expanduser("~/.atlas")
-        self.logger = logging.getLogger(__name__)
-        
-        # Create config directory if it doesn't exist
-        os.makedirs(self.config_dir, exist_ok=True)
-        
-    def save_config(self, name: str, config: Dict[str, Any]) -> None:
-        """Save a configuration to file."""
-        filepath = os.path.join(self.config_dir, f"{name}.json")
-        
-        try:
-            with open(filepath, "w") as f:
-                json.dump(config, f, indent=2)
-            self.logger.info(f"Configuration saved to {filepath}")
-        except Exception as e:
-            self.logger.error(f"Error saving configuration: {e}")
-            raise
-            
-    def load_config(self, name: str) -> Dict[str, Any]:
-        """Load a configuration from file."""
-        filepath = os.path.join(self.config_dir, f"{name}.json")
-        
-        try:
-            with open(filepath, "r") as f:
-                config = json.load(f)
-            self.logger.info(f"Configuration loaded from {filepath}")
-            return config
-        except FileNotFoundError:
-            self.logger.warning(f"Configuration file not found: {filepath}")
-            return {}
-        except Exception as e:
-            self.logger.error(f"Error loading configuration: {e}")
-            raise
-            
-    def list_configs(self) -> List[str]:
-        """List available configurations."""
-        try:
-            files = os.listdir(self.config_dir)
-            return [f[:-5] for f in files if f.endswith(".json")]
-        except Exception as e:
-            self.logger.error(f"Error listing configurations: {e}")
-            return []
-```
-
-### Command Integration with CLI Flags
-
-The new CLI will support both interactive mode and traditional flag-based execution:
-
-```python
-import argparse
-import sys
-from typing import Dict, Any, Optional
-import uuid
-from datetime import datetime
-
-from atlas.cli.textual.schema import Command, QueryConfig
-from atlas.cli.textual.commands import CommandExecutor
-
-
-def create_parser() -> argparse.ArgumentParser:
-    """Create the main CLI parser with textual support."""
-    parser = argparse.ArgumentParser(description="Atlas CLI")
-    
-    # Add textual flag
-    parser.add_argument(
-        "--textual",
-        action="store_true",
-        help="Launch the Textual UI"
-    )
-    
-    # Add subparsers for different commands
-    subparsers = parser.add_subparsers(dest="command")
-    
-    # Query command
-    query_parser = subparsers.add_parser("query", help="Run a query")
-    query_parser.add_argument("-q", "--query", help="Query text")
-    query_parser.add_argument("--no-context", action="store_true", help="Disable context")
-    query_parser.add_argument("--stream", action="store_true", help="Enable streaming")
-    
-    # Ingest command
-    ingest_parser = subparsers.add_parser("ingest", help="Ingest documents")
-    ingest_parser.add_argument("-d", "--directory", help="Directory to ingest")
-    
-    # Tool command
-    tool_parser = subparsers.add_parser("tool", help="Execute a tool")
-    tool_parser.add_argument("--name", help="Tool name")
-    tool_parser.add_argument("--args", help="Tool arguments as JSON")
-    
-    # Add common arguments to all subparsers
-    for subparser in [query_parser, ingest_parser, tool_parser]:
-        subparser.add_argument("--provider", help="Provider name")
-        subparser.add_argument("--model", help="Model name")
-        subparser.add_argument("--collection", help="Collection name")
-        subparser.add_argument("--db-path", help="Database path")
-    
-    return parser
-
-
-def convert_args_to_command(args: argparse.Namespace) -> Optional[Command]:
-    """Convert command line arguments to Command object."""
-    command_type = args.command
-    
-    if not command_type:
-        return None
-        
-    # Create base config with common args
-    base_config = {
-        "provider": {
-            "provider_name": args.provider if hasattr(args, "provider") and args.provider else None,
-            "model_name": args.model if hasattr(args, "model") and args.model else None
-        },
-        "collection": args.collection if hasattr(args, "collection") and args.collection else "atlas_knowledge_base",
-        "db_path": args.db_path if hasattr(args, "db_path") and args.db_path else None
-    }
-    
-    # Create command-specific config
-    if command_type == "query":
-        config = QueryConfig(
-            mode="query",
-            provider=base_config["provider"],
-            collection=base_config["collection"],
-            db_path=base_config["db_path"],
-            query=args.query if hasattr(args, "query") else None,
-            with_context=not args.no_context if hasattr(args, "no_context") else True,
-            stream=args.stream if hasattr(args, "stream") else False
-        )
-    elif command_type == "ingest":
-        # Create IngestConfig
-        config = IngestConfig(
-            mode="ingest",
-            provider=base_config["provider"],
-            collection=base_config["collection"],
-            db_path=base_config["db_path"],
-            directory=args.directory if hasattr(args, "directory") else None
-        )
-    elif command_type == "tool":
-        # Create ToolConfig
-        config = ToolConfig(
-            mode="tool",
-            provider=base_config["provider"],
-            collection=base_config["collection"],
-            db_path=base_config["db_path"],
-            tool_name=args.name if hasattr(args, "name") else None,
-            tool_args=json.loads(args.args) if hasattr(args, "args") and args.args else {}
-        )
-    else:
-        return None
-        
-    # Create command
-    return Command(
-        command_id=str(uuid.uuid4()),
-        command_type=command_type,
-        config=config,
-        timestamp=datetime.now().isoformat()
-    )
-
-
-def run_cli():
-    """Main entry point for the CLI."""
-    parser = create_parser()
-    args = parser.parse_args()
-    
-    # Check if textual UI was requested
-    if args.textual:
-        from atlas.cli.textual.app import AtlasApp
-        app = AtlasApp()
-        app.run()
-        return
-        
-    # Handle regular CLI command
-    command = convert_args_to_command(args)
-    
-    if not command:
-        parser.print_help()
-        return
-        
-    # Execute command
-    executor = CommandExecutor()
-    result = executor.execute_command(command)
-    
-    # Print result
-    if result.success:
-        print(json.dumps(result.data, indent=2))
-    else:
-        print(f"Error: {result.error}", file=sys.stderr)
-```
-
-## Implementation Roadmap
-
-::: timeline Core Services Layer
-- **May 17-20, 2025**
-- Create core services module foundation
-- Implement event system with subscription management
-- Develop thread-safe buffer implementations
-- Add state management with versioning
-- Create resource lifecycle management
+::: timeline Foundation: Event & Buffer System
+- **May 20-21, 2025** 🚧
+- Complete EventBus implementation using Blinker
+- Implement Buffer service with flow control
+- Create state container for response tracking
+- Implement thread safety mechanisms
+- Add event middleware pipeline
 :::
 
-::: timeline Tool Execution Framework
-- **May 20-22, 2025**
-- Create standardized tool execution pipeline
-- Implement tool result processing and validation
-- Add execution metrics and telemetry
-- Create hooks for pre/post execution processing
-- Implement comprehensive error handling
+::: timeline Streaming Provider
+- **May 21-22, 2025** 🔄
+- Implement ServiceEnabledProvider with EventBus
+- Create provider-specific streaming commands
+- Build streaming buffer adapter for providers
+- Add provider event publication
+- Implement token accumulation
 :::
 
-::: timeline Knowledge Tools Integration
-- **May 22-24, 2025**
-- Implement RetrievalTool for knowledge base searches
-- Create IngestTool for document processing
-- Add FilteringTool for metadata filtering
-- Design SearchTool for combined hybrid search
-- Integrate knowledge tools with agent system
+::: timeline Provider Implementations & Example
+- **May 22-23, 2025** 🔄
+- Implement Anthropic provider with streaming
+- Create OpenAI provider with streaming
+- Build Ollama provider with streaming
+- Create streaming chat example
+- Implement streaming chat CLI interface
 :::
 
-::: timeline Tool Chaining Implementation
-- **May 24-26, 2025**
-- Create tool chain builder interface
-- Implement sequential tool execution
-- Add parallel tool execution with result merging
-- Design conditional execution based on tool results
-- Implement result transformation between tools
+## 3. Feature Slice 2: Agent Delegation
+
+### 3.1 Feature Overview
+
+Agent Delegation enables task delegation and coordination between specialized agents working together to solve complex problems. This feature:
+
+- Showcases agent collaboration capabilities
+- Establishes message passing patterns
+- Demonstrates stateful agent behavior
+- Enables complex task decomposition
+
+### 3.2 Implementation Status
+
+- ✅ Defined agent messaging protocols
+- ✅ Created agent state model
+- 🚧 Implementing controller agent architecture
+- 🔄 Building message routing system
+- 🔄 Designing task delegation patterns
+- 🔲 Creating specialized agent implementations
+- 🔲 Building agent delegation example
+
+### 3.3 Implementation Components
+
+```
+atlas/
+├── primitives/
+│   ├── events/                                ✅  Event protocol definitions
+│   ├── state/                                 ✅  State protocol definitions
+│   └── transitions/                           ✅  Transition protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   ├── temporal_store.py                  🔄  Temporal state tracking
+│   │   └── effect_monad.py                    🔄  Effect tracking system
+├── services/
+│   ├── events/
+│   │   ├── event.py                           🚧  Event base classes
+│   │   └── subscription.py                    🔄  Event subscription system
+│   ├── state/
+│   │   ├── container.py                       🔄  State container implementation
+│   │   └── history.py                         🔲  State history tracking
+│   └── transitions/
+│       └── state_machine.py                   🔲  State machine implementation
+├── agents/
+│   ├── services/
+│   │   ├── base.py                            🔄  Service-enabled agent base
+│   │   ├── controller.py                      🔄  Agent controller implementation
+│   │   └── registry.py                        🔲  Agent registry service
+│   ├── messaging/
+│   │   ├── message.py                         🔄  Structured message implementation
+│   │   └── routing.py                         🔲  Message routing with EventBus
+│   └── specialized/
+│       ├── task_aware_agent.py                🔲  Task-aware agent implementation
+│       └── tool_agent.py                      🔲  Tool-enabled agent implementation
+└── examples/
+    └── 08_agent_delegation.py                 🔲  Agent delegation example
+```
+
+### 3.4 Implementation Roadmap
+
+::: timeline Foundation: Agent State & Messaging
+- **May 23-24, 2025** 🔄
+- Implement TemporalStore for agent state tracking
+- Create message model with serialization
+- Implement message routing system
+- Add agent state transition management
+- Create agent event publication
+:::
+
+::: timeline Controller & Delegation
+- **May 24-25, 2025** 🔲
+- Implement controller agent architecture
+- Create task delegation patterns
+- Build message passing protocols
+- Implement task tracking with state
+- Add agent registry for discovery
+:::
+
+::: timeline Specialized Agents & Example
+- **May 25-26, 2025** 🔲
+- Implement task-aware agent
+- Create tool-enabled agent
+- Build knowledge agent
+- Implement agent delegation example
+- Create agent delegation CLI interface
+:::
+
+## 4. Feature Slice 3: Knowledge Retrieval
+
+### 4.1 Feature Overview
+
+Knowledge Retrieval enables semantic search and retrieval of documents to enhance LLM responses with relevant information. This feature:
+
+- Provides critical context augmentation
+- Demonstrates persistence layer integration
+- Showcases buffer system for search results
+- Establishes document processing patterns
+
+### 4.2 Implementation Status
+
+- ✅ Defined chunking and embedding protocols
+- ✅ Created retrieval service interface
+- 🚧 Implementing document chunking strategies
+- 🔄 Building embedding service
+- 🔄 Designing vector store integration
+- 🔲 Creating hybrid search implementation
+- 🔲 Building knowledge retrieval example
+
+### 4.3 Implementation Components
+
+```
+atlas/
+├── primitives/
+│   ├── buffer/                                ✅  Buffer protocol definitions
+│   ├── events/                                ✅  Event protocol definitions
+│   └── resources/                             ✅  Resource protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   ├── perspective_aware.py               🔄  Context-specific views
+│   │   └── temporal_store.py                  🔄  Temporal state tracking
+├── services/
+│   ├── buffer/
+│   │   ├── buffer.py                          🚧  Buffer implementation
+│   │   └── flow_control.py                    🔄  Flow control capabilities
+│   ├── events/
+│   │   ├── event.py                           🚧  Event base classes
+│   │   └── subscription.py                    🔄  Event subscription system
+│   └── resources/
+│       ├── lifecycle.py                       🔲  Resource lifecycle management
+│       └── manager.py                         🔲  Resource manager implementation
+├── knowledge/
+│   ├── services/
+│   │   ├── chunking.py                        🔄  Document chunking system
+│   │   ├── embedding.py                       🔄  Embedding service
+│   │   ├── retrieval.py                       🔲  Retrieval service
+│   │   └── hybrid_search.py                   🔲  Hybrid search implementation
+│   └── persistence/
+│       ├── storage.py                         🔲  Storage abstraction
+│       └── chromadb.py                        🔲  ChromaDB adapter
+└── examples/
+    └── 12_knowledge_retrieval.py              🔲  Knowledge retrieval example
+```
+
+### 4.4 Implementation Roadmap
+
+::: timeline Foundation: Document Processing
+- **May 26-27, 2025** 🔄
+- Implement document chunking strategies
+- Create embedding service with providers
+- Build resource management for storage
+- Add event publication for processing steps
+- Implement resource cleanup
+:::
+
+::: timeline Vector Store & Retrieval
+- **May 27-28, 2025** 🔲
+- Implement ChromaDB adapter with persistence
+- Create vector search capabilities
+- Build metadata filtering
+- Implement result ranking algorithms
+- Add search result buffering
+:::
+
+::: timeline Hybrid Search & Example
+- **May 28-29, 2025** 🔲
+- Implement hybrid search (vector + keyword)
+- Create context enrichment pipeline
+- Build document tracking with versioning
+- Implement knowledge retrieval example
+- Create retrieval CLI interface
+:::
+
+## 5. Feature Slice 4: Multi-Provider Routing
+
+### 5.1 Feature Overview
+
+Multi-Provider Routing enables intelligent selection and fallback between different LLM providers based on capabilities, performance, and cost. This feature:
+
+- Optimizes provider selection
+- Demonstrates registry pattern
+- Showcases capability matching
+- Enables cost optimization
+
+### 5.2 Implementation Status
+
+- ✅ Defined provider service interfaces
+- ✅ Created capability registry protocols
+- 🔲 Implementing provider registry
+- 🔲 Building capability-based selection
+- 🔲 Designing fallback strategies
+- 🔲 Creating provider group implementation
+- 🔲 Building multi-provider routing example
+
+### 5.3 Implementation Components
+
+```
+atlas/
+├── primitives/
+│   ├── events/                                ✅  Event protocol definitions
+│   ├── registry/                              ✅  Registry protocol definitions
+│   └── commands/                              ✅  Command protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── container.py                       🔄  Dependency management
+│   │   ├── quantum_partitioner.py             🔲  Parallel execution system
+│   │   └── effect_monad.py                    🔄  Effect tracking system
+├── services/
+│   ├── registry/
+│   │   ├── discovery.py                       🔲  Service discovery mechanisms
+│   │   ├── registry.py                        🔲  Service registry
+│   │   └── factory.py                         🔲  Service factory implementation
+│   └── commands/
+│       ├── command.py                         🔲  Command base implementation
+│       └── executor.py                        🔲  Command executor
+├── providers/
+│   ├── services/
+│   │   ├── capability_registry.py             🔲  Provider capability registry
+│   │   ├── selection.py                       🔲  Provider selection strategies
+│   │   └── group.py                           🔲  Provider group implementation
+│   └── implementations/
+│       ├── anthropic.py                       🔄  Anthropic provider
+│       ├── openai.py                          🔄  OpenAI provider
+│       └── ollama.py                          🔄  Ollama provider
+└── examples/
+    └── 04_multi_provider_routing.py           🔲  Multi-provider routing example
+```
+
+### 5.4 Implementation Roadmap
+
+::: timeline Foundation: Registry & Commands
+- **May 29-30, 2025** 🔲
+- Implement Container for dependency management
+- Create service registry with discovery
+- Build command pattern implementation
+- Add capability registry system
+- Implement provider factory
+:::
+
+::: timeline Provider Selection & Grouping
+- **May 30-31, 2025** 🔲
+- Implement provider capability matching
+- Create cost optimization strategies
+- Build priority-based selection
+- Implement provider group with fallback
+- Add parallel execution for providers
+:::
+
+::: timeline Routing Strategies & Example
+- **May 31 - June 1, 2025** 🔲
+- Implement adaptive routing strategies
+- Create performance tracking
+- Build provider health monitoring
+- Implement multi-provider routing example
+- Create provider selection CLI interface
+:::
+
+## 6. Feature Slice 5: Workflow Execution
+
+### 6.1 Feature Overview
+
+Workflow Execution enables complex multi-step workflows with dependency management, parallel execution, and error handling. This feature:
+
+- Enables sophisticated process orchestration
+- Demonstrates quantum partitioning
+- Showcases reactive event mesh
+- Establishes workflow patterns
+
+### 6.2 Implementation Status
+
+- ✅ Defined workflow primitives
+- ✅ Created task execution protocols
+- 🔲 Implementing workflow engine
+- 🔲 Building dependency management
+- 🔲 Designing parallel execution
+- 🔲 Creating workflow monitoring
+- 🔲 Building workflow execution example
+
+### 6.3 Implementation Components
+
+```
+atlas/
+├── primitives/
+│   ├── events/                                ✅  Event protocol definitions
+│   ├── commands/                              ✅  Command protocol definitions
+│   └── state/                                 ✅  State protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── quantum_partitioner.py             🔲  Parallel execution system
+│   │   ├── event_bus.py                       🚧  Reactive event communication
+│   │   └── temporal_store.py                  🔄  Temporal state tracking
+│   └── composites/
+│       └── parallel_workflow_engine.py        🔲  Dependency-based parallel execution
+├── services/
+│   ├── commands/
+│   │   ├── command.py                         🔲  Command base implementation
+│   │   └── executor.py                        🔲  Command executor
+│   ├── events/
+│   │   ├── event.py                           🚧  Event base classes
+│   │   └── subscription.py                    🔄  Event subscription system
+│   └── state/
+│       ├── container.py                       🔄  State container implementation
+│       └── versioned.py                       🔲  Versioned state implementation
+├── orchestration/
+│   ├── workflow/
+│   │   ├── engine.py                          🔲  Workflow engine implementation
+│   │   ├── task.py                            🔲  Task implementation
+│   │   └── dependency.py                      🔲  Dependency management
+│   └── parallel/
+│       ├── executor.py                        🔲  Parallel executor implementation
+│       └── scheduler.py                       🔲  Task scheduler implementation
+└── examples/
+    └── 15_workflow_execution.py               🔲  Workflow execution example
+```
+
+### 6.4 Implementation Roadmap
+
+::: timeline Foundation: Quantum Partitioning
+- **June 1-2, 2025** 🔲
+- Implement QuantumPartitioner with TaskMap
+- Create parallel execution strategies
+- Build dependency tracking system
+- Add task scheduling mechanisms
+- Implement result aggregation
+:::
+
+::: timeline Workflow Engine
+- **June 2-3, 2025** 🔲
+- Implement workflow engine with parallel execution
+- Create workflow state tracking
+- Build error handling and recovery
+- Add workflow event publication
+- Implement workflow monitoring
+:::
+
+::: timeline Workflow Definition & Example
+- **June 3-4, 2025** 🔲
+- Implement workflow definition DSL
+- Create visual workflow representation
+- Build workflow history tracking
+- Implement workflow execution example
+- Create workflow CLI interface
+:::
+
+## 7. Feature Slice 6: Command CLI
+
+### 7.1 Feature Overview
+
+Command CLI provides a Textual-based rich terminal interface for interacting with Atlas. This feature:
+
+- Delivers user-friendly interface
+- Demonstrates command pattern
+- Showcases perspective shifting
+- Establishes UI patterns
+
+### 7.2 Implementation Status
+
+- ✅ Defined command primitives
+- ✅ Created CLI interface protocols
+- 🔲 Implementing command execution
+- 🔲 Building Textual UI components
+- 🔲 Designing perspective-based views
+- 🔲 Creating configuration management
+- 🔲 Building command CLI example
+
+### 7.3 Implementation Components
+
+```
+atlas/
+├── primitives/
+│   ├── commands/                              ✅  Command protocol definitions
+│   ├── events/                                ✅  Event protocol definitions
+│   └── perspective/                           ✅  Perspective protocol definitions
+├── nerv/
+│   ├── components/
+│   │   ├── perspective_aware.py               🔄  Context-specific views
+│   │   ├── effect_monad.py                    🔄  Effect tracking system
+│   │   └── event_bus.py                       🚧  Reactive event communication
+├── services/
+│   ├── commands/
+│   │   ├── command.py                         🔲  Command base implementation
+│   │   └── executor.py                        🔲  Command executor
+│   ├── perspective/
+│   │   ├── perspective.py                     🔲  Perspective implementation
+│   │   └── context.py                         🔲  Context management
+│   └── events/
+│       ├── event.py                           🚧  Event base classes
+│       └── subscription.py                    🔄  Event subscription system
+├── cli/
+│   ├── textual/
+│   │   ├── app.py                             🔲  Main application
+│   │   ├── commands.py                        🔲  Command execution
+│   │   ├── schema.py                          🔲  Command schema
+│   │   ├── config.py                          🔲  TUI configuration
+│   │   ├── screens/                           🔲  Screen implementations
+│   │   └── widgets/                           🔲  Custom widget components
+└── examples/
+    └── 20_command_cli.py                      🔲  Command CLI example
+```
+
+### 7.4 Implementation Roadmap
+
+::: timeline Foundation: Command & Perspective
+- **June 4-5, 2025** 🔲
+- Implement PerspectiveAware for context views
+- Create command pattern implementation
+- Build command schema with validation
+- Add command execution tracking
+- Implement command history
+:::
+
+::: timeline Textual UI Components
+- **June 5-6, 2025** 🔲
+- Implement Textual application with EventBus
+- Create conversation view with streaming
+- Build command bar implementation
+- Add screen management
+- Implement widget components
+:::
+
+::: timeline CLI Integration & Example
+- **June 6-7, 2025** 🔲
+- Implement configuration persistence
+- Create command discovery
+- Build help system and documentation
+- Implement command CLI example
+- Create comprehensive CLI user guide
+:::
+
+## 8. Key Architectural Principles
+
+Despite shifting to a feature-driven approach, we maintain these core architectural principles from NERV and the clean break design:
+
+1. **Protocol-First Design**: All interfaces are defined as protocols before implementation
+2. **Type-Safe Foundations**: Strong typing throughout with centralized type variable system
+3. **Reactive Event Mesh**: Components communicate through reactive event subscription
+4. **Temporal Awareness**: State history and versioning maintained throughout
+5. **Explicit Effect Tracking**: Side effects are captured and controlled
+6. **Perspective Shifting**: Different contexts have appropriate views of the same data
+7. **Quantum Partitioning**: Complex tasks are decomposed for parallel execution
+
+## 9. Implementation Timeline
+
+::: timeline Phase 1: Streaming Chat & Agent Delegation
+- **May 20-26, 2025** 🚧
+- Implement streaming chat feature slice
+- Build agent delegation feature slice
+- Create examples demonstrating both features
+- Implement core services: event, buffer, state
+- Core NERV components: EventBus, StateProjector
+:::
+
+::: timeline Phase 2: Knowledge Retrieval & Provider Routing
+- **May 26 - June 1, 2025** 🔄
+- Implement knowledge retrieval feature slice
+- Build multi-provider routing feature slice
+- Create examples demonstrating both features
+- Implement core services: registry, resources
+- Core NERV components: TemporalStore, Container
+:::
+
+::: timeline Phase 3: Workflow & CLI
+- **June 1-7, 2025** 🔲
+- Implement workflow execution feature slice
+- Build command CLI feature slice
+- Create examples demonstrating both features
+- Implement core services: commands, perspective
+- Core NERV components: QuantumPartitioner, PerspectiveAware
+:::
+
+::: timeline Phase 4: Integration & Polish
+- **June 7-14, 2025** 🔲
+- Implement system-level integration
+- Complete documentation
+- Add comprehensive examples
+- Final polish and cleanup
+- Full performance optimization
+:::
+
+## 10. Key Benefits of Feature-Driven Approach
+
+1. **Functional Value Earlier**: Users can see and test working features sooner
+2. **Reduced Implementation Risk**: Early validation of architectural patterns
+3. **Better Prioritization**: Resources focused on most important features first
+4. **Incremental Architecture Adoption**: Clean break principles applied incrementally
+5. **Natural Integration Points**: Features align with user expectations
+6. **Parallelization Opportunity**: Multiple vertical slices can be developed concurrently
+7. **Easier Progress Tracking**: Feature completion provides clear metrics
+
+::: info NEXT STEPS
+Our immediate focus is completing the Streaming Chat feature slice, followed by Agent Delegation. This will allow us to demonstrate the core capabilities of the system while establishing the architectural patterns that will be used throughout the implementation.
 :::

@@ -34,7 +34,7 @@ Patterns arising from graph topology:
   - *Description*: Concepts that serve as connection centers
   - *Indicators*: High degree, betweenness, or eigenvector centrality
   - *Significance*: Key concepts that organize knowledge domains
-  
+
 - **Community Structures**: Natural concept groupings
   - *Description*: Densely connected subgraphs indicating concept clusters
   - *Indicators*: High modularity, community detection algorithms
