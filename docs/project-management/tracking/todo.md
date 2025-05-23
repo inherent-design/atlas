@@ -6,8 +6,8 @@ title: Implementation Todo List
 
 This document tracks the specific implementation tasks for Atlas, organized by feature slice and priority.
 
-::: info Current Development Focus
-We are currently implementing the **Streaming Chat** feature slice (May 20-24, 2025). Buffer primitives are complete, now focusing on event system with Blinker integration, comprehensive Marshmallow schema implementation, and state management with Pyrsistent and Eventsourcing.
+::: danger Current Development Status
+As of May 23, 2025, **NO NEW CODE HAS BEEN IMPLEMENTED** in the atlas/ directory. All existing code was moved to atlas_legacy/. We need to start from scratch with the clean break architecture.
 :::
 
 ## Status Legend
@@ -23,17 +23,28 @@ We are currently implementing the **Streaming Chat** feature slice (May 20-24, 2
 - 🟠 Medium - Important tasks that enhance functionality
 - 🟢 Low - Optional tasks that provide additional value
 
+## 0. Initial Setup Tasks (PRIORITY: IMMEDIATE)
+
+### Create Atlas Directory Structure 🔴
+- [ ] Create atlas/ directory
+- [ ] Create atlas/core/ directory structure
+- [ ] Create atlas/core/primitives/ subdirectories
+- [ ] Create atlas/core/components/ directory
+- [ ] Create atlas/core/schema/ directory
+- [ ] Create atlas/__init__.py with version info
+- [ ] Create initial README.md in atlas/
+
 ## 1. Streaming Chat Feature Slice (May 20-24, 2025)
 
 ### Foundation: Protocol Definitions 🔴
 
-#### Buffer Protocol and Types ✅
-- [x] Define BufferProtocol with flow control
-- [x] Create buffer-related type variables and enumerations
-- [x] Implement buffer configuration and monitoring
-- [x] Validate with mypy and ruff
+#### Buffer Protocol and Types 🔲
+- [ ] Define BufferProtocol with flow control
+- [ ] Create buffer-related type variables and enumerations
+- [ ] Implement buffer configuration and monitoring
+- [ ] Validate with mypy and ruff
 
-#### Event Primitives and Protocols 🚧
+#### Event Primitives and Protocols 🔲
 - [ ] Define EventBusProtocol with publish/subscribe methods
 - [ ] Create event-related type variables and protocols
 - [ ] Implement event filtering and metadata structures
