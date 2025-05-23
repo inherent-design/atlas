@@ -4,7 +4,7 @@ title: Contributing
 
 # Contributing to Atlas Documentation
 
-This section outlines the guidelines and standards for contributing to the Atlas project documentation. Our documentation follows the structure of the Trimodal Methodology Framework, combining top-down design, bottom-up implementation, and holistic system integration perspectives.
+This section provides comprehensive guidelines for contributing to the Atlas project documentation. Our documentation follows the structure of the Trimodal Methodology Framework, combining top-down design, bottom-up implementation, and holistic system integration perspectives.
 
 ## Core Documentation Principles
 
@@ -42,62 +42,65 @@ Our documentation is organized into these main sections:
 
 ## Contribution Guides
 
-These guides provide detailed standards and best practices for specific aspects of our documentation:
+These consolidated guides provide comprehensive standards and best practices for Atlas documentation:
 
-1. **[Documentation Standards](./documentation-standards.md)**: Overall guidelines for documentation content
-2. **[Content Containers](./content-containers.md)**: Using VitePress custom containers for callouts
-   - Info, tip, warning, danger, and details containers
-   - GitHub-flavored alert syntax
-   - When and how to use visual emphasis effectively
-3. **[Timelines](./timelines.md)**: Guidelines for creating timeline components
-   - Chronological process visualization
-   - Implementation syntax and examples
-4. **[Code Examples](./code-examples.md)**: Standards for code samples and snippets
-5. **[Style Guide](./style-guide.md)**: Writing style, terminology, and voice guidelines
-6. **[Development Environment](./development-environment.md)**: Setting up and using the development environment
-   - Environment setup with uv
-   - Running development tools correctly
-   - Test execution and coverage
-   - Code quality tools
+### [Code Standards](./code-standards.md)
+Complete guide to code quality, formatting, and type system usage including:
+- **Code Examples**: Standards for creating clear, instructive code examples
+- **Colored Diffs**: Using visual diffs to highlight code changes
+- **Type System**: Comprehensive type system guidelines and best practices
+- **Type Mappings**: Handling type conversions between different systems
 
-### Type System and Schema Validation
+### [Documentation Guide](./documentation-guide.md)
+Comprehensive guide to writing high-quality documentation including:
+- **Writing Standards**: Voice, tone, and style guidelines
+- **Content Containers**: Using VitePress custom containers effectively
+- **Timeline Components**: Creating chronological visualizations
+- **Visual Elements**: Formatting, images, and accessibility
 
-The following guides provide information about Atlas's type system and schema validation approach:
+### [Implementation Guide](./implementation-guide.md)
+Technical setup and implementation patterns including:
+- **Development Environment**: Setting up and using the development environment
+- **Schema Validation**: Using Marshmallow for runtime validation
+- **Implementation Patterns**: Common patterns for providers, agents, and tools
 
-1. **[Type System Guide](./types.md)**: Comprehensive overview of Atlas's type system
-   - Static typing with Protocol and TypedDict
-   - Generic typing and type narrowing
-   - Best practices for type safety
-2. **[Schema Validation](./schema-validation.md)**: How to use Marshmallow schema validation
-   - Basic schema usage and examples
-   - Validation decorators and patterns
-   - Migration notes for Marshmallow 4.0.0
-3. **[Type Mapping Guide](./type-mappings.md)**: Handling type conversions between systems
-   - Type conversion patterns and strategies
-   - Serialization and deserialization techniques
-   - System boundary handling
-   - Integration with NERV/Inner Universe types
-
-::: warning Component Usage
-Remember to use [custom containers](./content-containers.md) and [timeline components](./timelines.md) sparingly throughout the documentation. These visual elements add significant weight and should only be used when they genuinely enhance understanding.
+::: tip Getting Started
+New contributors should start with the [Implementation Guide](./implementation-guide.md) to set up their development environment, then refer to the [Code Standards](./code-standards.md) for coding guidelines and the [Documentation Guide](./documentation-guide.md) for writing documentation.
 :::
 
 ## Contribution Process
 
 1. **Plan**: Determine where your content fits in the documentation structure
-2. **Draft**: Create your content following the appropriate guidelines
-3. **Review**: Ensure content meets our standards for quality and clarity
-4. **Submit**: Create a pull request with your changes
-5. **Iterate**: Address feedback and refine your contribution
+2. **Setup**: Follow the [Implementation Guide](./implementation-guide.md) to set up your development environment
+3. **Draft**: Create your content following the appropriate guidelines
+4. **Review**: Ensure content meets our standards for quality and clarity
+5. **Submit**: Create a pull request with your changes
+6. **Iterate**: Address feedback and refine your contribution
+
+## Key Guidelines Summary
+
+### For Code Contributions
+- Follow the type system guidelines in [Code Standards](./code-standards.md)
+- Use proper schema validation as outlined in [Implementation Guide](./implementation-guide.md)
+- Include comprehensive examples following [Code Standards](./code-standards.md)
+- Run all quality checks: `uv run pytest`, `uv run mypy atlas`, `uv run ruff check .`
+
+### For Documentation Contributions
+- Follow the writing style in [Documentation Guide](./documentation-guide.md)
+- Use custom containers appropriately (limit to 2-3 per page)
+- Include practical code examples following [Code Standards](./code-standards.md)
+- Test all links and code examples before submission
+
+### For Visual Elements
+- Use timeline components sparingly for chronological processes
+- Apply colored diffs to highlight important code changes
+- Follow accessibility guidelines for images and diagrams
+- Maintain visual consistency across documentation
 
 ## Getting Help
 
 If you're unsure about how to contribute or have questions about documentation standards, please [create an issue](https://github.com/inherent-design/atlas/issues/new) with the "documentation" label.
 
-::: tip When to Update Documentation
-Documentation should be updated:
-- When introducing new features or components
-- When changing existing functionality
-- When fixing bugs that affect documented behavior
-- When clarifying confusing or ambiguous documentation
+::: info Quality Focus
+Atlas prioritizes high-quality, consistent documentation that serves both newcomers and experienced developers. All contributions should enhance clarity, maintain consistency, and provide practical value to users.
 :::
