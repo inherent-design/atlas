@@ -401,7 +401,7 @@ npm install
 npm run dev
 ```
 
-Then open your browser to `http://localhost:5173/atlas/` to browse the documentation.
+Then open your browser to `http://localhost:5173/atlas/` to browse the documentation locally, or visit `https://atlas.inherent.design` for the published documentation.
 
 ## Contributing
 

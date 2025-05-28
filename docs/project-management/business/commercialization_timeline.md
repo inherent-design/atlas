@@ -1,16 +1,16 @@
 # Commercialization Timeline
 
-This document outlines the commercialization strategy and timeline for Atlas following the accelerated development phase concluding on June 30, 2025. It details the go-to-market approach, revenue model implementation, and strategic partnerships required to transform Atlas from an open-source project to a sustainable commercial offering.
+This document outlines the commercialization strategy and timeline for Atlas following the development phase. It details the go-to-market approach, revenue model implementation, and strategic partnerships required to transform Atlas from an open-source project to a sustainable commercial offering.
 
 ## Overview
 
-The accelerated development timeline will deliver a feature-complete Atlas framework by June 30, 2025. This commercialization plan builds on that foundation to create sustainable business value while maintaining the project's open-source core and community benefits.
+The development timeline will deliver a feature-complete Atlas framework. This commercialization plan builds on that foundation to create sustainable business value while maintaining the project's open-source core and community benefits.
 
 ## Phased Commercialization Approach
 
-### Phase 1: Open-Source Foundation (July 2025)
+### Phase 1: Open-Source Foundation
 
-**Timeframe: July 1-31, 2025**
+**Initial Launch Phase**
 
 **Key Activities:**
 - Official public launch of Atlas 1.0 on GitHub

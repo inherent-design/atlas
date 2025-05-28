@@ -9,7 +9,7 @@ const head: HeadConfig[] = [
   ['meta', { name: 'theme-color', content: '#1e88e5' }],
   ['meta', { name: 'og:type', content: 'website' }],
   ['meta', { name: 'og:site_name', content: 'Atlas Docs' }],
-  ['meta', { name: 'og:url', content: 'https://docs.inherent.design/atlas' }],
+  ['meta', { name: 'og:url', content: 'https://atlas.inherent.design' }],
 ]
 
 const nav: DefaultTheme.NavItem[] = []

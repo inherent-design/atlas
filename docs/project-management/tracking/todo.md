@@ -6,8 +6,8 @@ title: Implementation Todo List
 
 This document tracks the specific implementation tasks for Atlas, organized by feature slice and priority.
 
-::: danger Current Development Status
-As of May 23, 2025, **NO NEW CODE HAS BEEN IMPLEMENTED** in the atlas/ directory. All existing code was moved to atlas_legacy/. We need to start from scratch with the clean break architecture.
+::: info Current Development Status
+The atlas/ directory represents the new clean architecture implementation. All existing code was moved to atlas_legacy/ to enable a fresh start with improved design patterns.
 :::
 
 ## Status Legend
@@ -23,7 +23,7 @@ As of May 23, 2025, **NO NEW CODE HAS BEEN IMPLEMENTED** in the atlas/ directory
 - 🟠 Medium - Important tasks that enhance functionality
 - 🟢 Low - Optional tasks that provide additional value
 
-## 0. Initial Setup Tasks (PRIORITY: IMMEDIATE)
+## 0. Initial Setup Tasks
 
 ### Create Atlas Directory Structure 🔴
 - [ ] Create atlas/ directory
@@ -34,7 +34,7 @@ As of May 23, 2025, **NO NEW CODE HAS BEEN IMPLEMENTED** in the atlas/ directory
 - [ ] Create atlas/__init__.py with version info
 - [ ] Create initial README.md in atlas/
 
-## 1. Streaming Chat Feature Slice (May 20-24, 2025)
+## 1. Streaming Chat Feature Slice
 
 ### Foundation: Protocol Definitions 🔴
 

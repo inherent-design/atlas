@@ -7,20 +7,20 @@ title: Atlas Product
 
 # Atlas Product Roadmap
 
-This document outlines the comprehensive roadmap for Atlas development, detailing our strategic vision, key milestones, and release plans. With a completion target of end of June 2025, this accelerated roadmap covers both MVP features and beyond.
+This document outlines the comprehensive roadmap for Atlas development, detailing our strategic vision, key milestones, and release plans. This roadmap covers MVP features and future development areas.
 
 ## Strategic Vision
 
-Atlas aims to be the leading framework for building advanced AI agent systems with robust knowledge integration, sophisticated orchestration, and enterprise-grade reliability. This roadmap translates that vision into an accelerated development plan to achieve a finished state by June 30, 2025.
+Atlas aims to be the leading framework for building advanced AI agent systems with robust knowledge integration, sophisticated orchestration, and enterprise-grade reliability. This roadmap translates that vision into a sustainable development plan focused on quality and long-term maintainability.
 
-## Accelerated Delivery Timeline (May-June 2025)
+## Development Timeline
 
-::: tip Delivery Timeline
-The following timeline visualizes our accelerated delivery plan from May through June 2025. Each phase builds on previous work with parallel team focus areas.
+::: tip Development Phases
+The following timeline visualizes our development phases. Each phase builds on previous work with focused implementation areas.
 :::
 
 ::: timeline Provider System Finalization
-- **May 10-17, 2025**
+- **Phase 1**
 - Enhanced streaming with pause/resume/cancel controls
 - Provider lifecycle management with connection pooling
 - Intelligent fallback mechanisms with health monitoring
@@ -28,7 +28,7 @@ The following timeline visualizes our accelerated delivery plan from May through
 :::
 
 ::: timeline Agent-Provider Integration
-- **May 18-24, 2025**
+- **Phase 2**
 - Agent-provider interface with capability matching
 - Streaming control propagation to agent system
 - Task-aware provider selection with capability scoring
@@ -36,7 +36,7 @@ The following timeline visualizes our accelerated delivery plan from May through
 :::
 
 ::: timeline Knowledge System Enhancements
-- **May 25-31, 2025**
+- **Phase 3**
 - Hybrid retrieval combining semantic and keyword search
 - Metadata extraction with advanced filtering capabilities
 - Semantic boundary-aware document chunking strategies
@@ -44,7 +44,7 @@ The following timeline visualizes our accelerated delivery plan from May through
 :::
 
 ::: timeline Multi-Agent Orchestration
-- **June 1-7, 2025**
+- **Phase 4**
 - Domain-specialized worker agents with capability advertising
 - Dynamic coordination patterns with feedback mechanisms
 - Fault-tolerant error recovery with graceful degradation
@@ -52,7 +52,7 @@ The following timeline visualizes our accelerated delivery plan from May through
 :::
 
 ::: timeline Enterprise Features
-- **June 8-14, 2025**
+- **Phase 5**
 - Fine-grained access control with role-based permissions
 - Compliance tools for audit logging and verification
 - Advanced monitoring with alerts and visualization
@@ -60,15 +60,15 @@ The following timeline visualizes our accelerated delivery plan from May through
 :::
 
 ::: timeline Cloud Service Foundations
-- **June 15-22, 2025**
+- **Phase 6**
 - Secure multi-tenant architecture with isolation
 - Usage tracking, metering, and cost optimization
 - Self-service portal with intuitive administration
 - Integration marketplace with partner ecosystem
 :::
 
-::: timeline Atlas 1.0 Final Release
-- **June 30, 2025**
+::: timeline Atlas 1.0 Release
+- **Final Phase**
 - Comprehensive bug fixes and stabilization
 - Complete documentation with tutorials and examples
 - End-to-end validation across all components
