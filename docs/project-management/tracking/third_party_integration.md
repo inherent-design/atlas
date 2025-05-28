@@ -99,4 +99,4 @@ Atlas integrates carefully selected third-party libraries to leverage battle-tes
 - Minimal coupling between library integrations
 - Clear separation of concerns per library
 
-See [Proposed Structure](./proposed_structure.md) for architectural context and [Schema Validation Guide](../../contributing/schema-validation.md) for schema implementation details.
+See [Proposed Structure](./proposed_structure.md) for architectural context and [Implementation Guide](../../contributing/implementation-guide.md) for schema implementation details.

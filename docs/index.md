@@ -98,6 +98,6 @@ Atlas is a comprehensive meta-framework for knowledge representation, documentat
 
 #### Contributing
 - **[Contribution Guide](./contributing/)**: Guidelines for contributing to Atlas
-- **[Documentation Standards](./contributing/documentation-standards.md)**: Standards for writing documentation
-- **[Content Containers](./contributing/content-containers.md)**: Guidelines for using custom containers
-- **[Code Examples](./contributing/code-examples.md)**: Standards for code samples and examples
+- **[Documentation Guide](./contributing/documentation-guide.md)**: Standards for writing documentation
+- **[Code Standards](./contributing/code-standards.md)**: Standards for code samples and examples
+- **[Implementation Guide](./contributing/implementation-guide.md)**: Development environment and implementation patterns

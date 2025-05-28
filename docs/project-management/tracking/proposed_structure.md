@@ -1371,7 +1371,7 @@ Each feature slice implements comprehensive Marshmallow schemas for validation a
 - **Workflow Execution**: `WorkflowSchema`, `TaskSchema` with dependency validation and retry strategies
 - **Command CLI**: `CommandSchema`, `ParameterSchema` with permission control and usage examples
 
-See [Schema Validation Guide](../../contributing/schema-validation.md) for implementation details.
+See [Implementation Guide](../../contributing/implementation-guide.md) for implementation details.
 
 ### 12.4 Schema Registry Implementation
 
@@ -1382,7 +1382,7 @@ The Schema Registry provides centralized schema discovery, validation, and versi
 - **Version Migration**: Automated migration between schema versions
 - **Schema Discovery**: Runtime schema lookup by name or class
 
-See [Schema Validation Guide](../../contributing/schema-validation.md) for registry usage patterns.
+See [Implementation Guide](../../contributing/implementation-guide.md) for registry usage patterns.
 
 ### 12.5 Third-Party Library Integration Details
 
