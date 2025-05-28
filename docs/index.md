@@ -1,7 +1,4 @@
 ---
-
-title: Atlas
-
 layout: home
 
 hero:
@@ -16,11 +13,11 @@ hero:
       text: Proposed Structure
       link: /project-management/tracking/proposed_structure
     - theme: alt
-      text: API Reference
-      link: /api
-    - theme: alt
       text: Contribution Guidelines
       link: /contributing
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/inherent-design/atlas
 
 features:
   - icon: 🤖
