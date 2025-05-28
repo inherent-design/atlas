@@ -1,9 +1,11 @@
-# Atlas: Enterprise-Ready Framework for Knowledge-Driven AI Agent Systems
+# Atlas
 
 <div align="center">
   <!-- Add logo image once available -->
-  <p><strong>Build sophisticated AI agent systems with deep knowledge integration, powerful multi-agent orchestration, and flexible provider support</strong></p>
+  <p><strong>Build sophisticated AI agent systems with deep knowledge integration, powerful multi-agent orchestration, and flexible provider support</strong><br/><strong>📚 Documentation:</strong> <a href="https://atlas.inherent.design">atlas.inherent.design</a></p>
 </div>
+
+> 🚧 **Work in Progress** - Atlas is in active development. The framework is functional but not yet production-ready. APIs may change and documentation is evolving.
 
 Atlas is an open source framework that empowers organizations to build advanced AI agent systems with enterprise-grade reliability. It combines sophisticated document processing with powerful orchestration capabilities to create knowledge-driven applications while maintaining control, flexibility, and cost-efficiency.
 
