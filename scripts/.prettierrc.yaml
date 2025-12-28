@@ -1,0 +1,142 @@
+# Prettier Configuration
+# Schema: https://json.schemastore.org/prettierrc
+# Docs: https://prettier.io/docs/options
+
+# Print Width
+# Specify the line length that the printer will wrap on.
+# Default: 80
+printWidth: 100
+
+# Tab Width
+# Specify the number of spaces per indentation-level.
+# Default: 2
+tabWidth: 2
+
+# Tabs
+# Indent lines with tabs instead of spaces.
+# Default: false
+useTabs: false
+
+# Semicolons
+# Print semicolons at the ends of statements.
+# Default: true
+semi: false
+
+# Quotes
+# Use single quotes instead of double quotes.
+# Default: false
+singleQuote: true
+
+# Quote Props
+# Change when properties in objects are quoted.
+# Options: "as-needed" | "consistent" | "preserve"
+# Default: "as-needed"
+quoteProps: as-needed
+
+# JSX Quotes
+# Use single quotes instead of double quotes in JSX.
+# Default: false
+jsxSingleQuote: true
+
+# Trailing Commas
+# Print trailing commas wherever possible when multi-line.
+# Options: "all" | "es5" | "none"
+# Default: "all" (changed from "es5" in v3.0.0)
+# "es5" = trailing commas in objects and arrays (but not function parameters)
+trailingComma: es5
+
+# Bracket Spacing
+# Print spaces between brackets in object literals.
+# Default: true
+bracketSpacing: true
+
+# Bracket Same Line
+# Put > of opening tags on the last line instead of on a new line.
+# Default: false
+bracketSameLine: false
+
+# Arrow Function Parentheses
+# Include parentheses around a sole arrow function parameter.
+# Options: "always" | "avoid"
+# Default: "always"
+arrowParens: always
+
+# Prose Wrap
+# How to wrap prose in Markdown files.
+# Options: "always" | "never" | "preserve"
+# Default: "preserve"
+proseWrap: preserve
+
+# HTML Whitespace Sensitivity
+# How to handle whitespaces in HTML.
+# Options: "css" | "strict" | "ignore"
+# Default: "css"
+htmlWhitespaceSensitivity: css
+
+# Vue Indent Script And Style
+# Indent script and style tags in Vue files.
+# Default: false
+vueIndentScriptAndStyle: false
+
+# End of Line
+# Which end of line characters to apply.
+# Options: "lf" | "crlf" | "cr" | "auto"
+# Default: "lf"
+endOfLine: lf
+
+# Embedded Language Formatting
+# Control how Prettier formats quoted code embedded in the file.
+# Options: "auto" | "off"
+# Default: "auto"
+embeddedLanguageFormatting: auto
+
+# Single Attribute Per Line
+# Enforce single attribute per line in HTML, Vue and JSX.
+# Default: false
+singleAttributePerLine: false
+
+# Object Wrap
+# How to wrap object literals (v3.5.0+).
+# Options: "preserve" | "collapse"
+# Default: "preserve"
+objectWrap: preserve
+
+# Experimental Options (use with caution)
+
+# Experimental Ternaries
+# Use curious ternaries, with the question mark after the condition.
+# Default: false
+experimentalTernaries: false
+
+# Experimental Operator Position
+# Where to print operators when binary expressions wrap lines.
+# Options: "start" | "end"
+# Default: "end"
+experimentalOperatorPosition: end
+
+# Pragma Options (for selective formatting)
+
+# Require Pragma
+# Require either '@prettier' or '@format' to be present in the file's
+# first docblock comment in order for it to be formatted.
+# Default: false
+requirePragma: false
+
+# Insert Pragma
+# Insert @format pragma into file's first docblock comment.
+# Default: false
+insertPragma: false
+
+# Check Ignore Pragma
+# Check whether the file's first docblock comment contains '@noprettier'
+# or '@noformat' to determine if it should be formatted.
+# Default: false
+checkIgnorePragma: false
+# File-specific overrides
+# overrides:
+#   - files: '*.json'
+#     options:
+#       tabWidth: 4
+#   - files: '*.md'
+#     options:
+#       proseWrap: always
