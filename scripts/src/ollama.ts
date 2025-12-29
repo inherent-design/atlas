@@ -4,7 +4,9 @@
  * Dynamically pull and manage Ollama models via API
  */
 
-import { log } from './logger'
+import { createLogger } from './logger'
+
+const log = createLogger('ollama')
 import { OLLAMA_URL } from './config'
 
 export interface PullProgress {

@@ -14,9 +14,11 @@ import {
   OLLAMA_URL,
 } from './src/config'
 import { ingest } from './src/ingest'
-import { log, setLogLevel } from './src/logger'
+import { createLogger, setLogLevel } from './src/logger'
 import { setQNTMProvider } from './src/qntm'
 import { formatResults, search, timeline } from './src/search'
+
+const log = createLogger('app')
 
 const program = new Command()
 
@@ -44,9 +46,18 @@ program
   .option('--ollama-url <url>', 'Ollama server URL', OLLAMA_URL)
   .option(
     '-j, --jobs <n>',
-    'Concurrent QNTM generation jobs (default: 75% of CPU cores, max 10)',
+    'Concurrent QNTM generation jobs (default: 60% of CPU cores, max 10)',
     parseInt
   )
+  .hook('preAction', (thisCommand) => {
+    const opts = thisCommand.opts()
+    log.debug('CLI options parsed', {
+      provider: opts.provider,
+      model: opts.model,
+      jobs: opts.jobs,
+      logLevel: opts.logLevel,
+    })
+  })
 
 // Ingest command
 program
@@ -59,16 +70,24 @@ program
     const globalOpts = command.parent?.opts() || {}
 
     // Set runtime config from CLI flags
-    if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
-    if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
+    if (globalOpts.qdrantUrl) {
+      process.env.QDRANT_URL = globalOpts.qdrantUrl
+      log.debug('Qdrant URL configured', { url: globalOpts.qdrantUrl })
+    }
+    if (globalOpts.voyageKey) {
+      process.env.VOYAGE_API_KEY = globalOpts.voyageKey
+      log.debug('Voyage API key configured')
+    }
     if (globalOpts.logLevel) {
       process.env.LOG_LEVEL = globalOpts.logLevel
       setLogLevel(globalOpts.logLevel as any)
+      log.debug('Log level set', { level: globalOpts.logLevel })
     }
 
     // Configure QNTM concurrency
     if (globalOpts.jobs) {
       process.env.QNTM_CONCURRENCY = String(globalOpts.jobs)
+      log.debug('QNTM concurrency configured', { jobs: globalOpts.jobs })
     }
 
     // Configure QNTM provider
@@ -76,6 +95,7 @@ program
     const model =
       globalOpts.model ||
       (provider === 'anthropic' ? DEFAULT_QNTM_MODEL_ANTHROPIC : DEFAULT_QNTM_MODEL_OLLAMA)
+    log.debug('Configuring QNTM provider', { provider, model })
     setQNTMProvider({
       provider,
       model,
@@ -128,13 +148,14 @@ program
     }
 
     try {
-      log.info(`Searching: "${query}"`)
+      log.info('Starting search', { query, limit: options.limit })
       const results = await search({
         query,
         limit: options.limit,
         since: options.since,
         qntmKey: options.qntm,
       })
+      log.debug('Search complete', { resultCount: results.length })
       console.log(formatResults(results))
     } catch (error) {
       log.error('Search failed', error as Error)
@@ -160,8 +181,9 @@ program
     }
 
     try {
-      log.info(`Timeline since ${options.since}`)
+      log.info('Starting timeline query', { since: options.since, limit: options.limit })
       const results = await timeline(options.since, options.limit)
+      log.debug('Timeline complete', { resultCount: results.length })
       console.log(formatResults(results))
     } catch (error) {
       log.error('Timeline failed', error as Error)

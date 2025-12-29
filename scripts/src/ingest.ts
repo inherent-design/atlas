@@ -9,7 +9,9 @@ import { readFileSync } from 'fs'
 import { basename, extname, relative } from 'path'
 import { getQdrantClient, getTextSplitter, getVoyageClient } from './clients'
 import { VOYAGE_MODEL } from './config'
-import { log, startTimer } from './logger'
+import { createLogger, startTimer } from './logger'
+
+const log = createLogger('ingest')
 import { fetchExistingQNTMKeys, generateQNTMKeysBatch, sanitizeQNTMKey } from './qntm'
 import type { ChunkPayload } from './types'
 import { ensureCollection, expandPaths, generateChunkId } from './utils'

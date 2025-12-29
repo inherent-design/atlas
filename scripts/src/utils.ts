@@ -12,7 +12,9 @@ import {
   QDRANT_COLLECTION_CONFIG,
   TEXT_FILE_EXTENSIONS,
 } from './config'
-import { log } from './logger'
+import { createLogger } from './logger'
+
+const log = createLogger('utils')
 
 // Generate QNTM semantic key via content hash
 // TODO: Replace with LLM-based QNTM generation for better semantic stability

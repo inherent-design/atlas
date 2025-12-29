@@ -3,6 +3,10 @@
  * Based on .atlas research (Steps 1-4 + Sleep Patterns)
  */
 
+import { createLogger } from './logger'
+
+const log = createLogger('config')
+
 // Collection config
 export const COLLECTION_NAME = 'atlas_context' as const
 

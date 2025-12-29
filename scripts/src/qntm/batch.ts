@@ -6,18 +6,39 @@
  */
 
 import pLimit from 'p-limit'
+import pRetry from 'p-retry'
 import {
   generateQNTMKeys,
   getQNTMProvider,
   type QNTMGenerationInput,
   type QNTMGenerationResult,
 } from '.'
-import { log } from '../logger'
+import { createLogger } from '../logger'
 
-// CPU-aware concurrency: 75% of available cores, capped at 10 to avoid rate limits
-// Can be overridden via QNTM_CONCURRENCY environment variable or --jobs CLI flag
-const CONCURRENCY = (() => {
-  // Check for explicit override
+const log = createLogger('qntm/batch')
+
+// Retry configuration
+const RETRY_OPTIONS = {
+  retries: 3,
+  factor: 2, // Exponential backoff multiplier
+  minTimeout: 1000, // 1 second base delay
+  maxTimeout: 8000, // Cap at 8 seconds
+  onFailedAttempt: (context: { error: Error; attemptNumber: number; retriesLeft: number }) => {
+    log.warn('QNTM generation attempt failed, retrying...', {
+      attemptNumber: context.attemptNumber,
+      retriesLeft: context.retriesLeft,
+      error: context.error.message,
+    })
+  },
+}
+
+/**
+ * Get concurrency limit for batch processing
+ * CPU-aware: 60% of available cores, capped at 10 to avoid rate limits
+ * Can be overridden via QNTM_CONCURRENCY environment variable or --jobs CLI flag
+ */
+function getConcurrency(): number {
+  // Check for explicit override (set by CLI --jobs flag)
   const override = process.env.QNTM_CONCURRENCY
   if (override) {
     const parsed = parseInt(override, 10)
@@ -35,15 +56,15 @@ const CONCURRENCY = (() => {
   const computed = Math.max(2, Math.floor(cpuCount * 0.6))
   const capped = Math.min(computed, 10)
 
-  log.info('Auto-detected batch concurrency', {
+  log.debug('Auto-detected batch concurrency', {
     cpuCount,
-    computed75Percent: computed,
+    computed60Percent: computed,
     finalConcurrency: capped,
     override: 'Use --jobs <n> to override',
   })
 
   return capped
-})()
+}
 
 /**
  * Generate QNTM keys for multiple chunks concurrently
@@ -56,17 +77,33 @@ export async function generateQNTMKeysBatch(
 ): Promise<QNTMGenerationResult[]> {
   if (inputs.length === 0) return []
 
-  const limit = pLimit(CONCURRENCY)
+  const concurrency = getConcurrency()
+  const limit = pLimit(concurrency)
   const providerConfig = getQNTMProvider()
 
   log.info('Starting batch QNTM generation', {
     totalInputs: inputs.length,
-    concurrency: CONCURRENCY,
+    concurrency,
     provider: providerConfig.provider,
     model: providerConfig.model,
   })
 
-  // Create promise array with concurrency limiting
+  // Ensure Ollama model is pulled ONCE before batch work starts
+  if (providerConfig.provider === 'ollama') {
+    log.debug('Ensuring Ollama model before batch processing', {
+      model: providerConfig.model,
+    })
+
+    const { ensureModel } = await import('../ollama')
+    await ensureModel(providerConfig.model, providerConfig.ollamaHost)
+
+    log.debug('Ollama model ready', { model: providerConfig.model })
+  }
+
+  // Track failures for reporting
+  const failures: Array<{ index: number; error: Error }> = []
+
+  // Create promise array with concurrency limiting and retries
   const promises = inputs.map((input, index) =>
     limit(async () => {
       log.trace('Processing chunk in batch', {
@@ -77,7 +114,7 @@ export async function generateQNTMKeysBatch(
       })
 
       try {
-        const result = await generateQNTMKeys(input)
+        const result = await pRetry(() => generateQNTMKeys(input), RETRY_OPTIONS)
 
         log.debug('Batch chunk complete', {
           index,
@@ -88,19 +125,38 @@ export async function generateQNTMKeysBatch(
 
         return result
       } catch (error) {
-        log.error(`Failed to generate QNTM keys for chunk ${index}`, error as Error)
-        throw error
+        const err = error as Error
+        log.error(`Failed to generate QNTM keys for chunk ${index} after retries`, err)
+        failures.push({ index, error: err })
+
+        // Return empty result to maintain array order
+        return {
+          keys: [],
+          reasoning: `Failed after ${RETRY_OPTIONS.retries} retries: ${err.message}`,
+        }
       }
     })
   )
 
-  // Wait for all to complete
+  // Wait for all to complete (including failures)
   const results = await Promise.all(promises)
 
+  const successCount = results.filter((r) => r.keys.length > 0).length
+  const failureCount = failures.length
+
   log.info('Batch QNTM generation complete', {
-    totalProcessed: results.length,
+    totalProcessed: inputs.length,
+    successCount,
+    failureCount,
     totalKeys: results.reduce((sum, r) => sum + r.keys.length, 0),
   })
+
+  if (failures.length > 0) {
+    log.warn('Some chunks failed QNTM generation', {
+      failureCount: failures.length,
+      failedIndices: failures.map((f) => f.index),
+    })
+  }
 
   return results
 }

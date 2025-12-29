@@ -4,7 +4,9 @@
 
 import { VoyageAIClient } from 'voyageai'
 import { VOYAGE_API_KEY } from '../config'
-import { log } from '../logger'
+import { createLogger } from '../logger'
+
+const log = createLogger('clients/voyage')
 
 export function createVoyageClient(): VoyageAIClient {
   if (!VOYAGE_API_KEY) {

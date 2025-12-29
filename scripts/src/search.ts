@@ -14,7 +14,9 @@ import {
   DEFAULT_QUANTIZATION_RESCORE,
   DEFAULT_QUANTIZATION_OVERSAMPLING,
 } from './config'
-import { log, startTimer } from './logger'
+import { createLogger, startTimer } from './logger'
+
+const log = createLogger('search')
 import type { SearchOptions, SearchResult } from './types'
 
 // Semantic search with optional temporal filtering

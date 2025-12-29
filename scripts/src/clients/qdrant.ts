@@ -4,7 +4,9 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { QDRANT_URL } from '../config'
-import { log } from '../logger'
+import { createLogger } from '../logger'
+
+const log = createLogger('clients/qdrant')
 
 export function createQdrantClient(): QdrantClient {
   log.trace('Creating Qdrant client', { url: QDRANT_URL })

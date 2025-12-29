@@ -7,7 +7,9 @@
  */
 
 import type { QNTMGenerationInput, QNTMGenerationResult } from '.'
-import { log, startTimer } from '../logger'
+import { createLogger, startTimer } from '../logger'
+
+const log = createLogger('qntm/providers')
 
 export type QNTMProvider = 'anthropic' | 'ollama'
 
@@ -21,35 +23,70 @@ const DEFAULT_OLLAMA_HOST = 'http://localhost:11434'
 
 /**
  * Build QNTM generation prompt
+ *
+ * Uses QNTM language spec (EBNF) to ensure proper ternary relationship format.
+ * Based on: /production/llm/atlas/prev/qntm.ebnf
  */
 function buildQNTMPrompt(input: QNTMGenerationInput): string {
   const { chunk, existingKeys, context } = input
 
   return `# QNTM Semantic Key Generation
 
-Generate stable semantic addresses (QNTM keys) for this chunk. Each key represents a semantic neighborhood this chunk belongs to.
+Generate stable semantic addresses (QNTM keys) using the QNTM relationship language.
+Each key is a ternary relationship: subject ~ predicate ~ object
 
-## Existing Keys in System
+## QNTM Syntax (EBNF)
+relationship = expression, "~", expression, "~", expression
+expression   = concept | collection
+concept      = identifier [ ":" value ]
+collection   = "[" expression_list "]"
+
+## Examples (from atlas.qntm)
+memory ~ type ~ episodic
+memory ~ type ~ semantic
+database ~ strategy ~ indexing
+database ~ property ~ persistent
+retrieval ~ method ~ vector_search
+content ~ domain ~ [machine_learning, systems_design]
+
+## Existing Keys (REUSE when semantically close)
 ${existingKeys.length > 0 ? existingKeys.map((k) => `- ${k}`).join('\n') : '(none yet)'}
 
-${context?.fileName ? `## Context\nFile: ${context.fileName} (chunk ${context.chunkIndex}/${context.totalChunks})\n` : ''}
-## Chunk
+${
+  context?.fileName
+    ? `## Context
+File: ${context.fileName} (chunk ${context.chunkIndex}/${context.totalChunks})
+`
+    : ''
+}## Chunk Text
 \`\`\`
 ${chunk}
 \`\`\`
 
 ## Instructions
-1. Identify 1-3 core semantic concepts in this chunk
-2. For each concept, check if existing keys already capture it - REUSE if possible
-3. Generate new keys ONLY if concept not covered by existing keys
-4. Format: @concept ~ relationship ~ concept (simple, stable across rephrasing)
-5. Return ONLY valid JSON (no markdown, no explanation outside JSON)
+1. **Identify 1-3 semantic concepts** in this chunk (main topics/themes)
+2. **Check existing keys** - REUSE if semantically similar (don't create duplicates)
+3. **Format as ternary relationships**: Always 3 parts separated by " ~ "
+   - Subject: Core concept (e.g., "memory", "database", "algorithm")
+   - Predicate: Relationship type (e.g., "type", "strategy", "property", "relates_to")
+   - Object: Classification/value (e.g., "episodic", "indexing", "[concept1, concept2]")
+4. **Use simple identifiers**: snake_case, no special chars except underscore
+5. **Be stable**: Same semantic meaning → same key (invariant to rephrasing)
+6. Return ONLY valid JSON
 
-## Output (JSON only)
+## Output Format
 {
-  "keys": ["@concept1 ~ relation", "@concept2 ~ relation ~ concept3"],
-  "reasoning": "Brief explanation"
-}`
+  "keys": ["subject ~ predicate ~ object", "..."],
+  "reasoning": "1-2 sentence explanation of semantic choices"
+}
+
+## Quality Checks
+✓ Each key has exactly 3 parts separated by " ~ "
+✓ Identifiers use snake_case (no @, no spaces)
+✓ Keys are semantically meaningful (not just generic)
+✓ Reused existing keys when concepts overlap
+✗ Don't create near-duplicates of existing keys
+✗ Don't use vague predicates like "about" or "has"`
 }
 
 /**
@@ -65,39 +102,28 @@ async function generateViaAnthropicAPI(
 
   try {
     // Use stdin piping to avoid shell escaping issues
-    const process = Bun.spawn(
-      [
-        'claude',
-        '-p',
-        '--model',
-        model,
-        '--output-format',
-        'json',
-        '--tools',
-        '',
-        '--max-turns',
-        '1',
-      ],
-      {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      }
-    )
+    const args = [
+      'claude',
+      '-p',
+      '--model',
+      model,
+      '--output-format',
+      'json',
+      '--tools',
+      '""',
+      '--strict-mcp-config',
+      '--max-turns',
+      '1',
+    ]
+
+    const process = Bun.spawn(args, {
+      stdin: 'pipe',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
 
     log.trace('Claude CLI process spawned', {
-      args: [
-        'claude',
-        '-p',
-        '--model',
-        model,
-        '--output-format',
-        'json',
-        '--tools',
-        '',
-        '--max-turns',
-        '1',
-      ],
+      args,
     })
 
     // Write prompt to stdin
@@ -150,16 +176,15 @@ async function generateViaAnthropicAPI(
 
 /**
  * Generate QNTM keys via Ollama API
+ *
+ * NOTE: Model availability is ensured once at batch level (see batch.ts)
+ * to avoid concurrent pulls. This function assumes the model is ready.
  */
 async function generateViaOllama(
   prompt: string,
   model: string = 'qwen2.5:7b',
   ollamaHost: string = DEFAULT_OLLAMA_HOST
 ): Promise<QNTMGenerationResult> {
-  // Ensure model is available (pull if needed)
-  const { ensureModel } = await import('../ollama')
-  await ensureModel(model, ollamaHost)
-
   const endTimer = startTimer(`ollama ${model}`)
 
   log.trace('Ollama API request', { model, ollamaHost, promptLength: prompt.length })
@@ -172,7 +197,7 @@ async function generateViaOllama(
       format: 'json',
       options: {
         temperature: 0.1, // Low temperature for consistency
-        num_predict: 256, // Limit output tokens
+        num_predict: 512, // Allow complete JSON responses (1-3 keys + reasoning)
       },
     }
 

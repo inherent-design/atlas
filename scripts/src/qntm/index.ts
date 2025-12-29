@@ -5,7 +5,9 @@
  * Based on Step 1 research: parallel post-chunking workflow with key reuse.
  */
 
-import { log } from '../logger'
+import { createLogger } from '../logger'
+
+const log = createLogger('qntm')
 import { cacheQNTMKeys, getCachedQNTMKeys } from './cache'
 import { generateQNTMKeysWithProvider, type ProviderConfig } from './providers'
 

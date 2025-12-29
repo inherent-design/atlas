@@ -8,7 +8,9 @@
 import { Database } from 'bun:sqlite'
 import { mkdirSync } from 'fs'
 import { join } from 'path'
-import { log } from '../logger'
+import { createLogger } from '../logger'
+
+const log = createLogger('qntm/cache')
 
 const DB_PATH = join(process.cwd(), 'data', 'qntm-cache.db')
 

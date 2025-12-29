@@ -183,7 +183,7 @@ describe('qntm-providers', () => {
               provider: 'ollama',
               model: 'qwen2.5:7b',
             })
-          ).rejects.toThrow('Failed to pull')
+          ).rejects.toThrow('Ollama API error')
         } finally {
           global.fetch = originalFetch
         }
