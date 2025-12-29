@@ -14,9 +14,18 @@ services:
       # Optional: Enable persistence
       - QDRANT__STORAGE__WAL_CAPACITY_MB=32
       - QDRANT__STORAGE__WAL_SEGMENTS_AHEAD=0
+    # Resource constraints: prevent Qdrant from starving other processes
+    deploy:
+      resources:
+        limits:
+          cpus: '0.33'
+          memory: 6g    # ~0.42 of 16GB system RAM
+        reservations:
+          cpus: '0.1'
+          memory: 2g
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:6333/health']
+      test: ['CMD', 'curl', '-f', 'http://localhost:6333/metrics']
       interval: 10s
       timeout: 5s
       retries: 5

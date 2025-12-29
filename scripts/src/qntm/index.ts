@@ -6,10 +6,9 @@
  */
 
 import { createLogger } from '../logger'
+import { generateQNTMKeysWithProvider, type ProviderConfig } from './providers'
 
 const log = createLogger('qntm')
-import { cacheQNTMKeys, getCachedQNTMKeys } from './cache'
-import { generateQNTMKeysWithProvider, type ProviderConfig } from './providers'
 
 // Re-export batch functionality
 export { generateQNTMKeysBatch } from './batch'
@@ -62,9 +61,6 @@ export function getQNTMProvider(): ProviderConfig {
 export async function generateQNTMKeys(input: QNTMGenerationInput): Promise<QNTMGenerationResult> {
   const result = await generateQNTMKeysWithProvider(input, providerConfig)
 
-  // Cache generated keys for future reuse
-  cacheQNTMKeys(result.keys)
-
   log.info('QNTM keys generated', {
     provider: providerConfig.provider,
     model: providerConfig.model,
@@ -90,15 +86,11 @@ export function sanitizeQNTMKey(key: string): string {
 }
 
 /**
- * Fetch all existing QNTM keys (from cache + Qdrant collections)
+ * Fetch all existing QNTM keys from Qdrant collections
  *
- * @returns Array of all QNTM keys (deduplicated)
+ * @returns Array of all QNTM keys
  */
 export async function fetchExistingQNTMKeys(): Promise<string[]> {
-  // Get cached keys first (faster)
-  const cachedKeys = getCachedQNTMKeys()
-
-  // Also fetch from Qdrant collections as fallback/validation
   const { getQdrantClient } = await import('../clients')
   const qdrant = getQdrantClient()
 
@@ -108,25 +100,13 @@ export async function fetchExistingQNTMKeys(): Promise<string[]> {
       .map((c) => c.name)
       .filter((name) => !name.startsWith('atlas_')) // Skip non-QNTM collections
 
-    // Cache any Qdrant keys that aren't already cached (hydration)
-    const newKeys = qdrantKeys.filter((k) => !cachedKeys.includes(k))
-    if (newKeys.length > 0) {
-      cacheQNTMKeys(newKeys)
-      log.debug('Hydrated cache from Qdrant collections', { newKeysCached: newKeys.length })
-    }
-
-    // Merge and deduplicate
-    const allKeys = Array.from(new Set([...cachedKeys, ...qdrantKeys]))
-
-    log.debug('Fetched existing QNTM keys', {
-      cached: cachedKeys.length,
-      qdrant: qdrantKeys.length,
-      total: allKeys.length,
+    log.debug('Fetched existing QNTM keys from Qdrant', {
+      total: qdrantKeys.length,
     })
 
-    return allKeys
+    return qdrantKeys
   } catch (error) {
-    log.warn('Failed to fetch Qdrant QNTM keys, using cache only', error as Error)
-    return cachedKeys
+    log.error('Failed to fetch QNTM keys from Qdrant', error as Error)
+    return []
   }
 }

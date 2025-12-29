@@ -70,11 +70,6 @@ export async function setupIngestMocks(mocks: ReturnType<typeof createTestMocks>
     sanitizeQNTMKey: realSanitize, // Use real implementation
     fetchExistingQNTMKeys: () => Promise.resolve([]),
   }))
-
-  mock.module('./qntm/cache', () => ({
-    getCachedQNTMKeys: () => [],
-    cacheQNTMKeys: () => {},
-  }))
 }
 
 /**
