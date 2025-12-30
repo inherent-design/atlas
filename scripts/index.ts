@@ -12,11 +12,11 @@ import {
   DEFAULT_QNTM_PROVIDER,
   DEFAULT_SEARCH_LIMIT,
   OLLAMA_URL,
-} from './src/config'
-import { ingest } from './src/ingest'
-import { createLogger, setLogLevel, setModuleRules } from './src/logger'
-import { setQNTMProvider } from './src/qntm'
-import { formatResults, search, timeline } from './src/search'
+} from './src/shared/config'
+import { ingest } from './src/domain/ingest'
+import { createLogger, setLogLevel, setModuleRules } from './src/shared/logger'
+import { setQNTMProvider } from './src/services/llm'
+import { formatResults, search, timeline } from './src/domain/search'
 
 const log = createLogger('app')
 
@@ -202,7 +202,7 @@ program
     if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
 
     try {
-      const { consolidate } = await import('./src/consolidate')
+      const { consolidate } = await import('./src/domain/consolidate')
       const result = await consolidate({
         dryRun: options.dryRun,
         threshold: options.threshold,
