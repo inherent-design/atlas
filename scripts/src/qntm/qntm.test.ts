@@ -24,13 +24,13 @@ describe('qntm orchestration', () => {
     test('getQNTMProvider returns current configuration', () => {
       setQNTMProvider({
         provider: 'ollama',
-        model: 'qwen2.5:7b',
+        model: 'ministral-3:3b',
       })
 
       const config = getQNTMProvider()
 
       expect(config.provider).toBe('ollama')
-      expect(config.model).toBe('qwen2.5:7b')
+      expect(config.model).toBe('ministral-3:3b')
     })
 
     test('provider config persists across calls', () => {

@@ -8,11 +8,12 @@
 import { readFileSync } from 'fs'
 import { basename, extname, relative } from 'path'
 import { getQdrantClient, getTextSplitter, getVoyageClient } from './clients'
-import { VOYAGE_MODEL } from './config'
+import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from './config'
+import { getConsolidationWatchdog, ingestPauseController } from './consolidation-watchdog'
 import { createLogger, startTimer } from './logger'
 
 const log = createLogger('ingest')
-import { fetchExistingQNTMKeys, generateQNTMKeysBatch, sanitizeQNTMKey } from './qntm'
+import { fetchExistingQNTMKeys, generateQNTMKeysBatch } from './qntm'
 import type { ChunkPayload } from './types'
 import { ensureCollection, expandPaths, generateChunkId } from './utils'
 
@@ -30,8 +31,33 @@ export interface IngestResult {
   errors: Array<{ file: string; error: Error }>
 }
 
-// Ingest a single file with QNTM multi-collection indexing
+// Ingest a single file into unified 'atlas' collection
 export async function ingestFile(
+  filePath: string,
+  rootDir: string,
+  options: { verbose?: boolean; existingKeys?: string[] } = {}
+): Promise<number> {
+  // Check if ingestion is paused for consolidation
+  if (ingestPauseController.isPaused()) {
+    log.debug('Ingestion paused, waiting for consolidation', { file: filePath })
+    // Wait would block here - instead just skip with warning
+    log.warn('Skipping file during consolidation pause', { file: filePath })
+    return 0
+  }
+
+  // Register in-flight operation
+  ingestPauseController.registerInFlight()
+
+  try {
+    return await ingestFileInternal(filePath, rootDir, options)
+  } finally {
+    // Complete in-flight operation
+    ingestPauseController.completeInFlight()
+  }
+}
+
+// Internal ingest logic (wrapped by pause controller)
+async function ingestFileInternal(
   filePath: string,
   rootDir: string,
   options: { verbose?: boolean; existingKeys?: string[] } = {}
@@ -80,7 +106,6 @@ export async function ingestFile(
   embedStart()
 
   const timestamp = new Date().toISOString()
-  let totalUpserts = 0
 
   // Batch generate QNTM keys for all chunks concurrently
   log.debug('Batch generating QNTM keys', {
@@ -100,7 +125,12 @@ export async function ingestFile(
 
   const qntmResults = await generateQNTMKeysBatch(qntmInputs)
 
-  // Process each chunk: upsert to multiple collections
+  // Ensure unified collection exists
+  await ensureCollection(QDRANT_COLLECTION_NAME)
+
+  // Build all points for batch upsert
+  const points: Array<{ id: string; vector: number[]; payload: ChunkPayload }> = []
+
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]
     if (!chunk) continue
@@ -128,62 +158,55 @@ export async function ingestFile(
       chunk_index: i,
       total_chunks: chunks.length,
       char_count: chunk.length,
-      qntm_keys: qntmResult.keys, // Store all keys in payload
+      qntm_keys: qntmResult.keys, // QNTM keys as metadata tags
       created_at: timestamp,
       importance: 'normal',
       consolidated: false,
     }
 
-    const point = {
+    points.push({
       id: chunkId,
       vector: embedding,
       payload,
-    }
-
-    // Upsert same chunk to multiple collections (one per QNTM key)
-    for (const qntmKey of qntmResult.keys) {
-      const collectionName = sanitizeQNTMKey(qntmKey)
-
-      // Ensure collection exists
-      await ensureCollection(collectionName)
-
-      log.trace('Qdrant upsert request', {
-        collection: collectionName,
-        pointId: point.id,
-        vectorDim: point.vector.length,
-        payloadKeys: Object.keys(point.payload),
-      })
-
-      // Upsert chunk to this semantic neighborhood
-      await qdrant.upsert(collectionName, {
-        points: [point],
-        wait: true,
-      })
-
-      log.trace('Qdrant upsert complete', {
-        collection: collectionName,
-        pointId: point.id,
-      })
-
-      totalUpserts++
-    }
+    })
 
     if (verbose && i % 10 === 0) {
-      log.debug(`Processed chunk ${i + 1}/${chunks.length}`, {
+      log.debug(`Prepared chunk ${i + 1}/${chunks.length}`, {
         file: relativePath,
         qntmKeys: qntmResult.keys,
       })
     }
   }
 
-  if (verbose) {
-    log.info(`Stored ${chunks.length} chunks in ${totalUpserts} collection upserts`, {
-      file: relativePath,
+  // Batch upsert all chunks to unified collection
+  if (points.length > 0) {
+    log.trace('Qdrant batch upsert request', {
+      collection: QDRANT_COLLECTION_NAME,
+      pointCount: points.length,
+    })
+
+    await qdrant.upsert(QDRANT_COLLECTION_NAME, {
+      points,
+      wait: true,
+    })
+
+    log.trace('Qdrant batch upsert complete', {
+      collection: QDRANT_COLLECTION_NAME,
+      pointCount: points.length,
     })
   }
 
+  if (verbose) {
+    log.info(`Stored ${points.length} chunks`, { file: relativePath })
+  }
+
+  // Record ingestion for consolidation watchdog threshold tracking
+  if (points.length > 0) {
+    getConsolidationWatchdog().recordIngestion(points.length)
+  }
+
   endTimer()
-  return chunks.length
+  return points.length
 }
 
 // Main ingestion function

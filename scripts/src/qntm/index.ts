@@ -2,19 +2,20 @@
  * QNTM Semantic Key Generation - Public API
  *
  * LLM-based semantic compression generating stable addresses for chunks.
- * Based on Step 1 research: parallel post-chunking workflow with key reuse.
+ * Uses llm/ module for completions, provides QNTM-specific prompt building.
  */
 
 import { createLogger } from '../logger'
-import { generateQNTMKeysWithProvider, type ProviderConfig } from './providers'
+import { getLLMConfig, setLLMConfig, type LLMConfig } from '../llm'
+import { generateQNTMKeysWithProvider } from './providers'
 
 const log = createLogger('qntm')
 
 // Re-export batch functionality
 export { generateQNTMKeysBatch } from './batch'
 
-// Re-export types
-export type { ProviderConfig, QNTMProvider } from './providers'
+// Re-export types (using LLM types with QNTM aliases for compatibility)
+export type { LLMConfig as ProviderConfig, LLMProvider as QNTMProvider } from '../llm'
 
 export interface QNTMGenerationInput {
   chunk: string
@@ -31,25 +32,20 @@ export interface QNTMGenerationResult {
   reasoning?: string
 }
 
-// Global provider config (set via CLI or auto-detect)
-let providerConfig: ProviderConfig = {
-  provider: 'ollama',
-  model: 'qwen2.5:7b',
-}
-
 /**
  * Set QNTM provider configuration
+ * (Delegates to llm/ module)
  */
-export function setQNTMProvider(config: ProviderConfig): void {
-  providerConfig = config
+export function setQNTMProvider(config: Partial<LLMConfig>): void {
+  setLLMConfig(config)
   log.info('QNTM provider configured', config)
 }
 
 /**
  * Get current QNTM provider configuration
  */
-export function getQNTMProvider(): ProviderConfig {
-  return providerConfig
+export function getQNTMProvider(): LLMConfig {
+  return getLLMConfig()
 }
 
 /**
@@ -59,11 +55,12 @@ export function getQNTMProvider(): ProviderConfig {
  * @returns Array of QNTM keys (1-3 semantic addresses)
  */
 export async function generateQNTMKeys(input: QNTMGenerationInput): Promise<QNTMGenerationResult> {
-  const result = await generateQNTMKeysWithProvider(input, providerConfig)
+  const config = getLLMConfig()
+  const result = await generateQNTMKeysWithProvider(input, config)
 
   log.info('QNTM keys generated', {
-    provider: providerConfig.provider,
-    model: providerConfig.model,
+    provider: config.provider,
+    model: config.model,
     keyCount: result.keys.length,
     keys: result.keys,
   })
@@ -86,25 +83,59 @@ export function sanitizeQNTMKey(key: string): string {
 }
 
 /**
- * Fetch all existing QNTM keys from Qdrant collections
+ * Fetch all existing QNTM keys from unified atlas collection
  *
- * @returns Array of all QNTM keys
+ * Scrolls through collection to collect unique qntm_keys from payloads.
+ * Used for key reuse during QNTM generation (avoid near-duplicates).
+ *
+ * @returns Array of unique QNTM keys
  */
 export async function fetchExistingQNTMKeys(): Promise<string[]> {
   const { getQdrantClient } = await import('../clients')
+  const { QDRANT_COLLECTION_NAME } = await import('../config')
   const qdrant = getQdrantClient()
 
   try {
-    const collections = await qdrant.getCollections()
-    const qdrantKeys = collections.collections
-      .map((c) => c.name)
-      .filter((name) => !name.startsWith('atlas_')) // Skip non-QNTM collections
+    // Check if collection exists
+    try {
+      await qdrant.getCollection(QDRANT_COLLECTION_NAME)
+    } catch {
+      log.debug('Collection does not exist yet, no existing keys')
+      return []
+    }
 
-    log.debug('Fetched existing QNTM keys from Qdrant', {
-      total: qdrantKeys.length,
+    // Scroll through collection to collect unique keys
+    const uniqueKeys = new Set<string>()
+    let offset: string | number | null | undefined = undefined
+    const SCROLL_LIMIT = 100
+
+    do {
+      const result = await qdrant.scroll(QDRANT_COLLECTION_NAME, {
+        limit: SCROLL_LIMIT,
+        offset,
+        with_payload: { include: ['qntm_keys'] },
+        with_vector: false,
+      })
+
+      for (const point of result.points) {
+        const keys = (point.payload as any)?.qntm_keys as string[] | undefined
+        if (keys) {
+          for (const key of keys) {
+            uniqueKeys.add(key)
+          }
+        }
+      }
+
+      offset = result.next_page_offset
+    } while (offset !== null && offset !== undefined)
+
+    const keysArray = Array.from(uniqueKeys)
+
+    log.debug('Fetched existing QNTM keys from unified collection', {
+      total: keysArray.length,
     })
 
-    return qdrantKeys
+    return keysArray
   } catch (error) {
     log.error('Failed to fetch QNTM keys from Qdrant', error as Error)
     return []

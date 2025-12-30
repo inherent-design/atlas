@@ -2,6 +2,10 @@
  * Shared TypeScript types for Atlas
  */
 
+// Consolidation types
+export type ConsolidationType = 'duplicate_work' | 'sequential_iteration' | 'contextual_convergence'
+export type ConsolidationDirection = 'forward' | 'backward' | 'convergent' | 'unknown'
+
 export interface SearchOptions {
   query: string
   limit?: number
@@ -30,6 +34,15 @@ export interface ChunkPayload {
   created_at: string
   importance: 'normal' | 'high' | 'low'
   consolidated: boolean
+
+  // Consolidation metadata (populated after consolidation)
+  occurrences?: number // How many times this content appeared
+  parents?: string[] // Point IDs this was consolidated from (DAG provenance)
+  consolidated_from?: string[] // Original point IDs that were merged
+  consolidation_type?: 'duplicate_work' | 'sequential_iteration' | 'contextual_convergence'
+  consolidation_direction?: 'forward' | 'backward' | 'convergent' | 'unknown'
+  consolidation_reasoning?: string // LLM-provided explanation
+
   [key: string]: unknown // Index signature for Qdrant compatibility
 }
 

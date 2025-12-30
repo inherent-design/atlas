@@ -12,6 +12,7 @@
 
 import pLimit from 'p-limit'
 import { createLogger } from './logger'
+import { PollingScheduler } from './scheduler'
 import { assessSystemCapacity, type PressureLevel } from './system'
 
 const log = createLogger('watchdog')
@@ -21,14 +22,19 @@ export class AdaptiveConcurrencyController {
   private currentConcurrency: number
   private minWorkers: number
   private maxWorkers: number
-  private watchdogInterval: Timer | null = null
-  private isShuttingDown = false
+  private scheduler: PollingScheduler
 
   constructor(initialConcurrency: number, min = 1, max = 10) {
     this.currentConcurrency = Math.max(min, Math.min(initialConcurrency, max))
     this.minWorkers = min
     this.maxWorkers = max
     this.limit = pLimit(this.currentConcurrency)
+
+    this.scheduler = new PollingScheduler({
+      name: 'concurrency',
+      tick: () => this.checkAndAdjust(),
+      logger: log,
+    })
 
     log.debug('AdaptiveConcurrencyController initialized', {
       initialConcurrency: this.currentConcurrency,
@@ -44,27 +50,11 @@ export class AdaptiveConcurrencyController {
    * @param intervalMs - Poll interval in milliseconds (default: 10000ms = 10s)
    */
   startWatchdog(intervalMs = 10000): void {
-    if (this.watchdogInterval !== null) {
-      log.warn('Watchdog already running, ignoring duplicate start')
-      return
-    }
-
     log.info('Starting watchdog monitor', {
       intervalMs,
       currentConcurrency: this.currentConcurrency,
     })
-
-    this.watchdogInterval = setInterval(async () => {
-      if (this.isShuttingDown) {
-        return
-      }
-
-      try {
-        await this.checkAndAdjust()
-      } catch (error) {
-        log.error('Watchdog check failed', error as Error)
-      }
-    }, intervalMs)
+    this.scheduler.start(intervalMs)
   }
 
   /**
@@ -72,15 +62,7 @@ export class AdaptiveConcurrencyController {
    * Should be called when batch processing completes (use try/finally)
    */
   stopWatchdog(): void {
-    if (this.watchdogInterval === null) {
-      log.debug('Watchdog not running, nothing to stop')
-      return
-    }
-
-    this.isShuttingDown = true
-    clearInterval(this.watchdogInterval)
-    this.watchdogInterval = null
-
+    this.scheduler.stop()
     log.info('Watchdog stopped', {
       finalConcurrency: this.currentConcurrency,
       activeWorkers: this.limit.activeCount,
@@ -104,7 +86,7 @@ export class AdaptiveConcurrencyController {
       currentConcurrency: this.currentConcurrency,
       activeWorkers: this.limit.activeCount,
       pendingTasks: this.limit.pendingCount,
-      isWatchdogRunning: this.watchdogInterval !== null,
+      isWatchdogRunning: this.scheduler.isRunning(),
     }
   }
 

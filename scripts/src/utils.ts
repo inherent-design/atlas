@@ -7,7 +7,7 @@ import { readdirSync, statSync } from 'fs'
 import { extname, join } from 'path'
 import { getQdrantClient } from './clients'
 import {
-  COLLECTION_NAME,
+  QDRANT_COLLECTION_NAME,
   IGNORE_PATTERNS,
   QDRANT_COLLECTION_CONFIG,
   TEXT_FILE_EXTENSIONS,
@@ -29,10 +29,17 @@ export function generateChunkId(filePath: string, chunkIndex: number): string {
   return hash
 }
 
+// Payload index definitions for filtered queries
+const PAYLOAD_INDEXES = [
+  { field: 'qntm_keys', schema: 'keyword' as const },
+  { field: 'created_at', schema: 'datetime' as const },
+  { field: 'consolidated', schema: 'bool' as const },
+]
+
 // Ensure collection exists with Step 3 production config
 export async function ensureCollection(collectionName?: string): Promise<void> {
   const qdrant = getQdrantClient()
-  const name = collectionName || COLLECTION_NAME
+  const name = collectionName || QDRANT_COLLECTION_NAME
 
   try {
     await qdrant.getCollection(name)
@@ -44,7 +51,38 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
       collection: name,
       config: 'HNSW + int8 quantization',
     })
+
+    // Create payload indexes for filtered queries
+    await ensurePayloadIndexes(name)
   }
+}
+
+// Ensure payload indexes exist (idempotent)
+export async function ensurePayloadIndexes(collectionName?: string): Promise<void> {
+  const qdrant = getQdrantClient()
+  const name = collectionName || QDRANT_COLLECTION_NAME
+
+  for (const { field, schema } of PAYLOAD_INDEXES) {
+    try {
+      await qdrant.createPayloadIndex(name, {
+        field_name: field,
+        field_schema: schema,
+        wait: true,
+      })
+      log.debug('Payload index created', { collection: name, field, schema })
+    } catch (error) {
+      // Index may already exist - that's fine
+      const msg = (error as Error).message
+      if (!msg.includes('already exists')) {
+        log.warn('Failed to create payload index', { field, error: msg })
+      }
+    }
+  }
+
+  log.info('Payload indexes ensured', {
+    collection: name,
+    indexes: PAYLOAD_INDEXES.map((i) => i.field),
+  })
 }
 
 // Recursively find all text files

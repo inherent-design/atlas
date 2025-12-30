@@ -6,12 +6,8 @@
  */
 
 import pRetry from 'p-retry'
-import {
-  generateQNTMKeys,
-  getQNTMProvider,
-  type QNTMGenerationInput,
-  type QNTMGenerationResult,
-} from '.'
+import { generateQNTMKeys, type QNTMGenerationInput, type QNTMGenerationResult } from '.'
+import { getLLMConfig } from '../llm'
 import { createLogger } from '../logger'
 import { assessSystemCapacity, getRecommendedConcurrency } from '../system'
 import { AdaptiveConcurrencyController } from '../watchdog'
@@ -97,26 +93,26 @@ export async function generateQNTMKeysBatch(
   }
 
   const concurrency = await getConcurrency()
-  const providerConfig = getQNTMProvider()
+  const llmConfig = getLLMConfig()
 
   log.info('Starting batch QNTM generation', {
     totalInputs: inputs.length,
     concurrency,
-    provider: providerConfig.provider,
-    model: providerConfig.model,
+    provider: llmConfig.provider,
+    model: llmConfig.model,
     systemPressure: capacity.pressureLevel,
   })
 
   // Ensure Ollama model is pulled ONCE before batch work starts
-  if (providerConfig.provider === 'ollama') {
+  if (llmConfig.provider === 'ollama') {
     log.debug('Ensuring Ollama model before batch processing', {
-      model: providerConfig.model,
+      model: llmConfig.model,
     })
 
     const { ensureModel } = await import('../ollama')
-    await ensureModel(providerConfig.model, providerConfig.ollamaHost)
+    await ensureModel(llmConfig.model || 'ministral-3:3b', llmConfig.ollamaHost)
 
-    log.debug('Ollama model ready', { model: providerConfig.model })
+    log.debug('Ollama model ready', { model: llmConfig.model })
   }
 
   // Create adaptive concurrency controller with watchdog

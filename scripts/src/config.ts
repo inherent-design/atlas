@@ -8,7 +8,7 @@ import { createLogger } from './logger'
 const log = createLogger('config')
 
 // Collection config
-export const COLLECTION_NAME = 'atlas_context' as const
+export const QDRANT_COLLECTION_NAME = 'atlas' as const
 
 // Voyage AI config (Step 3)
 export const VOYAGE_MODEL = 'voyage-3-large' as const
@@ -82,7 +82,7 @@ export const IGNORE_PATTERNS = [
 
 // QNTM generation config
 export const DEFAULT_QNTM_PROVIDER = 'ollama' as const
-export const DEFAULT_QNTM_MODEL_OLLAMA = 'qwen2.5:7b' as const
+export const DEFAULT_QNTM_MODEL_OLLAMA = 'ministral-3:3b' as const
 export const DEFAULT_QNTM_MODEL_ANTHROPIC = 'haiku' as const
 export const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'
 

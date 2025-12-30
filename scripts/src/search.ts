@@ -7,7 +7,7 @@
 
 import { getVoyageClient, getQdrantClient } from './clients'
 import {
-  COLLECTION_NAME,
+  QDRANT_COLLECTION_NAME,
   VOYAGE_MODEL,
   DEFAULT_SEARCH_LIMIT,
   DEFAULT_HNSW_EF,
@@ -93,17 +93,17 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
   }
 
   log.trace('Qdrant search request', {
-    collection: COLLECTION_NAME,
+    collection: QDRANT_COLLECTION_NAME,
     vectorDim: queryVector.length,
     limit,
     hasFilter: !!searchParams.filter,
     filter: searchParams.filter,
   })
 
-  const results = await qdrant.search(COLLECTION_NAME, searchParams)
+  const results = await qdrant.search(QDRANT_COLLECTION_NAME, searchParams)
 
   log.trace('Qdrant search response', {
-    collection: COLLECTION_NAME,
+    collection: QDRANT_COLLECTION_NAME,
     resultCount: results.length,
     topScore: results[0]?.score,
   })
@@ -152,14 +152,14 @@ export async function timeline(since: string, limit = 20): Promise<SearchResult[
   }
 
   log.trace('Qdrant scroll request', {
-    collection: COLLECTION_NAME,
+    collection: QDRANT_COLLECTION_NAME,
     params: scrollParams,
   })
 
-  const results = await qdrant.scroll(COLLECTION_NAME, scrollParams)
+  const results = await qdrant.scroll(QDRANT_COLLECTION_NAME, scrollParams)
 
   log.trace('Qdrant scroll response', {
-    collection: COLLECTION_NAME,
+    collection: QDRANT_COLLECTION_NAME,
     pointCount: results.points.length,
     nextPageOffset: results.next_page_offset,
   })

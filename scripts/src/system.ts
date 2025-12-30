@@ -169,7 +169,7 @@ export async function getRecommendedConcurrency(
     }
 
     if (capacity.pressureLevel === 'warning') {
-      const reduced = Math.max(minWorkers, Math.floor(staticLimit * 0.5))
+      const reduced = Math.min(maxWorkers, Math.max(minWorkers, Math.floor(staticLimit * 0.5)))
       log.info('System pressure warning, reducing concurrency', {
         from: staticLimit,
         to: reduced,

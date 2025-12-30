@@ -200,8 +200,8 @@ describe('ingest', () => {
     })
 
     expect(result.filesProcessed).toBe(2)
-    // Each file splits into 2 chunks (by \n\n), 2 chunks × 2 keys = 4 upserts per file = 8 total
-    expect(mockQdrantUpsert).toHaveBeenCalledTimes(8)
+    // Each file batch upserts all chunks to unified collection = 1 upsert per file = 2 total
+    expect(mockQdrantUpsert).toHaveBeenCalledTimes(2)
   })
 
   test('expands directories without recursion', async () => {

@@ -191,6 +191,51 @@ program
     }
   })
 
+// Consolidate command
+program
+  .command('consolidate')
+  .description('Find and consolidate similar chunks in the atlas collection')
+  .option('--dry-run', 'Preview consolidation candidates without modifying', false)
+  .option('--threshold <n>', 'Similarity threshold (0-1)', parseFloat, 0.92)
+  .option('-l, --limit <n>', 'Max candidates to process', parseInt, 100)
+  .action(async (options, command) => {
+    const globalOpts = command.parent?.opts() || {}
+
+    // Set runtime config from CLI flags
+    if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
+    if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
+    if (globalOpts.logLevel) {
+      process.env.LOG_LEVEL = globalOpts.logLevel
+      setLogLevel(globalOpts.logLevel as any)
+    }
+
+    try {
+      const { consolidate } = await import('./src/consolidate')
+      const result = await consolidate({
+        dryRun: options.dryRun,
+        threshold: options.threshold,
+        limit: options.limit,
+      })
+
+      if (options.dryRun) {
+        log.info(`Dry run: found ${result.candidatesFound} consolidation candidates`)
+        if (result.candidates && result.candidates.length > 0) {
+          for (const candidate of result.candidates.slice(0, 10)) {
+            console.log(`  - ${candidate.file_path} (similarity: ${candidate.similarity.toFixed(3)})`)
+          }
+          if (result.candidates.length > 10) {
+            console.log(`  ... and ${result.candidates.length - 10} more`)
+          }
+        }
+      } else {
+        log.info(`Consolidation complete: ${result.consolidated} chunks merged, ${result.deleted} removed`)
+      }
+    } catch (error) {
+      log.error('Consolidation failed', error as Error)
+      process.exit(1)
+    }
+  })
+
 // Docker helper command
 program
   .command('docker')
