@@ -125,9 +125,6 @@ async function ingestFileInternal(
 
   const qntmResults = await generateQNTMKeysBatch(qntmInputs)
 
-  // Ensure unified collection exists
-  await ensureCollection(QDRANT_COLLECTION_NAME)
-
   // Build all points for batch upsert
   const points: Array<{ id: string; vector: number[]; payload: ChunkPayload }> = []
 
@@ -215,6 +212,9 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
   const endTimer = startTimer('ingest (total)')
 
   log.debug('Starting ingestion', { paths, recursive, rootDir })
+
+  // Ensure collection exists ONCE before any file processing
+  await ensureCollection(QDRANT_COLLECTION_NAME)
 
   // Fetch existing QNTM keys for reuse
   const existingKeys = config.existingKeys || (await fetchExistingQNTMKeys())

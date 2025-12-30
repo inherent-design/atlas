@@ -355,14 +355,9 @@ export async function consolidate(config: ConsolidateConfig): Promise<Consolidat
 
   log.info('Starting consolidation', { dryRun, threshold, limit })
 
-  // Check if collection exists
-  const qdrant = getQdrantClient()
-  try {
-    await qdrant.getCollection(QDRANT_COLLECTION_NAME)
-  } catch {
-    log.warn('Collection does not exist, nothing to consolidate')
-    return { candidatesFound: 0, consolidated: 0, deleted: 0 }
-  }
+  // Require collection to exist - fail if not (don't auto-create)
+  const { requireCollection } = await import('./utils')
+  await requireCollection(QDRANT_COLLECTION_NAME)
 
   // Find candidates
   const candidates = await findCandidates(threshold, limit)

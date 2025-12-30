@@ -1,22 +1,24 @@
 /**
  * Structured logging with Pino
  *
- * Module-scoped logging with application-level filtering:
- * - LOG_LEVEL: Global minimum level (trace|debug|info|warn|error)
- * - LOG_MODULES: Comma-separated glob patterns to enable (e.g., "qntm,ollama")
- * - LOG_MODULE_LEVEL: Override level for matched modules (default: trace)
+ * Pattern-based module logging with specificity ordering:
+ * - LOG_LEVEL: Global fallback level (trace|debug|info|warn|error), default: info
+ * - LOG_MODULES: Pattern:level pairs, comma-separated, with glob support
+ *
+ * Pattern format: "pattern:level" where pattern supports globs
+ * Specificity: exact match > more segments > glob patterns
  *
  * Usage:
  *   const log = createLogger('qntm/providers')
- *   log.trace('verbose details', { key: 'value' })
+ *   log.debug('message', { key: 'value' })
  *
  * Examples:
- *   LOG_LEVEL=info LOG_MODULES=qntm LOG_MODULE_LEVEL=trace
- *     -> trace for qntm modules, info for everything else
- *   LOG_MODULES="qntm,ollama"
- *     -> enable qntm and ollama modules (including qntm/*, ollama/*)
- *   LOG_MODULES="*"
- *     -> enable all modules
+ *   LOG_MODULES="qntm/providers:error,qntm/*:debug,watchdog:debug"
+ *     -> qntm/providers at error, other qntm/* at debug, watchdog at debug
+ *   LOG_MODULES="*:trace"
+ *     -> trace for all modules
+ *   LOG_LEVEL=warn LOG_MODULES="ingest:debug"
+ *     -> debug for ingest, warn for everything else
  */
 
 import { Glob } from 'bun'
@@ -33,37 +35,89 @@ const LEVELS: Record<string, number> = {
   error: 50,
 }
 
-// Mutable state (updated by CLI or setLogLevel)
-let globalLogLevel = process.env.LOG_LEVEL || 'info'
-let moduleLogLevel = process.env.LOG_MODULE_LEVEL || 'trace'
-let modulePatterns = process.env.LOG_MODULES
-  ? process.env.LOG_MODULES.split(',').map((m) => m.trim())
-  : null
+type LogLevel = keyof typeof LEVELS
 
-/**
- * Check if a module should be logged based on module filter patterns
- * Uses Bun's native glob matching for pattern support
- */
-function shouldLogModule(module?: string): boolean {
-  if (!modulePatterns || !module) return true
-
-  return modulePatterns.some((pattern) => {
-    // Use Bun's native Glob for pattern matching
-    // Check both exact match and hierarchical match (qntm matches qntm/providers)
-    const exactGlob = new Glob(pattern)
-    const hierarchicalGlob = new Glob(`${pattern}/*`)
-    return exactGlob.match(module) || hierarchicalGlob.match(module)
-  })
+/** Parsed log rule with specificity for ordering */
+interface LogRule {
+  pattern: string
+  level: LogLevel
+  specificity: number
+  glob: Glob
 }
 
 /**
- * Get effective log level for a module (reads from mutable state)
+ * Calculate specificity score for pattern ordering
+ * Higher = more specific, gets matched first
+ */
+function calculateSpecificity(pattern: string): number {
+  const segments = pattern.split('/').length
+  const hasGlob = pattern.includes('*')
+  const isWildcardOnly = pattern === '*'
+
+  // Wildcard-only is least specific
+  if (isWildcardOnly) return 0
+
+  // Base: 10 points per segment
+  // Bonus: +5 for exact match (no glob)
+  return segments * 10 + (hasGlob ? 0 : 5)
+}
+
+/**
+ * Parse LOG_MODULES config into sorted rules
+ * Format: "pattern:level,pattern:level,..."
+ */
+function parseLogModules(config: string | undefined): LogRule[] {
+  if (!config) return []
+
+  return config
+    .split(',')
+    .map((rule) => rule.trim())
+    .filter((rule) => rule.length > 0)
+    .map((rule) => {
+      const colonIdx = rule.lastIndexOf(':')
+      let pattern: string
+      let level: LogLevel
+
+      if (colonIdx === -1) {
+        // No level specified, default to debug
+        pattern = rule
+        level = 'debug'
+      } else {
+        pattern = rule.slice(0, colonIdx)
+        const levelStr = rule.slice(colonIdx + 1).toLowerCase()
+        level = (LEVELS[levelStr] !== undefined ? levelStr : 'debug') as LogLevel
+      }
+
+      return {
+        pattern,
+        level,
+        specificity: calculateSpecificity(pattern),
+        glob: new Glob(pattern),
+      }
+    })
+    .sort((a, b) => b.specificity - a.specificity) // Most specific first
+}
+
+// Mutable state (updated by CLI or setLogLevel)
+let globalLogLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info'
+let moduleRules: LogRule[] = parseLogModules(process.env.LOG_MODULES)
+
+/**
+ * Get effective log level for a module
+ * Checks rules in specificity order, falls back to global level
  */
 function getEffectiveLevel(module?: string): number {
-  if (module && shouldLogModule(module) && modulePatterns) {
-    // Module is explicitly enabled, use module-specific level
-    return LEVELS[moduleLogLevel] || LEVELS[globalLogLevel]
+  if (!module || moduleRules.length === 0) {
+    return LEVELS[globalLogLevel]
   }
+
+  // Find first matching rule (already sorted by specificity)
+  for (const rule of moduleRules) {
+    if (rule.glob.match(module)) {
+      return LEVELS[rule.level]
+    }
+  }
+
   return LEVELS[globalLogLevel]
 }
 
@@ -155,13 +209,29 @@ export function createLogger(module: string) {
 }
 
 /**
- * Update log level dynamically (called by CLI)
+ * Update global log level dynamically (called by CLI)
  * NOTE: Keep Pino at 'trace' - filtering happens at application level
  */
-export function setLogLevel(level: 'trace' | 'debug' | 'info' | 'warn' | 'error'): void {
+export function setLogLevel(level: LogLevel): void {
   globalLogLevel = level
-  // Don't lower Pino's level - we filter at application level per-module
-  // logger.level = level
+}
+
+/**
+ * Update module rules dynamically
+ * Format: "pattern:level,pattern:level,..."
+ */
+export function setModuleRules(config: string): void {
+  moduleRules = parseLogModules(config)
+}
+
+/**
+ * Get current logging configuration (for debugging)
+ */
+export function getLogConfig(): { globalLevel: LogLevel; rules: Array<{ pattern: string; level: LogLevel; specificity: number }> } {
+  return {
+    globalLevel: globalLogLevel,
+    rules: moduleRules.map((r) => ({ pattern: r.pattern, level: r.level, specificity: r.specificity })),
+  }
 }
 
 // Timing utilities for performance tracing

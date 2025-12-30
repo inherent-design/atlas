@@ -14,7 +14,7 @@ import {
   OLLAMA_URL,
 } from './src/config'
 import { ingest } from './src/ingest'
-import { createLogger, setLogLevel } from './src/logger'
+import { createLogger, setLogLevel, setModuleRules } from './src/logger'
 import { setQNTMProvider } from './src/qntm'
 import { formatResults, search, timeline } from './src/search'
 
@@ -34,8 +34,13 @@ program
   .option('--voyage-key <key>', 'Voyage AI API key', process.env.VOYAGE_API_KEY)
   .option(
     '--log-level <level>',
-    'Log level (debug, info, warn, error)',
+    'Global log level fallback (trace, debug, info, warn, error)',
     process.env.LOG_LEVEL || 'info'
+  )
+  .option(
+    '--log-modules <rules>',
+    'Module logging rules (e.g., "qntm/*:debug,ingest:trace")',
+    process.env.LOG_MODULES
   )
   .option(
     '--provider <provider>',
@@ -51,11 +56,21 @@ program
   )
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts()
+
+    // Apply logging configuration early
+    if (opts.logLevel) {
+      setLogLevel(opts.logLevel)
+    }
+    if (opts.logModules) {
+      setModuleRules(opts.logModules)
+    }
+
     log.debug('CLI options parsed', {
       provider: opts.provider,
       model: opts.model,
       jobs: opts.jobs,
       logLevel: opts.logLevel,
+      logModules: opts.logModules,
     })
   })
 
@@ -70,19 +85,8 @@ program
     const globalOpts = command.parent?.opts() || {}
 
     // Set runtime config from CLI flags
-    if (globalOpts.qdrantUrl) {
-      process.env.QDRANT_URL = globalOpts.qdrantUrl
-      log.debug('Qdrant URL configured', { url: globalOpts.qdrantUrl })
-    }
-    if (globalOpts.voyageKey) {
-      process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-      log.debug('Voyage API key configured')
-    }
-    if (globalOpts.logLevel) {
-      process.env.LOG_LEVEL = globalOpts.logLevel
-      setLogLevel(globalOpts.logLevel as any)
-      log.debug('Log level set', { level: globalOpts.logLevel })
-    }
+    if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
+    if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
 
     // Configure QNTM concurrency
     if (globalOpts.jobs) {
@@ -142,10 +146,6 @@ program
     // Set runtime config from CLI flags
     if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
     if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-    if (globalOpts.logLevel) {
-      process.env.LOG_LEVEL = globalOpts.logLevel
-      setLogLevel(globalOpts.logLevel as any)
-    }
 
     try {
       log.info('Starting search', { query, limit: options.limit })
@@ -175,10 +175,6 @@ program
     // Set runtime config from CLI flags
     if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
     if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-    if (globalOpts.logLevel) {
-      process.env.LOG_LEVEL = globalOpts.logLevel
-      setLogLevel(globalOpts.logLevel as any)
-    }
 
     try {
       log.info('Starting timeline query', { since: options.since, limit: options.limit })
@@ -204,10 +200,6 @@ program
     // Set runtime config from CLI flags
     if (globalOpts.qdrantUrl) process.env.QDRANT_URL = globalOpts.qdrantUrl
     if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-    if (globalOpts.logLevel) {
-      process.env.LOG_LEVEL = globalOpts.logLevel
-      setLogLevel(globalOpts.logLevel as any)
-    }
 
     try {
       const { consolidate } = await import('./src/consolidate')

@@ -1,11 +1,15 @@
 /**
  * System Monitoring and Capacity Assessment
  *
- * Cross-platform resource monitoring using systeminformation + bun-webgpu.
+ * Cross-platform resource monitoring using native commands (no systeminformation).
  * Enables intelligent workload scheduling based on CPU/memory pressure.
+ *
+ * Platform support:
+ * - macOS: memory_pressure, sysctl, vm.loadavg
+ * - Linux: /proc/meminfo, /proc/loadavg, nproc
+ * - Windows: TODO (fails open for now)
  */
 
-import si from 'systeminformation'
 import { createLogger } from './logger'
 
 const log = createLogger('system')
@@ -34,6 +38,226 @@ export interface GPUCapability {
   error?: string
 }
 
+/** Raw memory stats from platform-specific parsing */
+interface MemoryStats {
+  total: number // bytes
+  available: number // bytes
+  used: number // bytes
+  swapTotal: number // bytes
+  swapUsed: number // bytes
+  freePercent?: number // macOS memory_pressure gives this directly
+}
+
+/** Raw CPU stats */
+interface CPUStats {
+  loadAvg1m: number
+  loadAvg5m: number
+  loadAvg15m: number
+  cpuCount: number
+}
+
+// Simple TTL cache to avoid hammering shell on rapid calls
+let cachedCapacity: { data: SystemCapacity; timestamp: number } | null = null
+const CACHE_TTL_MS = 1000 // 1 second
+
+/**
+ * Run a shell command and return stdout
+ */
+function runCommand(cmd: string[]): string | null {
+  try {
+    const proc = Bun.spawnSync(cmd, { stdout: 'pipe', stderr: 'pipe' })
+    if (proc.success) {
+      return proc.stdout.toString().trim()
+    }
+    log.trace('Command failed', { cmd: cmd.join(' '), stderr: proc.stderr.toString() })
+    return null
+  } catch (error) {
+    log.trace('Command error', { cmd: cmd.join(' '), error: (error as Error).message })
+    return null
+  }
+}
+
+/**
+ * Parse macOS memory stats from memory_pressure and sysctl
+ */
+function parseMacOSMemory(): MemoryStats | null {
+  // Get total memory from sysctl
+  const memSizeStr = runCommand(['sysctl', '-n', 'hw.memsize'])
+  if (!memSizeStr) return null
+  const total = parseInt(memSizeStr, 10)
+
+  // Get memory pressure (includes free percentage)
+  const pressureOutput = runCommand(['memory_pressure'])
+  if (!pressureOutput) {
+    // Fallback: use vm_stat if memory_pressure unavailable
+    return parseMacOSVmStat(total)
+  }
+
+  // Parse "System-wide memory free percentage: XX%"
+  const freeMatch = pressureOutput.match(/System-wide memory free percentage:\s*(\d+)%/)
+  const freePercent = freeMatch ? parseInt(freeMatch[1], 10) : null
+
+  if (freePercent === null) {
+    return parseMacOSVmStat(total)
+  }
+
+  const available = Math.floor(total * (freePercent / 100))
+  const used = total - available
+
+  // macOS typically has no swap or minimal swap
+  // Parse swap from memory_pressure output if present
+  const swapInMatch = pressureOutput.match(/Swapins:\s*(\d+)/)
+  const swapOutMatch = pressureOutput.match(/Swapouts:\s*(\d+)/)
+  const hasSwapActivity = (swapInMatch && parseInt(swapInMatch[1], 10) > 0) ||
+                          (swapOutMatch && parseInt(swapOutMatch[1], 10) > 0)
+
+  return {
+    total,
+    available,
+    used,
+    swapTotal: 0, // macOS doesn't expose swap size easily
+    swapUsed: hasSwapActivity ? 1 : 0, // Binary indicator
+    freePercent,
+  }
+}
+
+/**
+ * Fallback: parse macOS vm_stat for memory stats
+ */
+function parseMacOSVmStat(total: number): MemoryStats | null {
+  const vmStatOutput = runCommand(['vm_stat'])
+  if (!vmStatOutput) return null
+
+  // Parse page size
+  const pageSizeMatch = vmStatOutput.match(/page size of (\d+) bytes/)
+  const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
+
+  // Parse page counts
+  const parsePages = (key: string): number => {
+    const match = vmStatOutput.match(new RegExp(`${key}:\\s*([\\d.]+)`))
+    return match ? Math.floor(parseFloat(match[1])) : 0
+  }
+
+  const pagesFree = parsePages('Pages free')
+  const pagesActive = parsePages('Pages active')
+  const pagesInactive = parsePages('Pages inactive')
+  const pagesSpeculative = parsePages('Pages speculative')
+  const pagesWired = parsePages('Pages wired down')
+  const pagesPurgeable = parsePages('Pages purgeable')
+
+  // Available = free + inactive + purgeable (roughly)
+  const availablePages = pagesFree + pagesInactive + pagesPurgeable
+  const usedPages = pagesActive + pagesWired
+
+  return {
+    total,
+    available: availablePages * pageSize,
+    used: usedPages * pageSize,
+    swapTotal: 0,
+    swapUsed: 0,
+  }
+}
+
+/**
+ * Parse macOS CPU stats from sysctl
+ */
+function parseMacOSCPU(): CPUStats | null {
+  const loadAvgStr = runCommand(['sysctl', '-n', 'vm.loadavg'])
+  const cpuCountStr = runCommand(['sysctl', '-n', 'hw.ncpu'])
+
+  if (!loadAvgStr || !cpuCountStr) return null
+
+  // Format: "{ 1.26 2.13 3.33 }"
+  const loadMatch = loadAvgStr.match(/\{\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\}/)
+  if (!loadMatch) return null
+
+  return {
+    loadAvg1m: parseFloat(loadMatch[1]),
+    loadAvg5m: parseFloat(loadMatch[2]),
+    loadAvg15m: parseFloat(loadMatch[3]),
+    cpuCount: parseInt(cpuCountStr, 10),
+  }
+}
+
+/**
+ * Parse Linux memory stats from /proc/meminfo
+ */
+function parseLinuxMemory(): MemoryStats | null {
+  const meminfo = runCommand(['cat', '/proc/meminfo'])
+  if (!meminfo) return null
+
+  const parseKB = (key: string): number => {
+    const match = meminfo.match(new RegExp(`${key}:\\s*(\\d+)\\s*kB`))
+    return match ? parseInt(match[1], 10) * 1024 : 0 // Convert to bytes
+  }
+
+  const total = parseKB('MemTotal')
+  const available = parseKB('MemAvailable')
+  const free = parseKB('MemFree')
+  const swapTotal = parseKB('SwapTotal')
+  const swapFree = parseKB('SwapFree')
+
+  return {
+    total,
+    available: available || free, // MemAvailable is better but may not exist on old kernels
+    used: total - (available || free),
+    swapTotal,
+    swapUsed: swapTotal - swapFree,
+  }
+}
+
+/**
+ * Parse Linux CPU stats from /proc/loadavg and nproc
+ */
+function parseLinuxCPU(): CPUStats | null {
+  const loadavg = runCommand(['cat', '/proc/loadavg'])
+  const cpuCountStr = runCommand(['nproc'])
+
+  if (!loadavg || !cpuCountStr) return null
+
+  // Format: "0.05 0.09 0.08 1/591 1005398"
+  const parts = loadavg.split(' ')
+  if (parts.length < 3) return null
+
+  return {
+    loadAvg1m: parseFloat(parts[0]),
+    loadAvg5m: parseFloat(parts[1]),
+    loadAvg15m: parseFloat(parts[2]),
+    cpuCount: parseInt(cpuCountStr, 10),
+  }
+}
+
+/**
+ * Get platform-specific memory and CPU stats
+ */
+function getPlatformStats(): { memory: MemoryStats; cpu: CPUStats } | null {
+  const platform = process.platform
+
+  if (platform === 'darwin') {
+    const memory = parseMacOSMemory()
+    const cpu = parseMacOSCPU()
+    if (memory && cpu) return { memory, cpu }
+  } else if (platform === 'linux') {
+    const memory = parseLinuxMemory()
+    const cpu = parseLinuxCPU()
+    if (memory && cpu) return { memory, cpu }
+  } else {
+    // TODO: Windows support - use wmic or Get-WmiObject
+    log.warn('Unsupported platform for system monitoring', { platform })
+  }
+
+  return null
+}
+
+/**
+ * Calculate CPU utilization from load average
+ * Load average / CPU count gives rough utilization (>1 means overloaded)
+ */
+function calculateCPUUtilization(loadAvg1m: number, cpuCount: number): number {
+  // Normalize load to percentage (load of cpuCount = 100%)
+  return Math.min(100, (loadAvg1m / cpuCount) * 100)
+}
+
 /**
  * Assess current system capacity for spawning workers
  *
@@ -44,41 +268,66 @@ export interface GPUCapability {
  * - Memory pressure classification
  */
 export async function assessSystemCapacity(): Promise<SystemCapacity> {
+  // Check cache first
+  if (cachedCapacity && Date.now() - cachedCapacity.timestamp < CACHE_TTL_MS) {
+    log.trace('Using cached system capacity')
+    return cachedCapacity.data
+  }
+
   try {
-    const [mem, cpu] = await Promise.all([si.mem(), si.currentLoad()])
+    const stats = getPlatformStats()
+
+    if (!stats) {
+      // Fail open: allow worker spawn if monitoring unavailable
+      log.debug('Platform stats unavailable, failing open')
+      return failOpenCapacity()
+    }
+
+    const { memory, cpu } = stats
 
     log.trace('Raw system stats', {
-      memTotal: mem.total,
-      memUsed: mem.used,
-      memAvailable: mem.available,
-      swapTotal: mem.swaptotal,
-      swapUsed: mem.swapused,
-      cpuLoad: cpu.currentLoad,
+      memTotal: memory.total,
+      memUsed: memory.used,
+      memAvailable: memory.available,
+      swapTotal: memory.swapTotal,
+      swapUsed: memory.swapUsed,
+      freePercent: memory.freePercent,
+      loadAvg1m: cpu.loadAvg1m,
+      cpuCount: cpu.cpuCount,
     })
 
-    const memRatio = mem.used / mem.total
-    const availRatio = mem.available / mem.total
-    const swapRatio = mem.swaptotal > 0 ? mem.swapused / mem.swaptotal : 0
+    const memRatio = memory.used / memory.total
+    const availRatio = memory.available / memory.total
+    const swapRatio = memory.swapTotal > 0 ? memory.swapUsed / memory.swapTotal : 0
+    const cpuUtilization = calculateCPUUtilization(cpu.loadAvg1m, cpu.cpuCount)
 
-    // Pressure classification (matches macOS/Linux kernel semantics)
+    // Pressure classification
+    // macOS memory_pressure gives us freePercent directly which is more accurate
     let pressureLevel: PressureLevel = 'nominal'
-    if (swapRatio > 0.5 || memRatio > 0.85) pressureLevel = 'warning'
-    if (swapRatio > 0.75 || memRatio > 0.95) pressureLevel = 'critical'
+    if (memory.freePercent !== undefined) {
+      // Use macOS memory_pressure classification
+      if (memory.freePercent < 20) pressureLevel = 'warning'
+      if (memory.freePercent < 5) pressureLevel = 'critical'
+    } else {
+      // Linux-style classification
+      if (swapRatio > 0.5 || memRatio > 0.85) pressureLevel = 'warning'
+      if (swapRatio > 0.75 || memRatio > 0.95) pressureLevel = 'critical'
+    }
 
     const canSpawnWorker =
-      cpu.currentLoad < 70 && availRatio > 0.15 && swapRatio < 0.4 && pressureLevel !== 'critical'
+      cpuUtilization < 70 && availRatio > 0.15 && swapRatio < 0.4 && pressureLevel !== 'critical'
 
     const capacity: SystemCapacity = {
       canSpawnWorker,
-      cpuUtilization: cpu.currentLoad,
+      cpuUtilization,
       memoryUtilization: memRatio * 100,
       pressureLevel,
       details: {
-        availableMemory: mem.available,
-        swapUsage: mem.swapused,
-        currentLoad: cpu.currentLoad,
-        totalMemory: mem.total,
-        usedMemory: mem.used,
+        availableMemory: memory.available,
+        swapUsage: memory.swapUsed,
+        currentLoad: cpu.loadAvg1m,
+        totalMemory: memory.total,
+        usedMemory: memory.used,
       },
     }
 
@@ -87,26 +336,35 @@ export async function assessSystemCapacity(): Promise<SystemCapacity> {
       pressureLevel,
       cpuUtilization: capacity.cpuUtilization.toFixed(1),
       memoryUtilization: capacity.memoryUtilization.toFixed(1),
-      availableMemoryGB: (mem.available / 1024 / 1024 / 1024).toFixed(2),
+      availableMemoryGB: (memory.available / 1024 / 1024 / 1024).toFixed(2),
     })
+
+    // Cache result
+    cachedCapacity = { data: capacity, timestamp: Date.now() }
 
     return capacity
   } catch (error) {
     log.error('Failed to assess system capacity', error as Error)
-    // Fail open: allow worker spawn if monitoring fails
-    return {
-      canSpawnWorker: true,
-      cpuUtilization: 0,
-      memoryUtilization: 0,
-      pressureLevel: 'nominal',
-      details: {
-        availableMemory: 0,
-        swapUsage: 0,
-        currentLoad: 0,
-        totalMemory: 0,
-        usedMemory: 0,
-      },
-    }
+    return failOpenCapacity()
+  }
+}
+
+/**
+ * Return a fail-open capacity (allows workers when monitoring fails)
+ */
+function failOpenCapacity(): SystemCapacity {
+  return {
+    canSpawnWorker: true,
+    cpuUtilization: 0,
+    memoryUtilization: 0,
+    pressureLevel: 'nominal',
+    details: {
+      availableMemory: 0,
+      swapUsage: 0,
+      currentLoad: 0,
+      totalMemory: 0,
+      usedMemory: 0,
+    },
   }
 }
 

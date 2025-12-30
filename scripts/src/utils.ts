@@ -57,6 +57,41 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
   }
 }
 
+/**
+ * Require collection to exist, throw if it doesn't
+ *
+ * Use this for operations that should NOT create the collection (e.g., consolidation).
+ * Throws an error with actionable message if collection is missing.
+ */
+export async function requireCollection(collectionName?: string): Promise<void> {
+  const qdrant = getQdrantClient()
+  const name = collectionName || QDRANT_COLLECTION_NAME
+
+  try {
+    await qdrant.getCollection(name)
+    log.debug('Collection verified', { collection: name })
+  } catch (error) {
+    const msg = `Collection '${name}' does not exist. Run 'bun atlas ingest' first to create it.`
+    log.error(msg)
+    throw new Error(msg)
+  }
+}
+
+/**
+ * Check if collection exists (non-throwing)
+ */
+export async function collectionExists(collectionName?: string): Promise<boolean> {
+  const qdrant = getQdrantClient()
+  const name = collectionName || QDRANT_COLLECTION_NAME
+
+  try {
+    await qdrant.getCollection(name)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // Ensure payload indexes exist (idempotent)
 export async function ensurePayloadIndexes(collectionName?: string): Promise<void> {
   const qdrant = getQdrantClient()

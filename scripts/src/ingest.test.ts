@@ -22,11 +22,13 @@ const mockQdrantGet = mock(() => Promise.reject(new Error('Collection not found'
 const mockQdrantCreate = mock(() => Promise.resolve())
 const mockQdrantUpsert = mock(() => Promise.resolve({ status: 'acknowledged' }))
 
-const mockGenerateQNTMKeys = mock(() =>
-  Promise.resolve({
-    keys: ['@test ~ content', '@mock ~ data'],
-    reasoning: 'Test content semantic keys',
-  })
+const mockGenerateQNTMKeysBatch = mock((inputs: any[]) =>
+  Promise.resolve(
+    inputs.map(() => ({
+      keys: ['@test ~ content', '@mock ~ data'],
+      reasoning: 'Test content semantic keys',
+    }))
+  )
 )
 
 const testDir = '/tmp/atlas-test-ingest'
@@ -64,7 +66,7 @@ describe('ingestFile', () => {
     // Mock QNTM generation (use real sanitizeQNTMKey to avoid mock conflicts)
     const { sanitizeQNTMKey: realSanitize } = await import('./qntm')
     mock.module('./qntm', () => ({
-      generateQNTMKeys: mockGenerateQNTMKeys,
+      generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
       sanitizeQNTMKey: realSanitize,
       fetchExistingQNTMKeys: () => Promise.resolve([]),
     }))
@@ -130,7 +132,7 @@ describe('ingestFile', () => {
     const qntmKeys1 = call1[1].points[0].payload.qntm_keys
 
     mockQdrantUpsert.mockClear()
-    mockGenerateQNTMKeys.mockClear()
+    mockGenerateQNTMKeysBatch.mockClear()
 
     await ingestFile(testFile2, testDir)
     const call2 = mockQdrantUpsert.mock.calls[0]
@@ -166,7 +168,7 @@ describe('ingest', () => {
     mockQdrantGet.mockClear()
     mockQdrantCreate.mockClear()
     mockQdrantUpsert.mockClear()
-    mockGenerateQNTMKeys.mockClear()
+    mockGenerateQNTMKeysBatch.mockClear()
 
     mock.module('./clients', () => ({
       getVoyageClient: () => ({ embed: mockVoyageEmbed }),
@@ -183,7 +185,7 @@ describe('ingest', () => {
     // Use real sanitizeQNTMKey to avoid mock conflicts
     const { sanitizeQNTMKey: realSanitize } = await import('./qntm')
     mock.module('./qntm', () => ({
-      generateQNTMKeys: mockGenerateQNTMKeys,
+      generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
       sanitizeQNTMKey: realSanitize,
       fetchExistingQNTMKeys: () => Promise.resolve([]),
     }))
