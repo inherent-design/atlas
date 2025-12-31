@@ -2,34 +2,39 @@
  * Tests for ConsolidationWatchdog and IngestPauseController
  */
 
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test'
+// Use vi.hoisted() to define mocks that will be available when vi.mock() factories run
+const { mockConsolidate } = vi.hoisted(() => ({
+  mockConsolidate: vi.fn(() =>
+    Promise.resolve({
+      candidatesFound: 5,
+      consolidated: 3,
+      deleted: 3,
+    })
+  ),
+}))
 
-// Mock consolidate function - MUST be set up before importing the module
-const mockConsolidate = mock(() =>
-  Promise.resolve({
-    candidatesFound: 5,
-    consolidated: 3,
-    deleted: 3,
-  })
-)
-
-// Setup module mock BEFORE any imports that use it
-mock.module('.', () => ({
+// Setup module mock - hoisted but now has access to hoisted mock function
+vi.mock('.', () => ({
   consolidate: mockConsolidate,
 }))
 
 // Now import the module under test (after mock is set up)
-const {
+import {
   ConsolidationWatchdog,
   ingestPauseController,
   resetConsolidationWatchdog,
   getConsolidationWatchdog,
-} = await import('./watchdog')
+} from './watchdog'
 
 describe('IngestPauseController', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     // Reset pause controller state completely
     ingestPauseController.reset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe('pause/resume', () => {
@@ -125,7 +130,7 @@ describe('IngestPauseController', () => {
       })
 
       // Should not resolve yet
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await vi.advanceTimersByTimeAsync(10)
       expect(resolved).toBe(false)
 
       // Complete the in-flight operation
@@ -146,7 +151,7 @@ describe('IngestPauseController', () => {
 
       // Complete first operation
       ingestPauseController.completeInFlight()
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await vi.advanceTimersByTimeAsync(10)
       expect(resolved).toBe(false)
 
       // Complete second operation
@@ -211,6 +216,7 @@ describe('ConsolidationWatchdog', () => {
   let watchdog: InstanceType<typeof ConsolidationWatchdog> | null = null
 
   beforeEach(() => {
+    vi.useFakeTimers()
     mockConsolidate.mockClear()
     ingestPauseController.reset()
     resetConsolidationWatchdog()
@@ -222,6 +228,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog = null
     }
     resetConsolidationWatchdog()
+    vi.useRealTimers()
   })
 
   describe('initialization', () => {
@@ -317,7 +324,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog.start(50) // Fast polling
 
       // Wait for a few poll cycles
-      await new Promise((resolve) => setTimeout(resolve, 150))
+      await vi.advanceTimersByTimeAsync(150)
 
       watchdog.stop()
 
@@ -332,7 +339,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog.start(50)
 
       // Wait for poll to trigger
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await vi.advanceTimersByTimeAsync(100)
 
       watchdog.stop()
 
@@ -346,7 +353,7 @@ describe('ConsolidationWatchdog', () => {
 
       watchdog.start(50)
 
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await vi.advanceTimersByTimeAsync(100)
 
       watchdog.stop()
 
@@ -376,7 +383,9 @@ describe('ConsolidationWatchdog', () => {
         return { candidatesFound: 0, consolidated: 0, deleted: 0 }
       })
 
-      await watchdog.forceConsolidation()
+      const consolidatePromise = watchdog.forceConsolidation()
+      await vi.advanceTimersByTimeAsync(100)
+      await consolidatePromise
 
       expect(pausedDuringConsolidation).toBe(true)
       expect(ingestPauseController.isPaused()).toBe(false) // Should be resumed
@@ -399,7 +408,7 @@ describe('ConsolidationWatchdog', () => {
       const consolidatePromise = watchdog.forceConsolidation()
 
       // Wait a bit - consolidation should not start yet
-      await new Promise((resolve) => setTimeout(resolve, 20))
+      await vi.advanceTimersByTimeAsync(20)
       expect(consolidationStarted).toBe(false)
 
       // Complete in-flight operation
@@ -511,6 +520,7 @@ describe('ConsolidationWatchdog', () => {
       const promise1 = watchdog.forceConsolidation()
       const promise2 = watchdog.forceConsolidation() // Should be rejected
 
+      await vi.advanceTimersByTimeAsync(200)
       await Promise.all([promise1, promise2])
 
       // Only one should have executed
@@ -562,10 +572,10 @@ describe('ConsolidationWatchdog', () => {
 
       // Incrementally add documents
       watchdog.recordIngestion(3)
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      await vi.advanceTimersByTimeAsync(60)
 
       watchdog.recordIngestion(2) // Now at threshold
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await vi.advanceTimersByTimeAsync(100)
 
       watchdog.stop()
 
@@ -587,7 +597,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog.start(30) // Fast polling, shorter than consolidation
 
       // Wait for multiple poll cycles
-      await new Promise((resolve) => setTimeout(resolve, 250))
+      await vi.advanceTimersByTimeAsync(300)
 
       watchdog.stop()
 

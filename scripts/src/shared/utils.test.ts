@@ -2,7 +2,6 @@
  * Unit tests for Atlas utility functions
  */
 
-import { test, expect, describe } from 'bun:test'
 import { generateQNTMKey, generateChunkId, expandPaths } from './utils'
 import { writeFileSync, mkdirSync, rmSync } from 'fs'
 import { join } from 'path'
@@ -14,7 +13,7 @@ describe('generateQNTMKey', () => {
     const key2 = generateQNTMKey(text)
 
     expect(key1).toBe(key2)
-    expect(key1).toStartWith('atlas_')
+    expect(key1).toMatch(/^atlas_/)
   })
 
   test('generates different keys for different content', () => {
@@ -31,13 +30,13 @@ describe('generateQNTMKey', () => {
     const longText = 'A'.repeat(1000)
     const key = generateQNTMKey(longText)
 
-    expect(key).toStartWith('atlas_')
+    expect(key).toMatch(/^atlas_/)
     expect(key.length).toBe(14) // 'atlas_' + 8 char hash
   })
 
   test('handles empty string', () => {
     const key = generateQNTMKey('')
-    expect(key).toStartWith('atlas_')
+    expect(key).toMatch(/^atlas_/)
   })
 })
 

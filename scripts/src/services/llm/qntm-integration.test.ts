@@ -2,11 +2,18 @@
  * Unit tests for QNTM orchestration layer
  */
 
-import { describe, expect, test } from 'bun:test'
-import { getQNTMProvider, sanitizeQNTMKey, setQNTMProvider } from '.'
+import { setQNTMProvider, getQNTMProvider, sanitizeQNTMKey, _resetLLMConfig } from '.'
 
 describe('qntm orchestration', () => {
   describe('provider configuration', () => {
+    beforeEach(() => {
+      _resetLLMConfig() // Reset to defaults before each test
+    })
+
+    afterEach(() => {
+      _resetLLMConfig()
+    })
+
     test('setQNTMProvider updates configuration', () => {
       setQNTMProvider({
         provider: 'anthropic',

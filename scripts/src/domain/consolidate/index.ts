@@ -155,10 +155,7 @@ async function classifyConsolidation(
  * For each chunk, finds other chunks with similarity > threshold.
  * Returns deduplicated pairs (A~B and B~A are same pair).
  */
-async function findCandidates(
-  threshold: number,
-  limit: number
-): Promise<ConsolidateCandidate[]> {
+async function findCandidates(threshold: number, limit: number): Promise<ConsolidateCandidate[]> {
   const endTimer = startTimer('findCandidates')
   const qdrant = getQdrantClient()
 
@@ -304,10 +301,7 @@ async function performConsolidation(
         consolidated: false, // Primary stays active
         occurrences: (primaryPayload.occurrences || 1) + (secondaryPayload.occurrences || 1),
         parents: [...(primaryPayload.parents || []), secondary.id as string],
-        consolidated_from: [
-          ...(primaryPayload.consolidated_from || []),
-          secondary.id as string,
-        ],
+        consolidated_from: [...(primaryPayload.consolidated_from || []), secondary.id as string],
         consolidation_type: classification.type,
         consolidation_direction: classification.direction,
         consolidation_reasoning: classification.reasoning,

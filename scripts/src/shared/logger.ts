@@ -24,6 +24,9 @@
 import { Glob } from 'bun'
 import pino from 'pino'
 
+// Test mode: disable all logging for zero overhead (unless VITEST_LOG=true)
+const IS_TEST =
+  Boolean(process.env.VITEST || process.env.NODE_ENV === 'test') && !process.env.VITEST_LOG
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 // Level ordering for comparison
@@ -145,43 +148,59 @@ export const logger = pino({
     : undefined,
 })
 
-// Root logger (backward compatibility - no module filtering)
-export const log = {
-  trace: (msg: string, data?: object) => {
-    if (LEVELS[globalLogLevel] <= LEVELS.trace) {
-      logger.trace(data || {}, msg)
-    }
-  },
-  debug: (msg: string, data?: object) => {
-    if (LEVELS[globalLogLevel] <= LEVELS.debug) {
-      logger.debug(data || {}, msg)
-    }
-  },
-  info: (msg: string, data?: object) => {
-    if (LEVELS[globalLogLevel] <= LEVELS.info) {
-      logger.info(data || {}, msg)
-    }
-  },
-  warn: (msg: string, data?: object) => {
-    if (LEVELS[globalLogLevel] <= LEVELS.warn) {
-      logger.warn(data || {}, msg)
-    }
-  },
-  error: (msg: string, error?: Error | object) => {
-    if (LEVELS[globalLogLevel] <= LEVELS.error) {
-      if (error instanceof Error) {
-        logger.error({ err: error }, msg)
-      } else {
-        logger.error(error || {}, msg)
-      }
-    }
-  },
+// No-op logger for test mode (zero overhead)
+const noop = () => {}
+const noopLogger: Logger = {
+  trace: noop,
+  debug: noop,
+  info: noop,
+  warn: noop,
+  error: noop,
 }
+
+// Root logger (backward compatibility - no module filtering)
+export const log: Logger = IS_TEST
+  ? noopLogger
+  : {
+      trace: (msg: string, data?: object) => {
+        if (LEVELS[globalLogLevel] <= LEVELS.trace) {
+          logger.trace(data || {}, msg)
+        }
+      },
+      debug: (msg: string, data?: object) => {
+        if (LEVELS[globalLogLevel] <= LEVELS.debug) {
+          logger.debug(data || {}, msg)
+        }
+      },
+      info: (msg: string, data?: object) => {
+        if (LEVELS[globalLogLevel] <= LEVELS.info) {
+          logger.info(data || {}, msg)
+        }
+      },
+      warn: (msg: string, data?: object) => {
+        if (LEVELS[globalLogLevel] <= LEVELS.warn) {
+          logger.warn(data || {}, msg)
+        }
+      },
+      error: (msg: string, error?: Error | object) => {
+        if (LEVELS[globalLogLevel] <= LEVELS.error) {
+          if (error instanceof Error) {
+            logger.error({ err: error }, msg)
+          } else {
+            logger.error(error || {}, msg)
+          }
+        }
+      },
+    }
 
 /**
  * Create a module-scoped logger with filtering
+ * In test mode, returns no-op logger for zero overhead
  */
-export function createLogger(module: string) {
+export function createLogger(module: string): Logger {
+  // Short-circuit in test mode - no pino child, no level checking
+  if (IS_TEST) return noopLogger
+
   const child = logger.child({ module })
 
   return {
@@ -236,10 +255,17 @@ export function setModuleRules(config: string): void {
 /**
  * Get current logging configuration (for debugging)
  */
-export function getLogConfig(): { globalLevel: LogLevel; rules: Array<{ pattern: string; level: LogLevel; specificity: number }> } {
+export function getLogConfig(): {
+  globalLevel: LogLevel
+  rules: Array<{ pattern: string; level: LogLevel; specificity: number }>
+} {
   return {
     globalLevel: globalLogLevel,
-    rules: moduleRules.map((r) => ({ pattern: r.pattern, level: r.level, specificity: r.specificity })),
+    rules: moduleRules.map((r) => ({
+      pattern: r.pattern,
+      level: r.level,
+      specificity: r.specificity,
+    })),
   }
 }
 

@@ -2,56 +2,62 @@
  * Tests for batch LLM completion
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test'
-import { completeBatch, type BatchResult } from './batch'
+// Use vi.hoisted() to define mocks that will be available when vi.mock() factories run
+// (vi.mock() is hoisted to top of file, before variable declarations)
+const {
+  mockCompleteJSON,
+  mockEnsureModel,
+  mockAssessSystemCapacity,
+  mockGetRecommendedConcurrency,
+} = vi.hoisted(() => ({
+  mockCompleteJSON: vi.fn((prompt: string, config: any) => {
+    // Return simple result based on prompt
+    return Promise.resolve({ result: `processed: ${prompt.slice(0, 20)}` })
+  }),
+  mockEnsureModel: vi.fn(() => Promise.resolve()),
+  mockAssessSystemCapacity: vi.fn(() =>
+    Promise.resolve({
+      pressureLevel: 'normal' as const,
+      cpuUtilization: 50,
+      memoryUtilization: 60,
+      canSpawnWorker: true,
+      details: {
+        totalMemory: 16 * 1024 * 1024 * 1024,
+        availableMemory: 8 * 1024 * 1024 * 1024,
+        cpuCount: 8,
+        loadAverage: 2.5,
+      },
+    })
+  ),
+  mockGetRecommendedConcurrency: vi.fn((staticLimit: number, _min: number, _max: number) =>
+    Promise.resolve(staticLimit)
+  ),
+}))
 
-// Mock dependencies
-const mockCompleteJSON = mock((prompt: string, config: any) => {
-  // Return simple result based on prompt
-  return Promise.resolve({ result: `processed: ${prompt.slice(0, 20)}` })
-})
-
-const mockEnsureModel = mock(() => Promise.resolve())
-
-const mockAssessSystemCapacity = mock(() =>
-  Promise.resolve({
-    pressureLevel: 'normal' as const,
-    cpuUtilization: 50,
-    memoryUtilization: 60,
-    canSpawnWorker: true,
-    details: {
-      totalMemory: 16 * 1024 * 1024 * 1024,
-      availableMemory: 8 * 1024 * 1024 * 1024,
-      cpuCount: 8,
-      loadAverage: 2.5,
-    },
-  })
-)
-
-const mockGetRecommendedConcurrency = mock((staticLimit: number, _min: number, _max: number) =>
-  Promise.resolve(staticLimit)
-)
-
-// Setup mocks
-mock.module('./providers', () => ({
+// Setup mocks - these are hoisted but now have access to hoisted mock functions
+vi.mock('./providers', () => ({
   completeJSON: mockCompleteJSON,
 }))
 
-mock.module('./ollama', () => ({
+vi.mock('./ollama', () => ({
   ensureModel: mockEnsureModel,
 }))
 
-mock.module('../../core/system', () => ({
+vi.mock('../../core/system', () => ({
   assessSystemCapacity: mockAssessSystemCapacity,
   getRecommendedConcurrency: mockGetRecommendedConcurrency,
 }))
 
 // Mock p-retry to just call the function directly
-mock.module('p-retry', () => ({
+vi.mock('p-retry', () => ({
   default: async (fn: () => any) => {
     return await fn()
   },
 }))
+
+// Dynamic import after mocks are set up
+const { completeBatch } = await import('./batch')
+import type { BatchResult } from './batch'
 
 describe('completeBatch', () => {
   beforeEach(() => {
@@ -59,6 +65,24 @@ describe('completeBatch', () => {
     mockEnsureModel.mockClear()
     mockAssessSystemCapacity.mockClear()
     mockGetRecommendedConcurrency.mockClear()
+
+    // Reset default implementations
+    mockCompleteJSON.mockImplementation((prompt: string, config: any) => {
+      return Promise.resolve({ result: `processed: ${prompt.slice(0, 20)}` })
+    })
+
+    mockAssessSystemCapacity.mockResolvedValue({
+      pressureLevel: 'normal' as const,
+      cpuUtilization: 50,
+      memoryUtilization: 60,
+      canSpawnWorker: true,
+      details: {
+        totalMemory: 16 * 1024 * 1024 * 1024,
+        availableMemory: 8 * 1024 * 1024 * 1024,
+        cpuCount: 8,
+        loadAverage: 2.5,
+      },
+    })
 
     // Reset environment
     delete process.env.LLM_CONCURRENCY
@@ -128,7 +152,7 @@ describe('completeBatch', () => {
 
     test('calls buildPrompt with input and index', async () => {
       const inputs = ['a', 'b', 'c']
-      const buildPrompt = mock((input: string, index: number) => `${index}: ${input}`)
+      const buildPrompt = vi.fn((input: string, index: number) => `${index}: ${input}`)
 
       await completeBatch(
         inputs,
@@ -183,7 +207,7 @@ describe('completeBatch', () => {
         .mockImplementationOnce(() => Promise.resolve({ success: true }))
         .mockImplementationOnce(() => Promise.reject(new Error('LLM failed')))
 
-      const defaultResult = mock((input: string, error: Error) => ({
+      const defaultResult = vi.fn((input: string, error: Error) => ({
         input,
         error: error.message,
       }))

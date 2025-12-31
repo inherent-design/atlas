@@ -2,7 +2,6 @@
  * Tests for pattern-based module logging
  */
 
-import { describe, expect, test, beforeEach } from 'bun:test'
 import { createLogger, setLogLevel, setModuleRules, getLogConfig } from './logger'
 
 describe('logger', () => {
@@ -99,12 +98,7 @@ describe('logger', () => {
       const config = getLogConfig()
 
       // Expected order: qntm/providers (25), qntm/* (20), llm (15), * (0)
-      expect(config.rules.map((r) => r.pattern)).toEqual([
-        'qntm/providers',
-        'qntm/*',
-        'llm',
-        '*',
-      ])
+      expect(config.rules.map((r) => r.pattern)).toEqual(['qntm/providers', 'qntm/*', 'llm', '*'])
     })
   })
 

@@ -213,14 +213,18 @@ program
         log.info(`Dry run: found ${result.candidatesFound} consolidation candidates`)
         if (result.candidates && result.candidates.length > 0) {
           for (const candidate of result.candidates.slice(0, 10)) {
-            console.log(`  - ${candidate.file_path} (similarity: ${candidate.similarity.toFixed(3)})`)
+            console.log(
+              `  - ${candidate.file_path} (similarity: ${candidate.similarity.toFixed(3)})`
+            )
           }
           if (result.candidates.length > 10) {
             console.log(`  ... and ${result.candidates.length - 10} more`)
           }
         }
       } else {
-        log.info(`Consolidation complete: ${result.consolidated} chunks merged, ${result.deleted} removed`)
+        log.info(
+          `Consolidation complete: ${result.consolidated} chunks merged, ${result.deleted} removed`
+        )
       }
     } catch (error) {
       log.error('Consolidation failed', error as Error)

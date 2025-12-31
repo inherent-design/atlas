@@ -272,7 +272,9 @@ let watchdogInstance: ConsolidationWatchdog | null = null
 /**
  * Get or create the consolidation watchdog singleton
  */
-export function getConsolidationWatchdog(config?: ConsolidationWatchdogConfig): ConsolidationWatchdog {
+export function getConsolidationWatchdog(
+  config?: ConsolidationWatchdogConfig
+): ConsolidationWatchdog {
   if (!watchdogInstance) {
     watchdogInstance = new ConsolidationWatchdog(config)
   }

@@ -40,9 +40,18 @@ export class PollingScheduler {
       return
     }
 
+    // Clamp to minimum 10ms to prevent CPU hammering from accidental 0/negative values
+    const clampedInterval = Math.max(10, intervalMs)
+    if (clampedInterval !== intervalMs) {
+      this.log.warn('Interval clamped to minimum', {
+        requested: intervalMs,
+        actual: clampedInterval,
+      })
+    }
+
     this.isShuttingDown = false
 
-    this.log.info('Scheduler started', { intervalMs })
+    this.log.info('Scheduler started', { intervalMs: clampedInterval })
 
     this.interval = setInterval(async () => {
       if (this.isShuttingDown || this.tickInProgress) {
@@ -57,7 +66,7 @@ export class PollingScheduler {
       } finally {
         this.tickInProgress = false
       }
-    }, intervalMs)
+    }, clampedInterval)
   }
 
   /**

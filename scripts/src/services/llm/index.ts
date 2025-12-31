@@ -28,11 +28,21 @@ export { completeBatch } from './batch'
 // Global LLM configuration
 import type { LLMConfig } from './providers'
 
-let globalConfig: LLMConfig = {
+const defaultConfig: LLMConfig = {
   provider: 'ollama',
   model: 'ministral-3:3b',
   ollamaHost: OLLAMA_URL,
   temperature: 0.1,
+}
+
+let globalConfig: LLMConfig = { ...defaultConfig }
+
+/**
+ * Reset LLM config to defaults (for testing)
+ * @internal Test-only export
+ */
+export function _resetLLMConfig(): void {
+  globalConfig = { ...defaultConfig }
 }
 
 /**

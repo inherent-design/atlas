@@ -61,6 +61,15 @@ let cachedCapacity: { data: SystemCapacity; timestamp: number } | null = null
 const CACHE_TTL_MS = 1000 // 1 second
 
 /**
+ * Reset capacity cache for testing.
+ * Enables deterministic cache testing without real delays.
+ * @internal Test-only export
+ */
+export function _resetCapacityCache(): void {
+  cachedCapacity = null
+}
+
+/**
  * Run a shell command and return stdout
  */
 function runCommand(cmd: string[]): string | null {
@@ -108,8 +117,9 @@ function parseMacOSMemory(): MemoryStats | null {
   // Parse swap from memory_pressure output if present
   const swapInMatch = pressureOutput.match(/Swapins:\s*(\d+)/)
   const swapOutMatch = pressureOutput.match(/Swapouts:\s*(\d+)/)
-  const hasSwapActivity = (swapInMatch && parseInt(swapInMatch[1], 10) > 0) ||
-                          (swapOutMatch && parseInt(swapOutMatch[1], 10) > 0)
+  const hasSwapActivity =
+    (swapInMatch && parseInt(swapInMatch[1], 10) > 0) ||
+    (swapOutMatch && parseInt(swapOutMatch[1], 10) > 0)
 
   return {
     total,

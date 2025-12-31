@@ -2,91 +2,94 @@
  * Integration tests for Atlas search
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test'
-import { formatResults, search, timeline } from '.'
 import type { SearchResult } from '../../shared/types'
 
-// Mock setup
-const mockVoyageEmbed = mock((input: any) => {
-  // Return one embedding per input
-  const chunks = Array.isArray(input.input) ? input.input : [input.input]
-  return Promise.resolve({
-    data: chunks.map(() => ({
-      embedding: new Array(1024).fill(0.1),
-    })),
-  })
-})
-
-const mockQdrantSearch = mock(() =>
-  Promise.resolve([
-    {
-      id: 'chunk1',
-      score: 0.95,
-      payload: {
-        original_text: 'This is about memory consolidation patterns in neural networks.',
-        file_path: 'docs/memory.md',
-        chunk_index: 0,
-        created_at: '2025-12-25T10:00:00Z',
-        qntm_keys: ['@memory ~ consolidation', '@neural ~ patterns'],
-      },
-    },
-    {
-      id: 'chunk2',
-      score: 0.87,
-      payload: {
-        original_text: 'Sleep patterns enable episodic to semantic transformation.',
-        file_path: 'docs/sleep.md',
-        chunk_index: 1,
-        created_at: '2025-12-26T11:00:00Z',
-        qntm_keys: ['@sleep ~ patterns', '@episodic ~ semantic'],
-      },
-    },
-  ])
-)
-
-const mockQdrantScroll = mock(() =>
-  Promise.resolve({
-    points: [
+// Use vi.hoisted() to define mocks that will be available when vi.mock() factories run
+const { mockVoyageEmbed, mockQdrantSearch, mockQdrantScroll } = vi.hoisted(() => ({
+  mockVoyageEmbed: vi.fn((input: any) => {
+    // Return one embedding per input
+    const chunks = Array.isArray(input.input) ? input.input : [input.input]
+    return Promise.resolve({
+      data: chunks.map(() => ({
+        embedding: new Array(1024).fill(0.1),
+      })),
+    })
+  }),
+  mockQdrantSearch: vi.fn(() =>
+    Promise.resolve([
       {
         id: 'chunk1',
+        score: 0.95,
         payload: {
-          original_text: 'First document chronologically.',
-          file_path: 'docs/first.md',
+          original_text: 'This is about memory consolidation patterns in neural networks.',
+          file_path: 'docs/memory.md',
           chunk_index: 0,
-          created_at: '2025-12-01T00:00:00Z',
-          qntm_keys: ['@first ~ doc'],
+          created_at: '2025-12-25T10:00:00Z',
+          qntm_keys: ['@memory ~ consolidation', '@neural ~ patterns'],
         },
       },
       {
         id: 'chunk2',
+        score: 0.87,
         payload: {
-          original_text: 'Second document chronologically.',
-          file_path: 'docs/second.md',
-          chunk_index: 0,
-          created_at: '2025-12-02T00:00:00Z',
-          qntm_keys: ['@second ~ doc'],
+          original_text: 'Sleep patterns enable episodic to semantic transformation.',
+          file_path: 'docs/sleep.md',
+          chunk_index: 1,
+          created_at: '2025-12-26T11:00:00Z',
+          qntm_keys: ['@sleep ~ patterns', '@episodic ~ semantic'],
         },
       },
-    ],
-  })
-)
+    ])
+  ),
+  mockQdrantScroll: vi.fn(() =>
+    Promise.resolve({
+      points: [
+        {
+          id: 'chunk1',
+          payload: {
+            original_text: 'First document chronologically.',
+            file_path: 'docs/first.md',
+            chunk_index: 0,
+            created_at: '2025-12-01T00:00:00Z',
+            qntm_keys: ['@first ~ doc'],
+          },
+        },
+        {
+          id: 'chunk2',
+          payload: {
+            original_text: 'Second document chronologically.',
+            file_path: 'docs/second.md',
+            chunk_index: 0,
+            created_at: '2025-12-02T00:00:00Z',
+            qntm_keys: ['@second ~ doc'],
+          },
+        },
+      ],
+    })
+  ),
+}))
+
+// Setup mocks - hoisted but now have access to hoisted mock functions
+vi.mock('../../services/embedding', () => ({
+  getVoyageClient: () => ({
+    embed: mockVoyageEmbed,
+  }),
+}))
+
+vi.mock('../../services/storage', () => ({
+  getQdrantClient: () => ({
+    search: mockQdrantSearch,
+    scroll: mockQdrantScroll,
+  }),
+}))
+
+// Import after mocks
+import { formatResults, search, timeline } from '.'
 
 describe('search', () => {
   beforeEach(() => {
     mockVoyageEmbed.mockClear()
     mockQdrantSearch.mockClear()
-
-    // Mock services
-    mock.module('../../services/embedding', () => ({
-      getVoyageClient: () => ({
-        embed: mockVoyageEmbed,
-      }),
-    }))
-    mock.module('../../services/storage', () => ({
-      getQdrantClient: () => ({
-        search: mockQdrantSearch,
-      }),
-    }))
   })
 
   test('performs basic semantic search', async () => {
@@ -193,12 +196,6 @@ describe('search', () => {
 describe('timeline', () => {
   beforeEach(() => {
     mockQdrantScroll.mockClear()
-
-    mock.module('../../services/storage', () => ({
-      getQdrantClient: () => ({
-        scroll: mockQdrantScroll,
-      }),
-    }))
   })
 
   test('retrieves chronological timeline', async () => {

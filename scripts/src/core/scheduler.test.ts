@@ -2,11 +2,14 @@
  * Tests for PollingScheduler
  */
 
-import { describe, expect, test, afterEach, mock } from 'bun:test'
 import { PollingScheduler } from './scheduler'
 
 describe('PollingScheduler', () => {
   let scheduler: PollingScheduler | null = null
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
 
   afterEach(() => {
     // Cleanup scheduler if test didn't
@@ -14,11 +17,12 @@ describe('PollingScheduler', () => {
       scheduler.stop()
       scheduler = null
     }
+    vi.useRealTimers()
   })
 
   describe('initialization', () => {
     test('initializes with correct name and state', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test-scheduler',
         tick,
@@ -33,10 +37,10 @@ describe('PollingScheduler', () => {
 
     test('accepts custom logger', () => {
       const customLog = {
-        debug: mock(() => {}),
-        info: mock(() => {}),
-        warn: mock(() => {}),
-        error: mock(() => {}),
+        debug: vi.fn(() => {}),
+        info: vi.fn(() => {}),
+        warn: vi.fn(() => {}),
+        error: vi.fn(() => {}),
       }
 
       scheduler = new PollingScheduler({
@@ -52,7 +56,7 @@ describe('PollingScheduler', () => {
 
   describe('start/stop lifecycle', () => {
     test('starts scheduler successfully', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -65,7 +69,7 @@ describe('PollingScheduler', () => {
     })
 
     test('stops scheduler successfully', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -79,7 +83,7 @@ describe('PollingScheduler', () => {
     })
 
     test('prevents duplicate start', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -99,7 +103,7 @@ describe('PollingScheduler', () => {
     })
 
     test('handles stop when not running', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -111,7 +115,7 @@ describe('PollingScheduler', () => {
     })
 
     test('resets shutdown flag on restart', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -129,7 +133,7 @@ describe('PollingScheduler', () => {
 
   describe('tick execution', () => {
     test('executes tick at interval', async () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -137,8 +141,8 @@ describe('PollingScheduler', () => {
 
       scheduler.start(50) // 50ms interval
 
-      // Wait for at least 2 ticks
-      await new Promise((resolve) => setTimeout(resolve, 120))
+      // Advance time for 2+ ticks
+      await vi.advanceTimersByTimeAsync(120)
 
       scheduler.stop()
 
@@ -148,9 +152,9 @@ describe('PollingScheduler', () => {
 
     test('skips tick when already in progress', async () => {
       let tickCount = 0
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         tickCount++
-        // Long-running tick
+        // Long-running tick - use real delay simulation
         await new Promise((resolve) => setTimeout(resolve, 100))
       })
 
@@ -161,8 +165,8 @@ describe('PollingScheduler', () => {
 
       scheduler.start(30) // Interval shorter than tick duration
 
-      // Wait for multiple intervals
-      await new Promise((resolve) => setTimeout(resolve, 150))
+      // Advance time for multiple intervals
+      await vi.advanceTimersByTimeAsync(150)
 
       scheduler.stop()
 
@@ -172,7 +176,7 @@ describe('PollingScheduler', () => {
     })
 
     test('skips tick when shutting down', async () => {
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
@@ -184,15 +188,15 @@ describe('PollingScheduler', () => {
       scheduler.start(20)
 
       // Let one tick execute
-      await new Promise((resolve) => setTimeout(resolve, 25))
+      await vi.advanceTimersByTimeAsync(25)
 
       // Stop immediately
       scheduler.stop()
 
       const callsAfterStop = tick.mock.calls.length
 
-      // Wait a bit more
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      // Advance more time
+      await vi.advanceTimersByTimeAsync(50)
 
       // Should not have increased
       expect(tick.mock.calls.length).toBe(callsAfterStop)
@@ -200,7 +204,7 @@ describe('PollingScheduler', () => {
 
     test('handles tick errors gracefully', async () => {
       let callCount = 0
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         callCount++
         if (callCount === 1) {
           throw new Error('Tick failed')
@@ -214,8 +218,8 @@ describe('PollingScheduler', () => {
 
       scheduler.start(50)
 
-      // Wait for multiple ticks
-      await new Promise((resolve) => setTimeout(resolve, 150))
+      // Advance time for multiple ticks
+      await vi.advanceTimersByTimeAsync(150)
 
       scheduler.stop()
 
@@ -224,7 +228,7 @@ describe('PollingScheduler', () => {
     })
 
     test('resets busy flag after tick error', async () => {
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         throw new Error('Test error')
       })
 
@@ -236,7 +240,7 @@ describe('PollingScheduler', () => {
       scheduler.start(50)
 
       // Wait for tick to execute and fail
-      await new Promise((resolve) => setTimeout(resolve, 70))
+      await vi.advanceTimersByTimeAsync(70)
 
       // Should not be busy after error
       expect(scheduler.isBusy()).toBe(false)
@@ -247,7 +251,7 @@ describe('PollingScheduler', () => {
 
   describe('state queries', () => {
     test('isRunning returns correct state', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -263,7 +267,7 @@ describe('PollingScheduler', () => {
     })
 
     test('isBusy returns false when no tick in progress', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -274,7 +278,7 @@ describe('PollingScheduler', () => {
 
     test('isBusy returns true during tick execution', async () => {
       let busyDuringTick = false
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         if (scheduler) {
           busyDuringTick = scheduler.isBusy()
         }
@@ -286,10 +290,11 @@ describe('PollingScheduler', () => {
         tick,
       })
 
-      // Use triggerTick for synchronous control (setInterval delays first execution)
+      // Use triggerTick for synchronous control
       const tickPromise = scheduler.triggerTick()
 
-      // Wait for tick to complete
+      // Advance time for tick to complete
+      await vi.advanceTimersByTimeAsync(50)
       await tickPromise
 
       // Busy flag should have been true inside tick
@@ -299,7 +304,7 @@ describe('PollingScheduler', () => {
     })
 
     test('getState returns complete state', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test-name',
         tick,
@@ -318,7 +323,7 @@ describe('PollingScheduler', () => {
 
   describe('triggerTick', () => {
     test('executes tick manually', async () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -331,7 +336,7 @@ describe('PollingScheduler', () => {
 
     test('sets busy flag during manual tick', async () => {
       let busyDuringTick = false
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         if (scheduler) {
           busyDuringTick = scheduler.isBusy()
         }
@@ -343,7 +348,9 @@ describe('PollingScheduler', () => {
         tick,
       })
 
-      await scheduler.triggerTick()
+      const tickPromise = scheduler.triggerTick()
+      await vi.advanceTimersByTimeAsync(20)
+      await tickPromise
 
       expect(busyDuringTick).toBe(true)
       expect(scheduler.isBusy()).toBe(false) // Should be reset after
@@ -351,7 +358,7 @@ describe('PollingScheduler', () => {
 
     test('skips manual trigger when tick in progress', async () => {
       let tickCount = 0
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         tickCount++
         await new Promise((resolve) => setTimeout(resolve, 50))
       })
@@ -365,13 +372,14 @@ describe('PollingScheduler', () => {
       const promise1 = scheduler.triggerTick()
       const promise2 = scheduler.triggerTick() // Should be skipped
 
+      await vi.advanceTimersByTimeAsync(100)
       await Promise.all([promise1, promise2])
 
       expect(tickCount).toBe(1) // Only one should have executed
     })
 
     test('resets busy flag after manual tick error', async () => {
-      const tick = mock(async () => {
+      const tick = vi.fn(async () => {
         throw new Error('Manual tick error')
       })
 
@@ -392,7 +400,7 @@ describe('PollingScheduler', () => {
     })
 
     test('works without starting scheduler', async () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -408,7 +416,7 @@ describe('PollingScheduler', () => {
 
   describe('edge cases', () => {
     test('handles rapid start/stop cycles', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
@@ -422,26 +430,27 @@ describe('PollingScheduler', () => {
       expect(scheduler.isRunning()).toBe(false)
     })
 
-    test('handles interval of zero', async () => {
-      const tick = mock(async () => {})
+    test('clamps interval to minimum 10ms', async () => {
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,
       })
 
-      // Start with zero interval (should fire very rapidly)
+      // Start with zero interval (should be clamped to 10ms)
       scheduler.start(0)
 
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await vi.advanceTimersByTimeAsync(50)
 
       scheduler.stop()
 
-      // Should have fired many times
-      expect(tick.mock.calls.length).toBeGreaterThan(5)
+      // With 10ms interval over 50ms, expect ~5 ticks
+      expect(tick.mock.calls.length).toBeGreaterThanOrEqual(4)
+      expect(tick.mock.calls.length).toBeLessThanOrEqual(6)
     })
 
     test('handles very long interval', () => {
-      const tick = mock(async () => {})
+      const tick = vi.fn(async () => {})
       scheduler = new PollingScheduler({
         name: 'test',
         tick,

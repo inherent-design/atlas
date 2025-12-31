@@ -2,82 +2,90 @@
  * Integration tests for Atlas ingestion
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { ingest, ingestFile } from '.'
 
-// Mock setup
-const mockVoyageEmbed = mock((input: any) => {
-  // Return one embedding per chunk
-  const chunks = Array.isArray(input.input) ? input.input : [input.input]
-  return Promise.resolve({
-    data: chunks.map(() => ({
-      embedding: new Array(1024).fill(0.1), // Mock 1024-dim embedding
-    })),
-  })
+// Use vi.hoisted() to define mocks that will be available when vi.mock() factories run
+const {
+  mockVoyageEmbed,
+  mockQdrantGet,
+  mockQdrantCreate,
+  mockQdrantUpsert,
+  mockGenerateQNTMKeysBatch,
+} = vi.hoisted(() => ({
+  mockVoyageEmbed: vi.fn((input: any) => {
+    // Return one embedding per chunk
+    const chunks = Array.isArray(input.input) ? input.input : [input.input]
+    return Promise.resolve({
+      data: chunks.map(() => ({
+        embedding: new Array(1024).fill(0.1), // Mock 1024-dim embedding
+      })),
+    })
+  }),
+  mockQdrantGet: vi.fn(() => Promise.reject(new Error('Collection not found'))),
+  mockQdrantCreate: vi.fn(() => Promise.resolve()),
+  mockQdrantUpsert: vi.fn(() => Promise.resolve({ status: 'acknowledged' })),
+  mockGenerateQNTMKeysBatch: vi.fn((inputs: any[]) =>
+    Promise.resolve(
+      inputs.map(() => ({
+        keys: ['@test ~ content', '@mock ~ data'],
+        reasoning: 'Test content semantic keys',
+      }))
+    )
+  ),
+}))
+
+// Setup mocks - hoisted but now have access to hoisted mock functions
+vi.mock('../../services/storage', () => ({
+  getQdrantClient: () => ({
+    getCollection: mockQdrantGet,
+    createCollection: mockQdrantCreate,
+    upsert: mockQdrantUpsert,
+  }),
+}))
+
+vi.mock('../../services/embedding', () => ({
+  getVoyageClient: () => ({
+    embed: mockVoyageEmbed,
+  }),
+}))
+
+vi.mock('../../services/chunking', () => ({
+  getTextSplitter: () => ({
+    splitText: async (text: string) => {
+      // Simple mock: split by paragraphs
+      return text.split('\n\n').filter((chunk) => chunk.trim().length > 0)
+    },
+  }),
+}))
+
+// Mock LLM service with sanitizeQNTMKey preserved
+vi.mock('../../services/llm', async () => {
+  const actual = await vi.importActual<typeof import('../../services/llm')>('../../services/llm')
+  return {
+    generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
+    sanitizeQNTMKey: actual.sanitizeQNTMKey,
+    fetchExistingQNTMKeys: () => Promise.resolve([]),
+  }
 })
 
-const mockQdrantGet = mock(() => Promise.reject(new Error('Collection not found')))
-const mockQdrantCreate = mock(() => Promise.resolve())
-const mockQdrantUpsert = mock(() => Promise.resolve({ status: 'acknowledged' }))
-
-const mockGenerateQNTMKeysBatch = mock((inputs: any[]) =>
-  Promise.resolve(
-    inputs.map(() => ({
-      keys: ['@test ~ content', '@mock ~ data'],
-      reasoning: 'Test content semantic keys',
-    }))
-  )
-)
+// Import after mocks are set up
+import { ingest, ingestFile } from '.'
 
 const testDir = '/tmp/atlas-test-ingest'
 
 describe('ingestFile', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     // Reset mocks
     mockVoyageEmbed.mockClear()
     mockQdrantGet.mockClear()
     mockQdrantCreate.mockClear()
     mockQdrantUpsert.mockClear()
+    mockGenerateQNTMKeysBatch.mockClear()
 
     // Setup test directory
     rmSync(testDir, { recursive: true, force: true })
     mkdirSync(testDir, { recursive: true })
-
-    // Mock storage service
-    mock.module('../../services/storage', () => ({
-      getQdrantClient: () => ({
-        getCollection: mockQdrantGet,
-        createCollection: mockQdrantCreate,
-        upsert: mockQdrantUpsert,
-      }),
-    }))
-
-    // Mock embedding service
-    mock.module('../../services/embedding', () => ({
-      getVoyageClient: () => ({
-        embed: mockVoyageEmbed,
-      }),
-    }))
-
-    // Mock chunking service
-    mock.module('../../services/chunking', () => ({
-      getTextSplitter: () => ({
-        splitText: async (text: string) => {
-          // Simple mock: split by paragraphs
-          return text.split('\n\n').filter((chunk) => chunk.trim().length > 0)
-        },
-      }),
-    }))
-
-    // Mock QNTM generation (use real sanitizeQNTMKey to avoid mock conflicts)
-    const { sanitizeQNTMKey: realSanitize } = await import('../../services/llm')
-    mock.module('../../services/llm', () => ({
-      generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
-      sanitizeQNTMKey: realSanitize,
-      fetchExistingQNTMKeys: () => Promise.resolve([]),
-    }))
   })
 
   test('ingests single file successfully', async () => {
@@ -167,42 +175,16 @@ describe('ingestFile', () => {
 })
 
 describe('ingest', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     rmSync(testDir, { recursive: true, force: true })
     mkdirSync(testDir, { recursive: true })
 
-    // Same mocking as ingestFile tests
+    // Reset mocks
     mockVoyageEmbed.mockClear()
     mockQdrantGet.mockClear()
     mockQdrantCreate.mockClear()
     mockQdrantUpsert.mockClear()
     mockGenerateQNTMKeysBatch.mockClear()
-
-    mock.module('../../services/storage', () => ({
-      getQdrantClient: () => ({
-        getCollection: mockQdrantGet,
-        createCollection: mockQdrantCreate,
-        upsert: mockQdrantUpsert,
-      }),
-    }))
-
-    mock.module('../../services/embedding', () => ({
-      getVoyageClient: () => ({ embed: mockVoyageEmbed }),
-    }))
-
-    mock.module('../../services/chunking', () => ({
-      getTextSplitter: () => ({
-        splitText: async (text: string) => text.split('\n\n').filter(Boolean),
-      }),
-    }))
-
-    // Use real sanitizeQNTMKey to avoid mock conflicts
-    const { sanitizeQNTMKey: realSanitize } = await import('../../services/llm')
-    mock.module('../../services/llm', () => ({
-      generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
-      sanitizeQNTMKey: realSanitize,
-      fetchExistingQNTMKeys: () => Promise.resolve([]),
-    }))
   })
 
   test('ingests multiple files', async () => {
