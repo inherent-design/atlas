@@ -266,7 +266,7 @@ export function createMockChunkPayload(overrides?: Partial<ChunkPayload>): Chunk
     qntm_keys: ['@test ~ content'],
     created_at: '2025-12-30T00:00:00Z',
     importance: 'normal',
-    consolidated: false,
+    consolidation_level: 0,
     ...overrides,
   }
 }

@@ -3,6 +3,11 @@
  *
  * Pure business logic for searching ingested context with Voyage + Qdrant.
  * CLI interface is in index.ts.
+ *
+ * Access Tracking:
+ * - Increments access_count on retrieved chunks
+ * - Updates last_accessed_at timestamp
+ * - Filters out deletion_eligible and superseded_by chunks
  */
 
 import { getVoyageClient } from '../../services/embedding'
@@ -16,9 +21,54 @@ import {
   DEFAULT_QUANTIZATION_OVERSAMPLING,
 } from '../../shared/config'
 import { createLogger, startTimer } from '../../shared/logger'
-import type { SearchOptions, SearchResult } from '../../shared/types'
+import type { SearchOptions, SearchResult, ChunkPayload } from '../../shared/types'
 
 const log = createLogger('search')
+
+/**
+ * Update access tracking for retrieved chunks
+ * Increments access_count and sets last_accessed_at
+ */
+async function updateAccessTracking(pointIds: string[]): Promise<void> {
+  if (pointIds.length === 0) return
+
+  const qdrant = getQdrantClient()
+  const now = new Date().toISOString()
+
+  try {
+    // Fetch current access counts
+    const points = await qdrant.retrieve(QDRANT_COLLECTION_NAME, {
+      ids: pointIds,
+      with_payload: true,
+      with_vector: false,
+    })
+
+    // Update each point with incremented access count
+    for (const point of points) {
+      const payload = point.payload as ChunkPayload
+      const currentCount = payload.access_count ?? 0
+
+      await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
+        payload: {
+          access_count: currentCount + 1,
+          last_accessed_at: now,
+        },
+        points: [point.id as string],
+      })
+    }
+
+    log.debug('Updated access tracking', {
+      pointCount: pointIds.length,
+      timestamp: now,
+    })
+  } catch (error) {
+    // Non-fatal: log warning but don't fail the search
+    log.warn('Failed to update access tracking', {
+      error: (error as Error).message,
+      pointCount: pointIds.length,
+    })
+  }
+}
 
 // Semantic search with optional temporal filtering
 export async function search(options: SearchOptions): Promise<SearchResult[]> {
@@ -55,7 +105,15 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
   }
 
   // Build Qdrant filter for temporal/semantic constraints
-  const filter: any = {}
+  const filter: any = {
+    // Always exclude deleted and superseded chunks
+    must_not: [
+      { key: 'deletion_eligible', match: { value: true } },
+      { key: 'superseded_by', match: { except: [null] } }, // Exclude if superseded_by is set
+    ],
+  }
+
+  // Add temporal filter
   if (since) {
     filter.must = filter.must || []
     filter.must.push({
@@ -65,9 +123,10 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
       },
     })
   }
+
+  // Add QNTM key filter
   if (qntmKey) {
     filter.must = filter.must || []
-    // Match against qntm_keys array
     filter.must.push({
       key: 'qntm_keys',
       match: { any: [qntmKey] },
@@ -113,6 +172,14 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 
   log.info('Search complete', { resultsFound: results.length })
 
+  // Extract point IDs for access tracking
+  const pointIds = results.map((hit: any) => hit.id as string)
+
+  // Update access tracking (non-blocking, fire-and-forget)
+  updateAccessTracking(pointIds).catch((err) => {
+    log.warn('Access tracking update failed', { error: err.message })
+  })
+
   // Format results
   const formatted = results.map((hit: any) => ({
     text: hit.payload.original_text,
@@ -141,6 +208,11 @@ export async function timeline(since: string, limit = 20): Promise<SearchResult[
           key: 'created_at',
           range: { gte: since },
         },
+      ],
+      // Exclude deleted and superseded chunks
+      must_not: [
+        { key: 'deletion_eligible', match: { value: true } },
+        { key: 'superseded_by', match: { except: [null] } },
       ],
     },
     limit,

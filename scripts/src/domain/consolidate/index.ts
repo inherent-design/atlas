@@ -294,14 +294,18 @@ async function performConsolidation(
         new Set([...primaryPayload.qntm_keys, ...secondaryPayload.qntm_keys])
       )
 
+      // Merge occurrences (timestamps array)
+      const primaryOccurrences = primaryPayload.occurrences || [primaryPayload.created_at]
+      const secondaryOccurrences = secondaryPayload.occurrences || [secondaryPayload.created_at]
+      const mergedOccurrences = [...new Set([...primaryOccurrences, ...secondaryOccurrences])].sort()
+
       // Update primary with consolidation metadata
       const updatedPayload: ChunkPayload = {
         ...primaryPayload,
         qntm_keys: mergedKeys,
-        consolidated: false, // Primary stays active
-        occurrences: (primaryPayload.occurrences || 1) + (secondaryPayload.occurrences || 1),
-        parents: [...(primaryPayload.parents || []), secondary.id as string],
-        consolidated_from: [...(primaryPayload.consolidated_from || []), secondary.id as string],
+        consolidation_level: Math.max(primaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3, // At least level 1 after consolidation
+        occurrences: mergedOccurrences, // Array of ISO timestamps
+        parents: [...(primaryPayload.parents || []), secondary.id as string], // Absorbs consolidated_from
         consolidation_type: classification.type,
         consolidation_direction: classification.direction,
         consolidation_reasoning: classification.reasoning,
@@ -313,9 +317,14 @@ async function performConsolidation(
         points: [primary.id as string],
       })
 
-      // Mark secondary as consolidated (soft delete)
+      // Mark secondary as superseded (soft delete with provenance)
       await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-        payload: { consolidated: true },
+        payload: {
+          consolidation_level: Math.max(secondaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3,
+          superseded_by: primary.id as string,
+          deletion_eligible: true,
+          deletion_marked_at: new Date().toISOString(),
+        },
         points: [secondary.id as string],
       })
 

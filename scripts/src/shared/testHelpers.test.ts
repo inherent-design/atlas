@@ -167,7 +167,7 @@ describe('Fixture Factories', () => {
     expect(payload.original_text).toBeDefined()
     expect(payload.file_path).toBeDefined()
     expect(payload.qntm_keys).toBeInstanceOf(Array)
-    expect(payload.consolidated).toBe(false)
+    expect(payload.consolidation_level).toBe(0)
   })
 
   test('createMockChunkPayload accepts overrides', () => {

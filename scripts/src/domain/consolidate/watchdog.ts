@@ -10,22 +10,27 @@
  * 3. Qdrant's vacuum optimizer handles soft-deleted chunks automatically
  */
 
-import { QDRANT_COLLECTION_NAME } from '../../shared/config'
+import {
+  QDRANT_COLLECTION_NAME,
+  CONSOLIDATION_BASE_THRESHOLD,
+  CONSOLIDATION_SCALE_FACTOR,
+  CONSOLIDATION_SIMILARITY_THRESHOLD,
+  CONSOLIDATION_POLL_INTERVAL_MS,
+  BATCH_HNSW_THRESHOLD,
+} from '../../shared/config'
 import { consolidate } from '.'
 import { createLogger } from '../../shared/logger'
 import { PollingScheduler } from '../../core/scheduler'
+import { getQdrantClient, withHNSWDisabled } from '../../services/storage'
 
 const log = createLogger('consolidation-watchdog')
 
-// Configuration
-const DEFAULT_THRESHOLD = 100 // Documents before triggering consolidation
-const DEFAULT_POLL_INTERVAL_MS = 30000 // 30 seconds
-const DEFAULT_SIMILARITY_THRESHOLD = 0.92
-
 export interface ConsolidationWatchdogConfig {
-  threshold?: number
+  baseThreshold?: number // Base threshold (default 100)
+  scaleFactor?: number // Scale factor for dynamic threshold (default 0.05)
   pollIntervalMs?: number
   similarityThreshold?: number
+  useHNSWToggle?: boolean // Enable HNSW disable/enable during consolidation
 }
 
 /**
@@ -122,19 +127,27 @@ export const ingestPauseController = new IngestPauseController()
 /**
  * Consolidation Watchdog
  *
- * Monitors document count and triggers consolidation at threshold.
+ * Monitors document count and triggers consolidation at dynamic threshold.
+ * Threshold formula: baseThreshold + (scaleFactor × point_count)
+ * Default: 100 + (0.05 × point_count)
  */
 export class ConsolidationWatchdog {
   private scheduler: PollingScheduler
   private lastConsolidationCount = 0
   private currentCount = 0
-  private threshold: number
+  private baseThreshold: number
+  private scaleFactor: number
   private similarityThreshold: number
+  private useHNSWToggle: boolean
   private isConsolidating = false
+  private consecutiveFailures = 0
+  private readonly MAX_CONSECUTIVE_FAILURES = 3
 
   constructor(config: ConsolidationWatchdogConfig = {}) {
-    this.threshold = config.threshold ?? DEFAULT_THRESHOLD
-    this.similarityThreshold = config.similarityThreshold ?? DEFAULT_SIMILARITY_THRESHOLD
+    this.baseThreshold = config.baseThreshold ?? CONSOLIDATION_BASE_THRESHOLD
+    this.scaleFactor = config.scaleFactor ?? CONSOLIDATION_SCALE_FACTOR
+    this.similarityThreshold = config.similarityThreshold ?? CONSOLIDATION_SIMILARITY_THRESHOLD
+    this.useHNSWToggle = config.useHNSWToggle ?? true
 
     this.scheduler = new PollingScheduler({
       name: 'consolidation',
@@ -142,18 +155,39 @@ export class ConsolidationWatchdog {
     })
 
     log.debug('ConsolidationWatchdog initialized', {
-      threshold: this.threshold,
+      baseThreshold: this.baseThreshold,
+      scaleFactor: this.scaleFactor,
       similarityThreshold: this.similarityThreshold,
+      useHNSWToggle: this.useHNSWToggle,
     })
+  }
+
+  /**
+   * Calculate dynamic threshold based on collection size
+   * Formula: baseThreshold + (scaleFactor × point_count)
+   */
+  private async calculateDynamicThreshold(): Promise<number> {
+    try {
+      const qdrant = getQdrantClient()
+      const info = await qdrant.getCollection(QDRANT_COLLECTION_NAME)
+      const pointCount = info.points_count ?? 0
+      const threshold = Math.floor(this.baseThreshold + this.scaleFactor * pointCount)
+      log.debug('Dynamic threshold calculated', { pointCount, threshold })
+      return threshold
+    } catch {
+      // Fall back to base threshold if collection doesn't exist
+      return this.baseThreshold
+    }
   }
 
   /**
    * Start the consolidation watchdog
    */
-  start(pollIntervalMs = DEFAULT_POLL_INTERVAL_MS): void {
+  start(pollIntervalMs = CONSOLIDATION_POLL_INTERVAL_MS): void {
     log.info('Starting consolidation watchdog', {
       pollIntervalMs,
-      threshold: this.threshold,
+      baseThreshold: this.baseThreshold,
+      scaleFactor: this.scaleFactor,
     })
     this.scheduler.start(pollIntervalMs)
   }
@@ -165,6 +199,7 @@ export class ConsolidationWatchdog {
     this.scheduler.stop()
     log.info('Consolidation watchdog stopped', {
       documentsProcessed: this.currentCount - this.lastConsolidationCount,
+      consecutiveFailures: this.consecutiveFailures,
     })
   }
 
@@ -185,23 +220,44 @@ export class ConsolidationWatchdog {
       currentCount: this.currentCount,
       lastConsolidationCount: this.lastConsolidationCount,
       documentsSinceLastConsolidation: this.currentCount - this.lastConsolidationCount,
-      threshold: this.threshold,
+      baseThreshold: this.baseThreshold,
+      scaleFactor: this.scaleFactor,
+      consecutiveFailures: this.consecutiveFailures,
+      circuitBreakerOpen: this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES,
     }
+  }
+
+  /**
+   * Reset circuit breaker (for recovery)
+   */
+  resetCircuitBreaker(): void {
+    this.consecutiveFailures = 0
+    log.info('Circuit breaker reset')
   }
 
   /**
    * Check if threshold reached and trigger consolidation
    */
   private async checkAndConsolidate(): Promise<void> {
+    // Circuit breaker: stop after consecutive failures
+    if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      log.warn('Circuit breaker open: too many consecutive failures', {
+        failures: this.consecutiveFailures,
+        maxFailures: this.MAX_CONSECUTIVE_FAILURES,
+      })
+      return
+    }
+
     const documentsSinceConsolidation = this.currentCount - this.lastConsolidationCount
+    const dynamicThreshold = await this.calculateDynamicThreshold()
 
     log.debug('Consolidation check', {
       documentsSinceConsolidation,
-      threshold: this.threshold,
+      dynamicThreshold,
       isConsolidating: this.isConsolidating,
     })
 
-    if (documentsSinceConsolidation < this.threshold) {
+    if (documentsSinceConsolidation < dynamicThreshold) {
       return
     }
 
@@ -214,7 +270,7 @@ export class ConsolidationWatchdog {
   }
 
   /**
-   * Run consolidation with pause/resume
+   * Run consolidation with pause/resume and HNSW toggle
    */
   private async runConsolidation(): Promise<void> {
     this.isConsolidating = true
@@ -228,13 +284,20 @@ export class ConsolidationWatchdog {
 
       log.info('Starting consolidation pass', {
         documentsSinceLastConsolidation: this.currentCount - this.lastConsolidationCount,
+        useHNSWToggle: this.useHNSWToggle,
       })
 
-      // 3. Run consolidation
-      const result = await consolidate({
-        threshold: this.similarityThreshold,
-        limit: 50, // Process up to 50 pairs per pass
-      })
+      // 3. Run consolidation (with HNSW toggle if enabled)
+      const consolidationTask = async () => {
+        return consolidate({
+          threshold: this.similarityThreshold,
+          limit: 50, // Process up to 50 pairs per pass
+        })
+      }
+
+      const result = this.useHNSWToggle
+        ? await withHNSWDisabled(consolidationTask)
+        : await consolidationTask()
 
       log.info('Consolidation pass complete', {
         candidatesFound: result.candidatesFound,
@@ -242,10 +305,16 @@ export class ConsolidationWatchdog {
         deleted: result.deleted,
       })
 
-      // 4. Update counter
+      // 4. Update counter and reset failure count
       this.lastConsolidationCount = this.currentCount
+      this.consecutiveFailures = 0
     } catch (error) {
-      log.error('Consolidation failed', error as Error)
+      this.consecutiveFailures++
+      log.error('Consolidation failed', {
+        error: (error as Error).message,
+        consecutiveFailures: this.consecutiveFailures,
+        maxFailures: this.MAX_CONSECUTIVE_FAILURES,
+      })
     } finally {
       // 5. Resume ingestion
       ingestPauseController.resume()

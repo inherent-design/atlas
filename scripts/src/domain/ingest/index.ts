@@ -7,10 +7,10 @@
 
 import { readFileSync } from 'fs'
 import { basename, extname, relative } from 'path'
-import { getQdrantClient } from '../../services/storage'
+import { getQdrantClient, withHNSWDisabled } from '../../services/storage'
 import { getVoyageClient } from '../../services/embedding'
 import { getTextSplitter } from '../../services/chunking'
-import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from '../../shared/config'
+import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL, BATCH_HNSW_THRESHOLD } from '../../shared/config'
 import { getConsolidationWatchdog, ingestPauseController } from '../consolidate/watchdog'
 import { createLogger, startTimer } from '../../shared/logger'
 import { fetchExistingQNTMKeys, generateQNTMKeysBatch } from '../../services/llm'
@@ -25,6 +25,7 @@ export interface IngestConfig {
   rootDir?: string
   verbose?: boolean
   existingKeys?: string[] // Pre-fetched keys for reuse
+  useHNSWToggle?: boolean // Disable HNSW during batch ingestion (default: auto based on file count)
 }
 
 export interface IngestResult {
@@ -160,7 +161,7 @@ async function ingestFileInternal(
       qntm_keys: qntmResult.keys, // QNTM keys as metadata tags
       created_at: timestamp,
       importance: 'normal',
-      consolidated: false,
+      consolidation_level: 0, // Raw chunk, no consolidation yet
     }
 
     points.push({
@@ -225,34 +226,54 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
   const filesToIngest = expandPaths(paths, recursive)
   log.info('Files to ingest', { count: filesToIngest.length })
 
-  const errors: Array<{ file: string; error: Error }> = []
-  let chunksStored = 0
+  // Determine if we should use HNSW toggle (auto: based on file count threshold)
+  const shouldToggleHNSW =
+    config.useHNSWToggle ?? filesToIngest.length >= BATCH_HNSW_THRESHOLD
 
-  for (const file of filesToIngest) {
-    try {
-      const chunks = await ingestFile(file, rootDir, { verbose, existingKeys })
-      chunksStored += chunks
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
-      errors.push({ file, error: err })
-      log.error(`Failed to ingest ${file}`, err)
+  if (shouldToggleHNSW) {
+    log.info('Batch mode: HNSW indexing will be disabled during ingestion', {
+      fileCount: filesToIngest.length,
+      threshold: BATCH_HNSW_THRESHOLD,
+    })
+  }
+
+  // Core ingestion logic
+  const ingestBatch = async (): Promise<IngestResult> => {
+    const errors: Array<{ file: string; error: Error }> = []
+    let chunksStored = 0
+
+    for (const file of filesToIngest) {
+      try {
+        const chunks = await ingestFile(file, rootDir, { verbose, existingKeys })
+        chunksStored += chunks
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error))
+        errors.push({ file, error: err })
+        log.error(`Failed to ingest ${file}`, err)
+      }
+    }
+
+    return {
+      filesProcessed: filesToIngest.length - errors.length,
+      chunksStored,
+      errors,
     }
   }
 
-  const result = {
-    filesProcessed: filesToIngest.length - errors.length,
-    chunksStored,
-    errors,
-  }
+  // Run with or without HNSW toggle
+  const result = shouldToggleHNSW
+    ? await withHNSWDisabled(ingestBatch)
+    : await ingestBatch()
 
   log.info('Ingestion complete', {
     filesProcessed: result.filesProcessed,
     chunksStored: result.chunksStored,
-    errorCount: errors.length,
+    errorCount: result.errors.length,
+    usedHNSWToggle: shouldToggleHNSW,
   })
 
-  if (errors.length > 0) {
-    log.warn('Some files failed to ingest', { errorCount: errors.length })
+  if (result.errors.length > 0) {
+    log.warn('Some files failed to ingest', { errorCount: result.errors.length })
   }
 
   endTimer()

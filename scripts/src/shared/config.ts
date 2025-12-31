@@ -89,3 +89,18 @@ export const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'
 // Environment
 export const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333'
 export const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
+
+// Consolidation config
+export const CONSOLIDATION_BASE_THRESHOLD = 100
+export const CONSOLIDATION_SCALE_FACTOR = 0.05
+export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.92
+export const CONSOLIDATION_POLL_INTERVAL_MS = 30000 // 30 seconds
+
+// Deletion config
+export const DELETION_GRACE_PERIOD_DAYS = 14
+export const STABILITY_SCORE_THRESHOLD = 0.95
+
+// HNSW batch mode config
+export const HNSW_M_DEFAULT = 16
+export const HNSW_M_DISABLED = 0
+export const BATCH_HNSW_THRESHOLD = 50 // Disable HNSW if batch size > this

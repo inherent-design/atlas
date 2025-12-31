@@ -3,7 +3,7 @@
  */
 
 // Use vi.hoisted() to define mocks that will be available when vi.mock() factories run
-const { mockConsolidate } = vi.hoisted(() => ({
+const { mockConsolidate, mockGetCollection, mockUpdateCollection } = vi.hoisted(() => ({
   mockConsolidate: vi.fn(() =>
     Promise.resolve({
       candidatesFound: 5,
@@ -11,11 +11,22 @@ const { mockConsolidate } = vi.hoisted(() => ({
       deleted: 3,
     })
   ),
+  mockGetCollection: vi.fn(() => Promise.resolve({ points_count: 0 })),
+  mockUpdateCollection: vi.fn(() => Promise.resolve()),
 }))
 
 // Setup module mock - hoisted but now has access to hoisted mock function
 vi.mock('.', () => ({
   consolidate: mockConsolidate,
+}))
+
+// Mock Qdrant client for dynamic threshold calculation and HNSW toggle
+vi.mock('../../services/storage', () => ({
+  getQdrantClient: () => ({
+    getCollection: mockGetCollection,
+    updateCollection: mockUpdateCollection,
+  }),
+  withHNSWDisabled: async <T>(fn: () => Promise<T>) => fn(), // Pass through
 }))
 
 // Now import the module under test (after mock is set up)
@@ -236,7 +247,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog = new ConsolidationWatchdog()
       const state = watchdog.getState()
 
-      expect(state.threshold).toBe(100) // DEFAULT_THRESHOLD
+      expect(state.baseThreshold).toBe(100) // CONSOLIDATION_BASE_THRESHOLD
       expect(state.isRunning).toBe(false)
       expect(state.isConsolidating).toBe(false)
       expect(state.currentCount).toBe(0)
@@ -244,10 +255,10 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('initializes with custom threshold', () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 50 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 50 })
       const state = watchdog.getState()
 
-      expect(state.threshold).toBe(50)
+      expect(state.baseThreshold).toBe(50)
     })
 
     test('initializes with custom similarity threshold', () => {
@@ -318,7 +329,7 @@ describe('ConsolidationWatchdog', () => {
 
   describe('threshold detection', () => {
     test('does not consolidate below threshold', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 10 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 10 })
       watchdog.recordIngestion(5)
 
       watchdog.start(50) // Fast polling
@@ -333,7 +344,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('triggers consolidation at threshold', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 10 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 10, useHNSWToggle: false })
       watchdog.recordIngestion(10)
 
       watchdog.start(50)
@@ -348,7 +359,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('triggers consolidation above threshold', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 10 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 10, useHNSWToggle: false })
       watchdog.recordIngestion(15)
 
       watchdog.start(50)
@@ -371,7 +382,7 @@ describe('ConsolidationWatchdog', () => {
 
   describe('consolidation execution', () => {
     test('pauses ingestion during consolidation', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(5)
 
       let pausedDuringConsolidation = false
@@ -392,7 +403,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('waits for in-flight operations before consolidating', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(5)
 
       // Register in-flight operation
@@ -419,7 +430,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('resumes ingestion after consolidation', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(5)
 
       await watchdog.forceConsolidation()
@@ -428,7 +439,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('resumes ingestion even if consolidation fails', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(5)
 
       mockConsolidate.mockImplementationOnce(async () => {
@@ -441,7 +452,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('updates lastConsolidationCount after successful consolidation', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(10)
 
       await watchdog.forceConsolidation()
@@ -452,7 +463,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('does not update count if consolidation fails', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(10)
 
       mockConsolidate.mockImplementationOnce(async () => {
@@ -469,8 +480,9 @@ describe('ConsolidationWatchdog', () => {
 
     test('passes similarity threshold to consolidate', async () => {
       watchdog = new ConsolidationWatchdog({
-        threshold: 5,
+        baseThreshold: 5,
         similarityThreshold: 0.88,
+        useHNSWToggle: false,
       })
       watchdog.recordIngestion(5)
 
@@ -483,7 +495,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('passes default similarity threshold', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
       watchdog.recordIngestion(5)
 
       await watchdog.forceConsolidation()
@@ -546,7 +558,7 @@ describe('ConsolidationWatchdog', () => {
 
   describe('getState', () => {
     test('returns complete state', () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 50 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 50 })
       watchdog.recordIngestion(30)
 
       const state = watchdog.getState()
@@ -556,17 +568,20 @@ describe('ConsolidationWatchdog', () => {
       expect(state).toHaveProperty('currentCount')
       expect(state).toHaveProperty('lastConsolidationCount')
       expect(state).toHaveProperty('documentsSinceLastConsolidation')
-      expect(state).toHaveProperty('threshold')
+      expect(state).toHaveProperty('baseThreshold')
+      expect(state).toHaveProperty('scaleFactor')
+      expect(state).toHaveProperty('consecutiveFailures')
+      expect(state).toHaveProperty('circuitBreakerOpen')
 
       expect(state.currentCount).toBe(30)
-      expect(state.threshold).toBe(50)
+      expect(state.baseThreshold).toBe(50)
       expect(state.documentsSinceLastConsolidation).toBe(30)
     })
   })
 
   describe('periodic consolidation', () => {
     test('automatically consolidates when threshold reached', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
 
       watchdog.start(50) // Fast polling
 
@@ -583,7 +598,7 @@ describe('ConsolidationWatchdog', () => {
     })
 
     test('skips consolidation if already in progress', async () => {
-      watchdog = new ConsolidationWatchdog({ threshold: 5 })
+      watchdog = new ConsolidationWatchdog({ baseThreshold: 5, useHNSWToggle: false })
 
       let consolidationCount = 0
 
@@ -625,18 +640,18 @@ describe('singleton functions', () => {
     })
 
     test('uses provided config on first call', () => {
-      const instance = getConsolidationWatchdog({ threshold: 75 })
+      const instance = getConsolidationWatchdog({ baseThreshold: 75 })
       const state = instance.getState()
 
-      expect(state.threshold).toBe(75)
+      expect(state.baseThreshold).toBe(75)
     })
 
     test('ignores config on subsequent calls', () => {
-      const instance1 = getConsolidationWatchdog({ threshold: 75 })
-      const instance2 = getConsolidationWatchdog({ threshold: 50 })
+      const instance1 = getConsolidationWatchdog({ baseThreshold: 75 })
+      const instance2 = getConsolidationWatchdog({ baseThreshold: 50 })
 
       expect(instance1).toBe(instance2)
-      expect(instance1.getState().threshold).toBe(75) // Original config
+      expect(instance1.getState().baseThreshold).toBe(75) // Original config
     })
   })
 
@@ -653,13 +668,13 @@ describe('singleton functions', () => {
     })
 
     test('allows creating new instance after reset', () => {
-      const instance1 = getConsolidationWatchdog({ threshold: 50 })
+      const instance1 = getConsolidationWatchdog({ baseThreshold: 50 })
       resetConsolidationWatchdog()
 
-      const instance2 = getConsolidationWatchdog({ threshold: 100 })
+      const instance2 = getConsolidationWatchdog({ baseThreshold: 100 })
 
       expect(instance1).not.toBe(instance2)
-      expect(instance2.getState().threshold).toBe(100)
+      expect(instance2.getState().baseThreshold).toBe(100)
     })
 
     test('handles reset when no instance exists', () => {

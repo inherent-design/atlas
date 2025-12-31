@@ -169,7 +169,7 @@ describe('ingestFile', () => {
     expect(payload.file_name).toBe('test.md')
     expect(payload.file_type).toBe('.md')
     expect(payload.importance).toBe('normal')
-    expect(payload.consolidated).toBe(false)
+    expect(payload.consolidation_level).toBe(0)
     expect(payload.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/) // ISO 8601 timestamp
   })
 })
