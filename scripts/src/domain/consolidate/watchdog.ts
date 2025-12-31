@@ -41,6 +41,7 @@ class IngestPauseController {
   private paused = false
   private inFlightCount = 0
   private waitResolvers: Array<() => void> = []
+  private resumeResolvers: Array<() => void> = []
 
   /**
    * Check if ingestion is currently paused
@@ -62,7 +63,27 @@ class IngestPauseController {
    */
   resume(): void {
     this.paused = false
+    // Notify all waiters that we've resumed
+    for (const resolve of this.resumeResolvers) {
+      resolve()
+    }
+    this.resumeResolvers = []
     log.info('Ingestion resumed')
+  }
+
+  /**
+   * Wait for ingestion to resume (called by ingest when paused)
+   */
+  async waitForResume(): Promise<void> {
+    if (!this.paused) {
+      return
+    }
+
+    log.debug('Waiting for consolidation to complete')
+
+    return new Promise((resolve) => {
+      this.resumeResolvers.push(resolve)
+    })
   }
 
   /**
@@ -118,6 +139,7 @@ class IngestPauseController {
     this.paused = false
     this.inFlightCount = 0
     this.waitResolvers = []
+    this.resumeResolvers = []
   }
 }
 

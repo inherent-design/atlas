@@ -17,6 +17,7 @@ export const EMBEDDING_DIM = 1024
 // Chunking config (Step 2)
 export const CHUNK_SIZE = 768 // tokens (conservative for quality)
 export const CHUNK_OVERLAP = 100 // 13% overlap
+export const CHUNK_MIN_CHARS = 10 // Skip chunks smaller than this
 export const CHUNK_SEPARATORS = ['\n\n', '\n', '. ', ' ', ''] // Hierarchical semantic boundaries
 
 // Search defaults
@@ -93,7 +94,7 @@ export const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 // Consolidation config
 export const CONSOLIDATION_BASE_THRESHOLD = 100
 export const CONSOLIDATION_SCALE_FACTOR = 0.05
-export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.92
+export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.80
 export const CONSOLIDATION_POLL_INTERVAL_MS = 30000 // 30 seconds
 
 // Deletion config

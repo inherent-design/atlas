@@ -159,7 +159,7 @@ describe('ingestFile', () => {
 
   test('sets metadata correctly', async () => {
     const testFile = join(testDir, 'test.md')
-    writeFileSync(testFile, '# Test')
+    writeFileSync(testFile, '# Test Document Title')
 
     await ingestFile(testFile, testDir)
 
@@ -188,8 +188,8 @@ describe('ingest', () => {
   })
 
   test('ingests multiple files', async () => {
-    writeFileSync(join(testDir, 'file1.md'), '# File 1\n\nContent 1')
-    writeFileSync(join(testDir, 'file2.md'), '# File 2\n\nContent 2')
+    writeFileSync(join(testDir, 'file1.md'), '# File One Title\n\nContent for file one')
+    writeFileSync(join(testDir, 'file2.md'), '# File Two Title\n\nContent for file two')
 
     const result = await ingest({
       paths: [join(testDir, 'file1.md'), join(testDir, 'file2.md')],
@@ -203,11 +203,11 @@ describe('ingest', () => {
   })
 
   test('expands directories without recursion', async () => {
-    writeFileSync(join(testDir, 'file1.md'), '# File 1')
-    writeFileSync(join(testDir, 'file2.md'), '# File 2')
+    writeFileSync(join(testDir, 'file1.md'), '# File One Title')
+    writeFileSync(join(testDir, 'file2.md'), '# File Two Title')
 
     mkdirSync(join(testDir, 'subdir'))
-    writeFileSync(join(testDir, 'subdir', 'file3.md'), '# File 3')
+    writeFileSync(join(testDir, 'subdir', 'file3.md'), '# File Three Title')
 
     const result = await ingest({ paths: [testDir], recursive: false, rootDir: testDir })
 
@@ -215,10 +215,10 @@ describe('ingest', () => {
   })
 
   test('expands directories with recursion', async () => {
-    writeFileSync(join(testDir, 'file1.md'), '# File 1')
+    writeFileSync(join(testDir, 'file1.md'), '# File One Title')
 
     mkdirSync(join(testDir, 'subdir'))
-    writeFileSync(join(testDir, 'subdir', 'file2.md'), '# File 2')
+    writeFileSync(join(testDir, 'subdir', 'file2.md'), '# File Two Title')
 
     const result = await ingest({ paths: [testDir], recursive: true, rootDir: testDir })
 
@@ -226,7 +226,7 @@ describe('ingest', () => {
   })
 
   test('ensures collection exists before ingesting', async () => {
-    writeFileSync(join(testDir, 'test.md'), '# Test')
+    writeFileSync(join(testDir, 'test.md'), '# Test Document Title')
 
     await ingest({ paths: [join(testDir, 'test.md')], recursive: false, rootDir: testDir })
 
@@ -238,9 +238,9 @@ describe('ingest', () => {
   })
 
   test('returns count of ingested files', async () => {
-    writeFileSync(join(testDir, 'file1.md'), 'content')
-    writeFileSync(join(testDir, 'file2.md'), 'content')
-    writeFileSync(join(testDir, 'file3.md'), 'content')
+    writeFileSync(join(testDir, 'file1.md'), 'content for test one')
+    writeFileSync(join(testDir, 'file2.md'), 'content for test two')
+    writeFileSync(join(testDir, 'file3.md'), 'content for test three')
 
     const result = await ingest({ paths: [testDir], recursive: false, rootDir: testDir })
 

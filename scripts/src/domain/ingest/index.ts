@@ -10,7 +10,7 @@ import { basename, extname, relative } from 'path'
 import { getQdrantClient, withHNSWDisabled } from '../../services/storage'
 import { getVoyageClient } from '../../services/embedding'
 import { getTextSplitter } from '../../services/chunking'
-import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL, BATCH_HNSW_THRESHOLD } from '../../shared/config'
+import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL, BATCH_HNSW_THRESHOLD, CHUNK_MIN_CHARS } from '../../shared/config'
 import { getConsolidationWatchdog, ingestPauseController } from '../consolidate/watchdog'
 import { createLogger, startTimer } from '../../shared/logger'
 import { fetchExistingQNTMKeys, generateQNTMKeysBatch } from '../../services/llm'
@@ -40,12 +40,11 @@ export async function ingestFile(
   rootDir: string,
   options: { verbose?: boolean; existingKeys?: string[] } = {}
 ): Promise<number> {
-  // Check if ingestion is paused for consolidation
+  // Wait if ingestion is paused for consolidation
   if (ingestPauseController.isPaused()) {
-    log.debug('Ingestion paused, waiting for consolidation', { file: filePath })
-    // Wait would block here - instead just skip with warning
-    log.warn('Skipping file during consolidation pause', { file: filePath })
-    return 0
+    log.debug('Ingestion paused, waiting for consolidation to complete', { file: filePath })
+    await ingestPauseController.waitForResume()
+    log.debug('Consolidation complete, resuming ingestion', { file: filePath })
   }
 
   // Register in-flight operation
@@ -78,7 +77,20 @@ async function ingestFileInternal(
   log.debug('Reading file', { file: relativePath, sizeBytes: content.length })
 
   // Chunk text using Step 2 config
-  const chunks = await splitter.splitText(content)
+  const rawChunks = await splitter.splitText(content)
+
+  // Filter out tiny chunks (headers, whitespace, etc.)
+  const chunks = rawChunks.filter(chunk => chunk.trim().length >= CHUNK_MIN_CHARS)
+
+  if (rawChunks.length !== chunks.length) {
+    log.debug('Filtered tiny chunks', {
+      file: relativePath,
+      original: rawChunks.length,
+      filtered: chunks.length,
+      removed: rawChunks.length - chunks.length,
+    })
+  }
+
   log.debug('Chunked text', { file: relativePath, chunks: chunks.length })
 
   if (verbose) {
@@ -237,6 +249,10 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
     })
   }
 
+  // Start consolidation watchdog to monitor ingestion and trigger consolidation
+  const consolidationWatchdog = getConsolidationWatchdog()
+  consolidationWatchdog.start()
+
   // Core ingestion logic
   const ingestBatch = async (): Promise<IngestResult> => {
     const errors: Array<{ file: string; error: Error }> = []
@@ -260,10 +276,17 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
     }
   }
 
-  // Run with or without HNSW toggle
-  const result = shouldToggleHNSW
-    ? await withHNSWDisabled(ingestBatch)
-    : await ingestBatch()
+  let result: IngestResult
+
+  try {
+    // Run with or without HNSW toggle
+    result = shouldToggleHNSW
+      ? await withHNSWDisabled(ingestBatch)
+      : await ingestBatch()
+  } finally {
+    // Stop consolidation watchdog
+    consolidationWatchdog.stop()
+  }
 
   log.info('Ingestion complete', {
     filesProcessed: result.filesProcessed,

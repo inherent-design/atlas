@@ -501,7 +501,7 @@ describe('ConsolidationWatchdog', () => {
       await watchdog.forceConsolidation()
 
       expect(mockConsolidate).toHaveBeenCalledWith({
-        threshold: 0.92, // DEFAULT_SIMILARITY_THRESHOLD
+        threshold: 0.8, // CONSOLIDATION_SIMILARITY_THRESHOLD from config
         limit: 50,
       })
     })
