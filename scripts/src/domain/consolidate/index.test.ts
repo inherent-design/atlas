@@ -22,17 +22,28 @@ const mockQdrant = createMockQdrantClient()
 const mockLLM = createMockLLMService()
 
 vi.mock('../../services/storage', () => ({
-  getQdrantClient: () => mockQdrant,
+  getStorageBackend: () => ({
+    name: 'qdrant',
+    scroll: mockQdrant.scroll,
+    search: mockQdrant.search,
+    retrieve: mockQdrant.retrieve,
+    setPayload: mockQdrant.setPayload,
+  }),
 }))
 
 vi.mock('../../services/llm', () => ({
   completeJSON: mockLLM.completeJSON,
   getLLMConfig: mockLLM.getLLMConfig,
+  getLLMBackendFor: mockLLM.getLLMBackendFor,
 }))
 
-vi.mock('../../shared/utils', () => ({
-  requireCollection: vi.fn(() => Promise.resolve()),
-}))
+vi.mock('../../shared/utils', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    requireCollection: vi.fn(() => Promise.resolve()),
+  }
+})
 
 // Then import
 const { consolidate } = await import('./index')
@@ -52,6 +63,9 @@ describe('domain/consolidate', () => {
     // Restore default implementations
     ;(requireCollection as any).mockImplementation(() => Promise.resolve())
     mockQdrant.setPayload.mockResolvedValue({})
+    mockQdrant.scroll.mockResolvedValue({ points: [], nextOffset: null })
+    mockQdrant.search.mockResolvedValue([])
+    mockQdrant.retrieve.mockResolvedValue([])
   })
 
   // ============================================
@@ -94,7 +108,7 @@ describe('domain/consolidate', () => {
     // Mock scroll to return both points
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     // Mock search to return similar chunk
@@ -133,7 +147,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([
@@ -157,7 +171,7 @@ describe('domain/consolidate', () => {
   test('should use default config values', async () => {
     mockQdrant.scroll.mockResolvedValue({
       points: [],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     await consolidate({})
@@ -174,7 +188,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([])
@@ -184,7 +198,7 @@ describe('domain/consolidate', () => {
     // Verify search was called with custom threshold
     expect(mockQdrant.search).toHaveBeenCalledWith(
       'atlas',
-      expect.objectContaining({ score_threshold: 0.95 })
+      expect.objectContaining({ scoreThreshold: 0.95 })
     )
   })
 
@@ -198,7 +212,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points,
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     // Each point finds one similar chunk
@@ -236,7 +250,7 @@ describe('domain/consolidate', () => {
     // Mock scroll to return both points
     mockQdrant.scroll.mockResolvedValue({
       points: [point1, point2],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     // Each point finds the other as similar (mutual discovery)
@@ -272,7 +286,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     const result = await consolidate({ dryRun: true, threshold: 0.92 })
@@ -289,7 +303,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     // Search returns a consolidated chunk
@@ -323,9 +337,9 @@ describe('domain/consolidate', () => {
     mockQdrant.scroll.mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        return Promise.resolve({ points: page1Points, next_page_offset: 'offset-1' })
+        return Promise.resolve({ points: page1Points, nextOffset: 'offset-1' })
       }
-      return Promise.resolve({ points: page2Points, next_page_offset: null })
+      return Promise.resolve({ points: page2Points, nextOffset: null })
     })
 
     mockQdrant.search.mockResolvedValue([])
@@ -338,7 +352,7 @@ describe('domain/consolidate', () => {
   test('should stop pagination when offset is null', async () => {
     mockQdrant.scroll.mockResolvedValue({
       points: [createMockQdrantPoint({ id: 'chunk-1' })],
-      next_page_offset: null, // Final page
+      nextOffset: null, // Final page
     })
 
     mockQdrant.search.mockResolvedValue([])
@@ -358,7 +372,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -384,7 +398,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -417,7 +431,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -438,8 +452,8 @@ describe('domain/consolidate', () => {
     expect(calls).toHaveLength(2)
 
     // Find the call that marks secondary as deletion eligible
-    const secondaryCall = calls.find((call: any) => call[1].payload.deletion_eligible === true)
-    expect(secondaryCall[1].points).toContain('chunk-1') // Point1 marked for deletion
+    const secondaryCall = calls.find((call: any) => call[2].deletion_eligible === true)
+    expect(secondaryCall[1]).toContain('chunk-1') // Point1 marked for deletion
   })
 
   test('should keep original when keep=first', async () => {
@@ -455,7 +469,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -473,8 +487,8 @@ describe('domain/consolidate', () => {
 
     // Verify point1 is kept, point2 is marked for deletion
     const calls = mockQdrant.setPayload.mock.calls
-    const secondaryCall = calls.find((call: any) => call[1].payload.deletion_eligible === true)
-    expect(secondaryCall[1].points).toContain('chunk-2')
+    const secondaryCall = calls.find((call: any) => call[2].deletion_eligible === true)
+    expect(secondaryCall[1]).toContain('chunk-2')
   })
 
   test('should merge QNTM keys (union)', async () => {
@@ -490,7 +504,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -508,8 +522,8 @@ describe('domain/consolidate', () => {
 
     // Find the call that updates primary (has consolidation_level set)
     const calls = mockQdrant.setPayload.mock.calls
-    const primaryUpdate = calls.find((call: any) => call[1].payload.consolidation_level !== undefined)
-    const updatedPayload = primaryUpdate[1].payload
+    const primaryUpdate = calls.find((call: any) => call[2].consolidation_level !== undefined)
+    const updatedPayload = primaryUpdate[2]
 
     expect(updatedPayload.qntm_keys).toContain('@test ~ a')
     expect(updatedPayload.qntm_keys).toContain('@test ~ b')
@@ -530,7 +544,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -547,8 +561,8 @@ describe('domain/consolidate', () => {
     await consolidate({ threshold: 0.92 })
 
     const calls = mockQdrant.setPayload.mock.calls
-    const primaryUpdate = calls.find((call: any) => call[1].payload.consolidation_level !== undefined)
-    const updatedPayload = primaryUpdate[1].payload
+    const primaryUpdate = calls.find((call: any) => call[2].consolidation_level !== undefined)
+    const updatedPayload = primaryUpdate[2]
 
     expect(updatedPayload.parents).toContain('chunk-0') // Existing parent
     expect(updatedPayload.parents).toContain('chunk-2') // New secondary parent
@@ -571,7 +585,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -588,8 +602,8 @@ describe('domain/consolidate', () => {
     await consolidate({ threshold: 0.92 })
 
     const calls = mockQdrant.setPayload.mock.calls
-    const primaryUpdate = calls.find((call: any) => call[1].payload.consolidation_level !== undefined)
-    const updatedPayload = primaryUpdate[1].payload
+    const primaryUpdate = calls.find((call: any) => call[2].consolidation_level !== undefined)
+    const updatedPayload = primaryUpdate[2]
 
     expect(updatedPayload.occurrences).toHaveLength(5) // 2 + 3 timestamps merged
   })
@@ -611,7 +625,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -628,8 +642,8 @@ describe('domain/consolidate', () => {
     await consolidate({ threshold: 0.92 })
 
     const calls = mockQdrant.setPayload.mock.calls
-    const primaryUpdate = calls.find((call: any) => call[1].payload.consolidation_level !== undefined)
-    const updatedPayload = primaryUpdate[1].payload
+    const primaryUpdate = calls.find((call: any) => call[2].consolidation_level !== undefined)
+    const updatedPayload = primaryUpdate[2]
 
     expect(updatedPayload.occurrences).toHaveLength(2) // 2 timestamps (created_at from both chunks)
   })
@@ -643,7 +657,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([
@@ -665,7 +679,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -714,7 +728,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -747,7 +761,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -764,10 +778,10 @@ describe('domain/consolidate', () => {
     await consolidate({ threshold: 0.92 })
 
     const calls = mockQdrant.setPayload.mock.calls
-    const secondaryCall = calls.find((call: any) => call[1].payload.deletion_eligible === true)
+    const secondaryCall = calls.find((call: any) => call[2].deletion_eligible === true)
 
     expect(secondaryCall).toBeDefined()
-    expect(secondaryCall[1].points).toContain('chunk-2')
+    expect(secondaryCall[1]).toContain('chunk-2')
   })
 
   test('should preserve primary as not consolidated', async () => {
@@ -776,7 +790,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     mockQdrant.search.mockResolvedValue([{ id: point2.id, score: 0.95, payload: point2.payload }])
@@ -793,10 +807,10 @@ describe('domain/consolidate', () => {
     await consolidate({ threshold: 0.92 })
 
     const calls = mockQdrant.setPayload.mock.calls
-    const primaryUpdate = calls.find((call: any) => call[1].payload.consolidation_level !== undefined)
+    const primaryUpdate = calls.find((call: any) => call[2].consolidation_level !== undefined)
 
     expect(primaryUpdate).toBeDefined()
-    expect(primaryUpdate[1].points).toContain('chunk-1')
+    expect(primaryUpdate[1]).toContain('chunk-1')
   })
 
   test('should return correct result structure', async () => {
@@ -806,7 +820,7 @@ describe('domain/consolidate', () => {
 
     mockQdrant.scroll.mockResolvedValue({
       points: [point1],
-      next_page_offset: null,
+      nextOffset: null,
     })
 
     // Return 3 similar chunks

@@ -36,6 +36,8 @@ export interface SearchOptions {
   limit?: number
   since?: string // ISO 8601 datetime for temporal filtering
   qntmKey?: string // Filter by specific QNTM key
+  rerank?: boolean // Enable reranking with cross-encoder
+  rerankTopK?: number // How many candidates to rerank (default: 3x limit)
 }
 
 export interface SearchResult {
@@ -45,6 +47,7 @@ export interface SearchResult {
   score: number
   created_at: string
   qntm_key: string
+  rerank_score?: number // Cross-encoder relevance score (if reranking enabled)
 }
 
 export interface ChunkPayload {
@@ -59,6 +62,12 @@ export interface ChunkPayload {
   qntm_keys: string[] // Multiple semantic addresses (tag-based)
   created_at: string // ISO 8601
   importance: 'normal' | 'high' | 'low'
+
+  // === Embedding metadata (Phase 2: Named Vectors) ===
+  embedding_model?: string // 'voyage-3-large', 'voyage-code-3', etc.
+  embedding_strategy?: string // 'snippet', 'contextualized', 'multimodal'
+  content_type?: 'text' | 'code' | 'media' // Content classification
+  vectors_present?: ('text' | 'code' | 'media')[] // Which named vectors exist for this point
 
   // === Vertical consolidation (abstraction levels) ===
   consolidation_level: ConsolidationLevel // 0=raw, 1=deduped, 2=topic, 3=domain

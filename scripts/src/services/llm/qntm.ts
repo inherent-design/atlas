@@ -5,11 +5,27 @@
  * Uses llm/ module for actual LLM completions.
  */
 
+import pRetry from 'p-retry'
 import type { QNTMGenerationInput, QNTMGenerationResult } from '.'
-import { completeJSON, type LLMConfig } from '.'
+import { getLLMBackendFor, type LLMConfig } from '.'
 import { createLogger } from '../../shared/logger'
 
 const log = createLogger('qntm/providers')
+
+// Retry configuration for QNTM generation
+const RETRY_OPTIONS = {
+  retries: 3,
+  factor: 2,
+  minTimeout: 1000,
+  maxTimeout: 8000,
+  onFailedAttempt: (context: { error: Error; attemptNumber: number; retriesLeft: number }) => {
+    log.warn('QNTM generation attempt failed, retrying...', {
+      attemptNumber: context.attemptNumber,
+      retriesLeft: context.retriesLeft,
+      error: context.error.message,
+    })
+  },
+}
 
 // Re-export types for backwards compatibility
 export type { LLMConfig as ProviderConfig, LLMProvider as QNTMProvider } from '.'
@@ -97,12 +113,25 @@ export async function generateQNTMKeysWithProvider(
     existingKeyCount: input.existingKeys.length,
   })
 
-  const result = await completeJSON<QNTMGenerationResult>(prompt, config)
+  // Get JSON-capable LLM backend from registry
+  const backend = getLLMBackendFor('json-completion')
+  if (!backend) {
+    throw new Error('No JSON-capable LLM backend available for QNTM generation')
+  }
 
-  log.trace('QNTM generation result', { result })
+  // Type-safe check for JSON completion capability
+  if (!('completeJSON' in backend)) {
+    throw new Error('Backend does not implement JSON completion')
+  }
+
+  log.debug('Using LLM backend for QNTM generation', { backend: backend.name })
+
+  const result = await pRetry(
+    () => backend.completeJSON<QNTMGenerationResult>(prompt),
+    RETRY_OPTIONS
+  )
+
+  log.trace('QNTM generation result', { backend: backend.name, result })
 
   return result
 }
-
-// Re-export detection utilities from llm/
-export { checkOllamaAvailable, detectProvider } from '../llm/providers'

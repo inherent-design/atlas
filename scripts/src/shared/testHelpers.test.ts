@@ -184,7 +184,7 @@ describe('Fixture Factories', () => {
     const point = createMockQdrantPoint({ id: 'test-123' })
 
     expect(point.id).toBe('test-123')
-    expect(point.vector).toHaveLength(1024)
+    expect(point.vector.text).toHaveLength(1024)
     expect(point.payload.original_text).toBeDefined()
   })
 

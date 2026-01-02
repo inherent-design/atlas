@@ -276,12 +276,21 @@ export function createMockChunkPayload(overrides?: Partial<ChunkPayload>): Chunk
  */
 export function createMockQdrantPoint(overrides?: {
   id?: string
-  vector?: number[]
+  vector?: number[] | { text?: number[]; code?: number[] }
   payload?: Partial<ChunkPayload>
 }) {
+  const defaultVector = new Array(1024).fill(0.1)
+
+  // Support both flat vectors (legacy) and named vectors (current)
+  const vector = overrides?.vector
+    ? (Array.isArray(overrides.vector)
+      ? { text: overrides.vector } // Convert flat to named
+      : overrides.vector) // Already named
+    : { text: defaultVector } // Default named vector
+
   return {
     id: overrides?.id ?? `point-${Math.random().toString(36).slice(2, 8)}`,
-    vector: overrides?.vector ?? new Array(1024).fill(0.1),
+    vector,
     payload: createMockChunkPayload(overrides?.payload),
   }
 }
@@ -316,7 +325,7 @@ export function createMockQdrantClient() {
     createCollection: vi.fn(() => Promise.resolve()),
     upsert: vi.fn(() => Promise.resolve({ status: 'acknowledged' })),
     search: vi.fn(() => Promise.resolve([])),
-    scroll: vi.fn(() => Promise.resolve({ points: [], next_page_offset: null })),
+    scroll: vi.fn(() => Promise.resolve({ points: [], nextOffset: null })),
     retrieve: vi.fn(() => Promise.resolve([])),
     setPayload: vi.fn(() => Promise.resolve()),
     createPayloadIndex: vi.fn(() => Promise.resolve()),
@@ -327,21 +336,29 @@ export function createMockQdrantClient() {
  * Create mock LLM service for testing
  */
 export function createMockLLMService() {
+  const mockCompleteJSON = vi.fn(() =>
+    Promise.resolve({
+      type: 'duplicate_work',
+      direction: 'unknown',
+      reasoning: 'Test classification',
+      keep: 'first',
+    })
+  )
+
   return {
-    completeJSON: vi.fn(() =>
-      Promise.resolve({
-        type: 'duplicate_work',
-        direction: 'unknown',
-        reasoning: 'Test classification',
-        keep: 'first',
-      })
-    ),
+    completeJSON: mockCompleteJSON,
     getLLMConfig: vi.fn(() => ({
       provider: 'ollama' as const,
       model: 'test-model',
       temperature: 0.1,
     })),
     complete: vi.fn(() => Promise.resolve({ content: '{}', usage: {} })),
+    getLLMBackendFor: vi.fn(() => ({
+      name: 'test-backend',
+      capabilities: new Set(['json-completion']),
+      supports: (cap: string) => cap === 'json-completion',
+      completeJSON: mockCompleteJSON,
+    })),
   }
 }
 

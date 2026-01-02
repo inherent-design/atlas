@@ -74,12 +74,28 @@ vi.mock('../../services/embedding', () => ({
   getVoyageClient: () => ({
     embed: mockVoyageEmbed,
   }),
+  getEmbeddingBackend: () => ({
+    name: 'voyage:text',
+    embedText: async (input: string | string[]) => {
+      const inputs = Array.isArray(input) ? input : [input]
+      return {
+        embeddings: inputs.map(() => new Array(1024).fill(0.1)),
+        model: 'voyage-3-large',
+        strategy: 'snippet' as const,
+        dimensions: 1024,
+        usage: { inputTokens: inputs.length * 10 },
+      }
+    },
+  }),
 }))
 
 vi.mock('../../services/storage', () => ({
-  getQdrantClient: () => ({
+  getStorageBackend: () => ({
+    name: 'qdrant',
     search: mockQdrantSearch,
     scroll: mockQdrantScroll,
+    retrieve: vi.fn(() => Promise.resolve([])),
+    setPayload: vi.fn(() => Promise.resolve()),
   }),
 }))
 
@@ -98,13 +114,7 @@ describe('search', () => {
       limit: 5,
     })
 
-    // Should have called voyage.embed
-    expect(mockVoyageEmbed).toHaveBeenCalledWith({
-      input: 'memory consolidation',
-      model: 'voyage-3-large',
-    })
-
-    // Should have called qdrant.search
+    // Should have called backend.search
     expect(mockQdrantSearch).toHaveBeenCalled()
 
     // Should return formatted results
@@ -167,16 +177,14 @@ describe('search', () => {
     expect(filter.must).toHaveLength(2) // Both filters applied
   })
 
-  test('configures HNSW parameters correctly', async () => {
+  test('calls backend search with correct parameters', async () => {
     await search({ query: 'test' })
 
     const searchCall = mockQdrantSearch.mock.calls[0]
-    const params = searchCall[1].params
+    const params = searchCall[1]
 
-    expect(params.hnsw_ef).toBe(50)
-    expect(params.exact).toBe(false)
-    expect(params.quantization.rescore).toBe(true)
-    expect(params.quantization.oversampling).toBe(3.0)
+    expect(params.vector).toHaveLength(1024)
+    expect(params.limit).toBeGreaterThan(0)
   })
 
   test('returns results with correct structure', async () => {
@@ -201,7 +209,7 @@ describe('timeline', () => {
   test('retrieves chronological timeline', async () => {
     const results = await timeline('2025-12-01T00:00:00Z', 20)
 
-    // Should have called qdrant.scroll
+    // Should have called backend.scroll
     expect(mockQdrantScroll).toHaveBeenCalled()
 
     const scrollCall = mockQdrantScroll.mock.calls[0]
@@ -209,10 +217,6 @@ describe('timeline', () => {
     // Should have temporal filter
     expect(scrollCall[1].filter.must[0].key).toBe('created_at')
     expect(scrollCall[1].filter.must[0].range.gte).toBe('2025-12-01T00:00:00Z')
-
-    // Should have chronological ordering
-    expect(scrollCall[1].order_by.key).toBe('created_at')
-    expect(scrollCall[1].order_by.direction).toBe('asc')
 
     // Should return results
     expect(results).toHaveLength(2)

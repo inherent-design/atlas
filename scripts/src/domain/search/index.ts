@@ -10,11 +10,12 @@
  * - Filters out deletion_eligible and superseded_by chunks
  */
 
-import { getVoyageClient } from '../../services/embedding'
-import { getQdrantClient } from '../../services/storage'
+import { getEmbeddingBackend } from '../../services/embedding'
+import { getStorageBackend } from '../../services/storage'
+import { getRerankerBackendFor } from '../../services/reranker'
+import type { StorageFilter } from '../../services/storage'
 import {
   QDRANT_COLLECTION_NAME,
-  VOYAGE_MODEL,
   DEFAULT_SEARCH_LIMIT,
   DEFAULT_HNSW_EF,
   DEFAULT_QUANTIZATION_RESCORE,
@@ -28,37 +29,62 @@ const log = createLogger('search')
 /**
  * Update access tracking for retrieved chunks
  * Increments access_count and sets last_accessed_at
+ * Follows supersession chains to credit the current version
  */
 async function updateAccessTracking(pointIds: string[]): Promise<void> {
   if (pointIds.length === 0) return
 
-  const qdrant = getQdrantClient()
+  const storageBackend = getStorageBackend('vector-storage')
+  if (!storageBackend) {
+    log.warn('No storage backend available for access tracking')
+    return
+  }
+
   const now = new Date().toISOString()
 
   try {
-    // Fetch current access counts
-    const points = await qdrant.retrieve(QDRANT_COLLECTION_NAME, {
-      ids: pointIds,
-      with_payload: true,
-      with_vector: false,
-    })
+    // Retrieve points to check for supersession
+    const points = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, pointIds)
 
-    // Update each point with incremented access count
+    // Build map of target IDs (follow supersession chains)
+    const targetUpdates = new Map<string, number>()
+
     for (const point of points) {
       const payload = point.payload as ChunkPayload
-      const currentCount = payload.access_count ?? 0
+      let targetId = point.id
+      let targetPayload = payload
 
-      await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-        payload: {
-          access_count: currentCount + 1,
-          last_accessed_at: now,
-        },
-        points: [point.id as string],
+      // Follow supersession chain to current version
+      while (targetPayload.superseded_by) {
+        try {
+          const successor = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [targetPayload.superseded_by])
+          if (successor.length === 0) break
+          targetId = successor[0].id
+          targetPayload = successor[0].payload as ChunkPayload
+        } catch {
+          break // Chain broken, use last valid target
+        }
+      }
+
+      // Accumulate access counts per target (in case multiple accessed chunks point to same current version)
+      targetUpdates.set(targetId, (targetUpdates.get(targetId) ?? 0) + 1)
+    }
+
+    // Update each target's access tracking
+    for (const [targetId, incrementBy] of targetUpdates) {
+      const target = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [targetId])
+      if (target.length === 0) continue
+
+      const currentPayload = target[0].payload as ChunkPayload
+      await storageBackend.setPayload(QDRANT_COLLECTION_NAME, [targetId], {
+        access_count: (currentPayload.access_count ?? 0) + incrementBy,
+        last_accessed_at: now,
       })
     }
 
     log.debug('Updated access tracking', {
-      pointCount: pointIds.length,
+      requested: pointIds.length,
+      targets: targetUpdates.size,
       timestamp: now,
     })
   } catch (error) {
@@ -73,39 +99,45 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
 // Semantic search with optional temporal filtering
 export async function search(options: SearchOptions): Promise<SearchResult[]> {
   const endTimer = startTimer('search')
-  const voyage = getVoyageClient()
-  const qdrant = getQdrantClient()
+
+  // Get backends from registries
+  const embeddingBackend = getEmbeddingBackend('text-embedding')
+  if (!embeddingBackend) {
+    throw new Error('No text embedding backend available')
+  }
+
+  const storageBackend = getStorageBackend('vector-storage')
+  if (!storageBackend) {
+    throw new Error('No vector storage backend available')
+  }
 
   const { query, limit = DEFAULT_SEARCH_LIMIT, since, qntmKey } = options
 
   log.debug('Starting search', { query, limit, since, qntmKey })
 
-  // Embed query using Voyage
+  // Embed query using backend
   const embedStart = startTimer('embed query')
 
-  log.trace('Voyage embed request', { query, model: VOYAGE_MODEL })
+  log.trace('Embedding request', { query, backend: embeddingBackend.name })
 
-  const embedding = await voyage.embed({
-    input: query,
-    model: VOYAGE_MODEL,
-  })
+  const embedResult = await embeddingBackend.embedText(query)
 
-  log.trace('Voyage embed response', {
-    dataLength: embedding.data?.length,
-    embeddingDim: embedding.data?.[0]?.embedding?.length,
-    usage: embedding.usage,
+  log.trace('Embedding response', {
+    embeddingCount: embedResult.embeddings.length,
+    embeddingDim: embedResult.embeddings[0]?.length,
+    usage: embedResult.usage,
   })
 
   embedStart()
 
   // Safety check for embedding
-  const queryVector = embedding.data?.[0]?.embedding
+  const queryVector = embedResult.embeddings[0]
   if (!queryVector) {
     throw new Error('Failed to generate query embedding')
   }
 
-  // Build Qdrant filter for temporal/semantic constraints
-  const filter: any = {
+  // Build typed filter for temporal/semantic constraints
+  const filter: StorageFilter = {
     // Always exclude deleted and superseded chunks
     must_not: [
       { key: 'deletion_eligible', match: { value: true } },
@@ -133,47 +165,85 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
     })
   }
 
-  // Search with HNSW + rescoring (from Step 3 config)
-  const qdrantStart = startTimer('qdrant search')
+  // Search using backend
+  // Default to 'text' vector, future: add CLI flag to search 'code' vector
+  const searchStart = startTimer('storage search')
 
-  const searchParams = {
-    vector: queryVector,
-    limit,
-    filter: Object.keys(filter).length > 0 ? filter : undefined,
-    with_payload: true,
-    with_vector: false,
-    params: {
-      quantization: {
-        rescore: DEFAULT_QUANTIZATION_RESCORE,
-        oversampling: DEFAULT_QUANTIZATION_OVERSAMPLING,
-      },
-      hnsw_ef: DEFAULT_HNSW_EF,
-      exact: false,
-    },
-  }
-
-  log.trace('Qdrant search request', {
+  log.trace('Storage search request', {
     collection: QDRANT_COLLECTION_NAME,
+    vectorName: 'text',
     vectorDim: queryVector.length,
     limit,
-    hasFilter: !!searchParams.filter,
-    filter: searchParams.filter,
+    hasFilter: Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0,
+    backend: storageBackend.name,
   })
 
-  const results = await qdrant.search(QDRANT_COLLECTION_NAME, searchParams)
+  let results = await storageBackend.search(QDRANT_COLLECTION_NAME, {
+    vectorName: 'text', // Phase 2: Default to text vector
+    vector: queryVector,
+    limit,
+    filter: Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0 ? filter : undefined,
+  })
 
-  log.trace('Qdrant search response', {
+  log.trace('Storage search response', {
     collection: QDRANT_COLLECTION_NAME,
     resultCount: results.length,
     topScore: results[0]?.score,
   })
 
-  qdrantStart()
+  searchStart()
 
   log.info('Search complete', { resultsFound: results.length })
 
+  // Rerank results if requested
+  if (options.rerank && results.length > 0) {
+    const rerankStart = startTimer('reranker')
+    const reranker = getRerankerBackendFor('text-reranking')
+
+    if (reranker && 'rerank' in reranker) {
+      const rerankTopK = options.rerankTopK ?? (limit * 3)
+
+      // Get more candidates for reranking (up to rerankTopK, but don't exceed results)
+      const candidateCount = Math.min(rerankTopK, results.length)
+      const candidates = results.slice(0, candidateCount)
+      const documents = candidates.map((hit) => (hit.payload as ChunkPayload).original_text)
+
+      log.debug('Reranking results', {
+        candidates: candidates.length,
+        finalLimit: limit,
+        backend: reranker.name
+      })
+
+      try {
+        const reranked = await reranker.rerank(query, documents, { topK: limit })
+
+        // Reorder results by rerank score (reranker returns sorted by relevance)
+        results = reranked.results.map((r) => {
+          const originalHit = candidates[r.index]
+          return {
+            ...originalHit,
+            rerank_score: r.relevance_score,
+          }
+        })
+
+        log.debug('Reranking complete', {
+          results: results.length,
+          topRerankScore: results[0]?.rerank_score
+        })
+      } catch (error) {
+        log.warn('Reranking failed, using vector search results', {
+          error: (error as Error).message,
+        })
+      }
+
+      rerankStart()
+    } else {
+      log.warn('Reranker requested but not available')
+    }
+  }
+
   // Extract point IDs for access tracking
-  const pointIds = results.map((hit: any) => hit.id as string)
+  const pointIds = results.map((hit) => hit.id)
 
   // Update access tracking (non-blocking, fire-and-forget)
   updateAccessTracking(pointIds).catch((err) => {
@@ -181,14 +251,18 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
   })
 
   // Format results
-  const formatted = results.map((hit: any) => ({
-    text: hit.payload.original_text,
-    file_path: hit.payload.file_path,
-    chunk_index: hit.payload.chunk_index,
-    score: hit.score,
-    created_at: hit.payload.created_at,
-    qntm_key: hit.payload.qntm_keys[0] || 'unknown', // Use first key for display
-  }))
+  const formatted = results.map((hit) => {
+    const payload = hit.payload as ChunkPayload
+    return {
+      text: payload.original_text,
+      file_path: payload.file_path,
+      chunk_index: payload.chunk_index,
+      score: hit.score,
+      created_at: payload.created_at,
+      qntm_key: payload.qntm_keys[0] || 'unknown', // Use first key for display
+      rerank_score: (hit as any).rerank_score, // Preserve rerank score if present
+    }
+  })
 
   endTimer()
   return formatted
@@ -197,56 +271,58 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 // Get chronological timeline (temporal-only query)
 export async function timeline(since: string, limit = 20): Promise<SearchResult[]> {
   const endTimer = startTimer('timeline')
-  const qdrant = getQdrantClient()
+
+  const storageBackend = getStorageBackend('vector-storage')
+  if (!storageBackend) {
+    throw new Error('No vector storage backend available')
+  }
 
   log.debug('Fetching timeline', { since, limit })
 
-  const scrollParams = {
-    filter: {
-      must: [
-        {
-          key: 'created_at',
-          range: { gte: since },
-        },
-      ],
-      // Exclude deleted and superseded chunks
-      must_not: [
-        { key: 'deletion_eligible', match: { value: true } },
-        { key: 'superseded_by', match: { except: [null] } },
-      ],
-    },
-    limit,
-    with_payload: true,
-    with_vector: false,
-    order_by: {
-      key: 'created_at',
-      direction: 'asc' as const, // Chronological order
-    },
+  const filter: StorageFilter = {
+    must: [
+      {
+        key: 'created_at',
+        range: { gte: since },
+      },
+    ],
+    // Exclude deleted and superseded chunks
+    must_not: [
+      { key: 'deletion_eligible', match: { value: true } },
+      { key: 'superseded_by', match: { except: [null] } },
+    ],
   }
 
-  log.trace('Qdrant scroll request', {
+  log.trace('Storage scroll request', {
     collection: QDRANT_COLLECTION_NAME,
-    params: scrollParams,
+    filter,
+    backend: storageBackend.name,
   })
 
-  const results = await qdrant.scroll(QDRANT_COLLECTION_NAME, scrollParams)
+  const results = await storageBackend.scroll(QDRANT_COLLECTION_NAME, {
+    filter,
+    limit,
+  })
 
-  log.trace('Qdrant scroll response', {
+  log.trace('Storage scroll response', {
     collection: QDRANT_COLLECTION_NAME,
     pointCount: results.points.length,
-    nextPageOffset: results.next_page_offset,
+    nextPageOffset: results.nextOffset,
   })
 
   log.info('Timeline complete', { pointsFound: results.points.length })
 
-  const formatted = results.points.map((point: any) => ({
-    text: point.payload.original_text,
-    file_path: point.payload.file_path,
-    chunk_index: point.payload.chunk_index,
-    score: 1.0, // Timeline queries don't have similarity scores
-    created_at: point.payload.created_at,
-    qntm_key: point.payload.qntm_keys[0] || 'unknown', // Use first key for display
-  }))
+  const formatted = results.points.map((point) => {
+    const payload = point.payload as ChunkPayload
+    return {
+      text: payload.original_text,
+      file_path: payload.file_path,
+      chunk_index: payload.chunk_index,
+      score: 1.0, // Timeline queries don't have similarity scores
+      created_at: payload.created_at,
+      qntm_key: payload.qntm_keys[0] || 'unknown', // Use first key for display
+    }
+  })
 
   endTimer()
   return formatted
@@ -260,7 +336,10 @@ export function formatResults(results: SearchResult[]): string {
 
   return results
     .map((result, i) => {
-      const header = `[${i + 1}] ${result.file_path} (chunk ${result.chunk_index}) - Score: ${result.score.toFixed(3)}`
+      const scoreDisplay = result.rerank_score !== undefined
+        ? `Vector: ${result.score.toFixed(3)} | Rerank: ${result.rerank_score.toFixed(3)}`
+        : `Score: ${result.score.toFixed(3)}`
+      const header = `[${i + 1}] ${result.file_path} (chunk ${result.chunk_index}) - ${scoreDisplay}`
       const meta = `QNTM: ${result.qntm_key} | Created: ${result.created_at}`
       const divider = '─'.repeat(80)
       return `${header}\n${meta}\n${divider}\n${result.text}\n`

@@ -11,12 +11,14 @@
  * - contextual_convergence: Different paths arriving at similar insight
  */
 
-import { getQdrantClient } from '../../services/storage'
-import { getVoyageClient } from '../../services/embedding'
+import { getStorageBackend } from '../../services/storage'
+import { getEmbeddingBackend } from '../../services/embedding'
 import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from '../../shared/config'
-import { completeJSON, getLLMConfig } from '../../services/llm'
+import { getConfig } from '../../shared/config.loader'
+import { getLLMBackendFor } from '../../services/llm'
 import { createLogger, startTimer } from '../../shared/logger'
 import type { ChunkPayload, ConsolidationType, ConsolidationDirection } from '../../shared/types'
+import type { NamedVectors } from '../../services/storage'
 
 const log = createLogger('consolidate')
 
@@ -117,7 +119,16 @@ async function classifyConsolidation(
   payload1: ChunkPayload,
   payload2: ChunkPayload
 ): Promise<ConsolidationClassification> {
-  const config = getLLMConfig()
+  // Get JSON-capable LLM backend from registry
+  const backend = getLLMBackendFor('json-completion')
+  if (!backend) {
+    throw new Error('No JSON-capable LLM backend available')
+  }
+
+  // Type-safe check for JSON completion capability
+  if (!('completeJSON' in backend)) {
+    throw new Error('Backend does not implement JSON completion')
+  }
 
   const prompt = buildConsolidationPrompt(
     payload1.original_text,
@@ -129,8 +140,9 @@ async function classifyConsolidation(
   )
 
   try {
-    const result = await completeJSON<ConsolidationClassification>(prompt, config)
+    const result = await backend.completeJSON<ConsolidationClassification>(prompt)
     log.debug('Consolidation classified', {
+      backend: backend.name,
       type: result.type,
       direction: result.direction,
       keep: result.keep,
@@ -157,7 +169,10 @@ async function classifyConsolidation(
  */
 async function findCandidates(threshold: number, limit: number): Promise<ConsolidateCandidate[]> {
   const endTimer = startTimer('findCandidates')
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
 
   log.info('Scanning for consolidation candidates', { threshold, limit })
 
@@ -169,26 +184,28 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
   const SCROLL_LIMIT = 50
 
   do {
-    const result = await qdrant.scroll(QDRANT_COLLECTION_NAME, {
+    const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
       limit: SCROLL_LIMIT,
       offset,
-      with_payload: true,
-      with_vector: true,
+      withPayload: true,
+      withVector: true,
     })
 
     // For each point, search for similar points
     for (const point of result.points) {
       const payload = point.payload as ChunkPayload
-      const vector = point.vector as number[]
+      const namedVectors = point.vector as NamedVectors
+      const textVector = namedVectors.text
 
-      if (!vector || payload.consolidated) continue
+      if (!textVector || payload.consolidated) continue
 
       // Search for similar points
-      const similar = await qdrant.search(QDRANT_COLLECTION_NAME, {
-        vector,
+      const similar = await storage.search(QDRANT_COLLECTION_NAME, {
+        vectorName: 'text',
+        vector: textVector,
         limit: 5, // Top 5 similar
-        score_threshold: threshold,
-        with_payload: true,
+        scoreThreshold: threshold,
+        withPayload: true,
         filter: {
           must_not: [
             { has_id: [point.id] }, // Exclude self
@@ -223,7 +240,7 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
       if (candidates.length >= limit) break
     }
 
-    offset = result.next_page_offset
+    offset = result.nextOffset
   } while (offset !== null && offset !== undefined && candidates.length < limit)
 
   log.info('Found consolidation candidates', { count: candidates.length })
@@ -245,7 +262,10 @@ async function performConsolidation(
   candidates: ConsolidateCandidate[]
 ): Promise<{ consolidated: number; deleted: number }> {
   const endTimer = startTimer('performConsolidation')
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
 
   let consolidated = 0
   let deleted = 0
@@ -254,11 +274,7 @@ async function performConsolidation(
   for (const candidate of candidates) {
     try {
       // Fetch both points
-      const points = await qdrant.retrieve(QDRANT_COLLECTION_NAME, {
-        ids: [candidate.id, candidate.pair_id],
-        with_payload: true,
-        with_vector: true,
-      })
+      const points = await storage.retrieve(QDRANT_COLLECTION_NAME, [candidate.id, candidate.pair_id])
 
       if (points.length !== 2) {
         log.warn('Could not fetch both points for consolidation', {
@@ -312,20 +328,14 @@ async function performConsolidation(
       }
 
       // Update primary point
-      await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-        payload: updatedPayload,
-        points: [primary.id as string],
-      })
+      await storage.setPayload(QDRANT_COLLECTION_NAME, [primary.id as string], updatedPayload)
 
       // Mark secondary as superseded (soft delete with provenance)
-      await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-        payload: {
-          consolidation_level: Math.max(secondaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3,
-          superseded_by: primary.id as string,
-          deletion_eligible: true,
-          deletion_marked_at: new Date().toISOString(),
-        },
-        points: [secondary.id as string],
+      await storage.setPayload(QDRANT_COLLECTION_NAME, [secondary.id as string], {
+        consolidation_level: Math.max(secondaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3,
+        superseded_by: primary.id as string,
+        deletion_eligible: true,
+        deletion_marked_at: new Date().toISOString(),
       })
 
       consolidated++
@@ -354,7 +364,10 @@ async function performConsolidation(
  * Main consolidation function
  */
 export async function consolidate(config: ConsolidateConfig): Promise<ConsolidateResult> {
-  const { dryRun = false, threshold = 0.92, limit = 100 } = config
+  const atlasConfig = getConfig()
+  const defaultThreshold = atlasConfig.consolidation?.similarityThreshold ?? 0.95
+
+  const { dryRun = false, threshold = defaultThreshold, limit = Infinity } = config
   const endTimer = startTimer('consolidate')
 
   log.info('Starting consolidation', { dryRun, threshold, limit })

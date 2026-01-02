@@ -295,17 +295,6 @@ export async function assessSystemCapacity(): Promise<SystemCapacity> {
 
     const { memory, cpu } = stats
 
-    log.trace('Raw system stats', {
-      memTotal: memory.total,
-      memUsed: memory.used,
-      memAvailable: memory.available,
-      swapTotal: memory.swapTotal,
-      swapUsed: memory.swapUsed,
-      freePercent: memory.freePercent,
-      loadAvg1m: cpu.loadAvg1m,
-      cpuCount: cpu.cpuCount,
-    })
-
     const memRatio = memory.used / memory.total
     const availRatio = memory.available / memory.total
     const swapRatio = memory.swapTotal > 0 ? memory.swapUsed / memory.swapTotal : 0
@@ -341,13 +330,23 @@ export async function assessSystemCapacity(): Promise<SystemCapacity> {
       },
     }
 
-    log.debug('System capacity assessed', {
-      canSpawnWorker,
-      pressureLevel,
-      cpuUtilization: capacity.cpuUtilization.toFixed(1),
-      memoryUtilization: capacity.memoryUtilization.toFixed(1),
-      availableMemoryGB: (memory.available / 1024 / 1024 / 1024).toFixed(2),
-    })
+    // Log at TRACE for raw values, DEBUG only for notable pressure
+    if (pressureLevel !== 'nominal') {
+      log.debug('System capacity assessed', {
+        canSpawnWorker,
+        pressureLevel,
+        cpuUtilization: capacity.cpuUtilization.toFixed(1),
+        memoryUtilization: capacity.memoryUtilization.toFixed(1),
+        availableMemoryGB: (memory.available / 1024 / 1024 / 1024).toFixed(2),
+      })
+    } else {
+      log.trace('System capacity assessed', {
+        canSpawnWorker,
+        pressureLevel,
+        cpuUtilization: capacity.cpuUtilization.toFixed(1),
+        memoryUtilization: capacity.memoryUtilization.toFixed(1),
+      })
+    }
 
     // Cache result
     cachedCapacity = { data: capacity, timestamp: Date.now() }

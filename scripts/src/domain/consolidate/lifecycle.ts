@@ -15,7 +15,7 @@
  *   before being hard deleted.
  */
 
-import { getQdrantClient } from '../../services/storage'
+import { getStorageBackend } from '../../services/storage'
 import {
   QDRANT_COLLECTION_NAME,
   DELETION_GRACE_PERIOD_DAYS,
@@ -92,7 +92,10 @@ export async function vacuumEligibleChunks(options: {
   const { dryRun = false, limit = 1000, updateStability = true } = options
   const endTimer = startTimer('vacuumEligibleChunks')
 
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
 
   const result: VacuumResult = {
     scanned: 0,
@@ -105,13 +108,13 @@ export async function vacuumEligibleChunks(options: {
 
   try {
     // Find deletion_eligible chunks
-    const scrollResult = await qdrant.scroll(QDRANT_COLLECTION_NAME, {
+    const scrollResult = await storage.scroll(QDRANT_COLLECTION_NAME, {
       filter: {
         must: [{ key: 'deletion_eligible', match: { value: true } }],
       },
       limit,
-      with_payload: true,
-      with_vector: false,
+      withPayload: true,
+      withVector: false,
     })
 
     result.scanned = scrollResult.points.length
@@ -136,10 +139,7 @@ export async function vacuumEligibleChunks(options: {
     // Hard delete
     if (toDelete.length > 0 && !dryRun) {
       try {
-        await qdrant.delete(QDRANT_COLLECTION_NAME, {
-          points: toDelete,
-          wait: true,
-        })
+        await storage.delete(QDRANT_COLLECTION_NAME, toDelete)
         result.deleted = toDelete.length
         log.info('Hard deleted chunks', { count: result.deleted })
       } catch (error) {
@@ -189,7 +189,10 @@ export async function updateStabilityScores(options: {
   const { dryRun = false, limit = 500 } = options
   const endTimer = startTimer('updateStabilityScores')
 
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
 
   const result: StabilityUpdateResult = {
     scanned: 0,
@@ -201,13 +204,13 @@ export async function updateStabilityScores(options: {
 
   try {
     // Find active (non-deleted) chunks
-    const scrollResult = await qdrant.scroll(QDRANT_COLLECTION_NAME, {
+    const scrollResult = await storage.scroll(QDRANT_COLLECTION_NAME, {
       filter: {
         must_not: [{ key: 'deletion_eligible', match: { value: true } }],
       },
       limit,
-      with_payload: true,
-      with_vector: false,
+      withPayload: true,
+      withVector: false,
     })
 
     result.scanned = scrollResult.points.length
@@ -221,9 +224,8 @@ export async function updateStabilityScores(options: {
       if (Math.abs(newScore - currentScore) >= 0.05) {
         if (!dryRun) {
           try {
-            await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-              payload: { stability_score: newScore },
-              points: [point.id as string],
+            await storage.setPayload(QDRANT_COLLECTION_NAME, [point.id as string], {
+              stability_score: newScore,
             })
             result.updated++
           } catch (error) {
@@ -258,16 +260,17 @@ export async function updateStabilityScores(options: {
  * Mark a chunk for deletion with grace period
  */
 export async function markForDeletion(pointId: string, supersededBy?: string): Promise<void> {
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
+
   const now = new Date().toISOString()
 
-  await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-    payload: {
-      deletion_eligible: true,
-      deletion_marked_at: now,
-      ...(supersededBy && { superseded_by: supersededBy }),
-    },
-    points: [pointId],
+  await storage.setPayload(QDRANT_COLLECTION_NAME, [pointId], {
+    deletion_eligible: true,
+    deletion_marked_at: now,
+    ...(supersededBy && { superseded_by: supersededBy }),
   })
 
   log.debug('Marked chunk for deletion', {
@@ -281,15 +284,15 @@ export async function markForDeletion(pointId: string, supersededBy?: string): P
  * Unmark a chunk from deletion (rescue before grace period expires)
  */
 export async function unmarkFromDeletion(pointId: string): Promise<void> {
-  const qdrant = getQdrantClient()
+  const storage = getStorageBackend()
+  if (!storage) {
+    throw new Error('No storage backend available')
+  }
 
-  await qdrant.setPayload(QDRANT_COLLECTION_NAME, {
-    payload: {
-      deletion_eligible: false,
-      deletion_marked_at: null,
-      superseded_by: null,
-    },
-    points: [pointId],
+  await storage.setPayload(QDRANT_COLLECTION_NAME, [pointId], {
+    deletion_eligible: false,
+    deletion_marked_at: null,
+    superseded_by: null,
   })
 
   log.debug('Unmarked chunk from deletion', { pointId })

@@ -12,16 +12,13 @@
 
 import {
   QDRANT_COLLECTION_NAME,
-  CONSOLIDATION_BASE_THRESHOLD,
-  CONSOLIDATION_SCALE_FACTOR,
-  CONSOLIDATION_SIMILARITY_THRESHOLD,
-  CONSOLIDATION_POLL_INTERVAL_MS,
   BATCH_HNSW_THRESHOLD,
 } from '../../shared/config'
+import { getConfig } from '../../shared/config.loader'
 import { consolidate } from '.'
 import { createLogger } from '../../shared/logger'
 import { PollingScheduler } from '../../core/scheduler'
-import { getQdrantClient, withHNSWDisabled } from '../../services/storage'
+import { getStorageBackend, withHNSWDisabled } from '../../services/storage'
 
 const log = createLogger('consolidation-watchdog')
 
@@ -166,9 +163,12 @@ export class ConsolidationWatchdog {
   private readonly MAX_CONSECUTIVE_FAILURES = 3
 
   constructor(config: ConsolidationWatchdogConfig = {}) {
-    this.baseThreshold = config.baseThreshold ?? CONSOLIDATION_BASE_THRESHOLD
-    this.scaleFactor = config.scaleFactor ?? CONSOLIDATION_SCALE_FACTOR
-    this.similarityThreshold = config.similarityThreshold ?? CONSOLIDATION_SIMILARITY_THRESHOLD
+    const atlasConfig = getConfig()
+    const consolidationConfig = atlasConfig.consolidation
+
+    this.baseThreshold = config.baseThreshold ?? consolidationConfig?.baseThreshold ?? 100
+    this.scaleFactor = config.scaleFactor ?? consolidationConfig?.scaleFactor ?? 0.05
+    this.similarityThreshold = config.similarityThreshold ?? consolidationConfig?.similarityThreshold ?? 0.95
     this.useHNSWToggle = config.useHNSWToggle ?? true
 
     this.scheduler = new PollingScheduler({
@@ -190,8 +190,11 @@ export class ConsolidationWatchdog {
    */
   private async calculateDynamicThreshold(): Promise<number> {
     try {
-      const qdrant = getQdrantClient()
-      const info = await qdrant.getCollection(QDRANT_COLLECTION_NAME)
+      const backend = getStorageBackend()
+      if (!backend) {
+        return this.baseThreshold
+      }
+      const info = await backend.getCollectionInfo(QDRANT_COLLECTION_NAME)
       const pointCount = info.points_count ?? 0
       const threshold = Math.floor(this.baseThreshold + this.scaleFactor * pointCount)
       log.debug('Dynamic threshold calculated', { pointCount, threshold })
@@ -205,13 +208,17 @@ export class ConsolidationWatchdog {
   /**
    * Start the consolidation watchdog
    */
-  start(pollIntervalMs = CONSOLIDATION_POLL_INTERVAL_MS): void {
+  start(pollIntervalMs?: number): void {
+    const atlasConfig = getConfig()
+    const defaultInterval = atlasConfig.consolidation?.pollIntervalMs ?? 30000
+    const interval = pollIntervalMs ?? defaultInterval
+
     log.info('Starting consolidation watchdog', {
-      pollIntervalMs,
+      pollIntervalMs: interval,
       baseThreshold: this.baseThreshold,
       scaleFactor: this.scaleFactor,
     })
-    this.scheduler.start(pollIntervalMs)
+    this.scheduler.start(interval)
   }
 
   /**

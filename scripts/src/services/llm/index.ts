@@ -2,10 +2,11 @@
  * LLM Service Layer - Public API
  *
  * Unified interface for LLM completions across providers:
- * - anthropic: Claude via CLI
+ * - anthropic: Claude via SDK
  * - ollama: Local inference
  *
  * Features:
+ * - Backend registry with capability-based lookup
  * - Single completions (complete, completeJSON)
  * - Batched completions with pressure-aware concurrency
  * - Provider auto-detection
@@ -14,19 +15,152 @@
 
 import { OLLAMA_URL, QDRANT_COLLECTION_NAME } from '../../shared/config'
 import { createLogger } from '../../shared/logger'
+import { BackendRegistry } from '../../shared/registry'
+import { getConfig } from '../../shared/config.loader'
+import type { LLMBackend } from './types'
 
 const log = createLogger('llm')
 
-// Re-export types and functions
-export type { BatchResult } from './batch'
-export type { CompletionResult, LLMConfig, LLMProvider } from './providers'
+// ============================================
+// Backend Registry
+// ============================================
 
-export { checkOllamaAvailable, complete, completeJSON, detectProvider } from './providers'
+import { OllamaLLMBackend } from './backends/ollama'
+import { getClaudeCodeBackend } from './backends/claude-code'
 
-export { completeBatch } from './batch'
+/**
+ * Global LLM backend registry.
+ * Lazily initialized to allow runtime config overrides.
+ */
+export const llmRegistry = new BackendRegistry<LLMBackend>()
 
-// Global LLM configuration
-import type { LLMConfig } from './providers'
+let initialized = false
+
+/**
+ * Initialize LLM backends from current config.
+ * Called after CLI args are parsed and runtime overrides applied.
+ * Safe to call multiple times - clears and re-registers on subsequent calls.
+ */
+export function initializeLLMBackends(): void {
+  if (initialized) {
+    log.debug('Re-initializing LLM backends (clearing previous registrations)')
+    llmRegistry.clear()
+  }
+
+  const config = getConfig()
+
+  log.debug('Initializing LLM backends', {
+    textCompletion: config.backends?.['text-completion'],
+    jsonCompletion: config.backends?.['json-completion'],
+    qntmGeneration: config.backends?.['qntm-generation'],
+  })
+
+  // Always register Claude Code backends (uses CLI, no API key needed)
+  llmRegistry.register(getClaudeCodeBackend('haiku'))
+  llmRegistry.register(getClaudeCodeBackend('sonnet'))
+  llmRegistry.register(getClaudeCodeBackend('opus'))
+
+  // Register Anthropic API backends (when ANTHROPIC_API_KEY present and SDK installed)
+  // Note: Requires @anthropic-ai/sdk package (not installed by default)
+  // Skip registration if SDK not available (graceful degradation)
+  try {
+    if (process.env.ANTHROPIC_API_KEY) {
+      // This will throw if @anthropic-ai/sdk is not installed
+      const { AnthropicBackend } = require('./backends/anthropic')
+      llmRegistry.register(new AnthropicBackend('haiku'))
+      llmRegistry.register(new AnthropicBackend('sonnet'))
+      llmRegistry.register(new AnthropicBackend('opus'))
+      log.debug('Anthropic API backends registered')
+    }
+  } catch (error) {
+    // SDK not installed or import failed - skip Anthropic backends
+    log.debug('Anthropic SDK not available, skipping Anthropic API backends', {
+      error: (error as Error).message,
+    })
+  }
+
+  // Always register Ollama backends (local, commonly used)
+  const ollamaModel = (config.backends?.['text-completion'] || 'ollama:ministral-3:3b').split(':').slice(1).join(':') || 'ministral-3:3b'
+  llmRegistry.register(new OllamaLLMBackend(ollamaModel))
+
+  initialized = true
+
+  log.debug('LLM backends initialized', {
+    backends: llmRegistry.getAll().map(b => b.name),
+    capabilities: llmRegistry.getCapabilities(),
+  })
+}
+
+// Auto-initialize at module load for backward compatibility
+// (CLI will call initializeLLMBackends() after applying runtime overrides)
+initializeLLMBackends()
+
+/**
+ * Get an LLM backend by name.
+ *
+ * @param name - Backend name (e.g., 'anthropic:haiku', 'ollama:ministral')
+ * @returns Backend or undefined if not found
+ */
+export function getLLMBackend(name: string): LLMBackend | undefined {
+  return llmRegistry.get(name)
+}
+
+/**
+ * Get LLM backend for a capability, respecting config preferences.
+ *
+ * Lookup order:
+ * 1. Config-specified backend for this capability (e.g., backends['json-completion'])
+ * 2. First registered backend with this capability (fallback)
+ *
+ * @param capability - LLM capability to look for
+ * @returns Backend or undefined if none support it
+ */
+export function getLLMBackendFor(capability: string): LLMBackend | undefined {
+  const config = getConfig()
+
+  // Check if config specifies a backend for this capability
+  const configuredBackend = config.backends?.[capability as keyof typeof config.backends]
+  if (configuredBackend) {
+    const backend = llmRegistry.get(configuredBackend)
+    if (backend) {
+      log.trace('Using configured backend for capability', { capability, backend: backend.name })
+      return backend
+    }
+    log.debug('Configured backend not found in registry, falling back', {
+      capability,
+      configured: configuredBackend,
+    })
+  }
+
+  // Fallback: first backend with capability
+  return llmRegistry.getFor(capability)
+}
+
+// ============================================
+// Backward-Compatible Exports
+// ============================================
+
+// Re-export types
+export type { CompletionResult } from './types'
+
+// ============================================
+// Legacy Configuration Types
+// ============================================
+
+/**
+ * Legacy LLM configuration type.
+ * Used for backward compatibility with QNTM code.
+ * New code should use backend registry directly.
+ */
+export type LLMProvider = 'anthropic' | 'ollama'
+
+export interface LLMConfig {
+  provider: LLMProvider
+  model?: string
+  temperature?: number
+  maxTokens?: number
+  ollamaHost?: string
+}
 
 const defaultConfig: LLMConfig = {
   provider: 'ollama',
@@ -60,34 +194,11 @@ export function getLLMConfig(): LLMConfig {
   return { ...globalConfig }
 }
 
-/**
- * Initialize LLM with auto-detected provider
- */
-export async function initLLM(overrides?: Partial<LLMConfig>): Promise<LLMConfig> {
-  const { detectProvider } = await import('./providers')
-
-  const provider = overrides?.provider || (await detectProvider(overrides?.ollamaHost))
-
-  const config: LLMConfig = {
-    provider,
-    model: overrides?.model || (provider === 'ollama' ? 'ministral-3:3b' : 'haiku'),
-    ollamaHost: overrides?.ollamaHost || OLLAMA_URL,
-    temperature: overrides?.temperature ?? 0.1,
-    maxTokens: overrides?.maxTokens,
-  }
-
-  setLLMConfig(config)
-  return config
-}
-
 // ============================================
 // QNTM Semantic Key Generation
 // ============================================
 
 import { generateQNTMKeysWithProvider } from './qntm'
-
-// Re-export QNTM batch
-export { generateQNTMKeysBatch } from './qntm-batch'
 
 export interface QNTMGenerationInput {
   chunk: string
@@ -130,12 +241,13 @@ export async function generateQNTMKeys(input: QNTMGenerationInput): Promise<QNTM
   const config = getLLMConfig()
   const result = await generateQNTMKeysWithProvider(input, config)
 
-  log.info('QNTM keys generated', {
+  log.debug('QNTM keys generated', {
     provider: config.provider,
     model: config.model,
     keyCount: result.keys.length,
-    keys: result.keys,
   })
+
+  log.trace('QNTM keys', { keys: result.keys })
 
   return result
 }
@@ -163,14 +275,17 @@ export function sanitizeQNTMKey(key: string): string {
  * @returns Array of unique QNTM keys
  */
 export async function fetchExistingQNTMKeys(): Promise<string[]> {
-  const { getQdrantClient } = await import('../storage')
-  const qdrant = getQdrantClient()
+  const { getStorageBackend } = await import('../storage')
+  const storage = getStorageBackend()
+  if (!storage) {
+    log.debug('No storage backend available')
+    return []
+  }
 
   try {
     // Check if collection exists
-    try {
-      await qdrant.getCollection(QDRANT_COLLECTION_NAME)
-    } catch {
+    const exists = await storage.collectionExists(QDRANT_COLLECTION_NAME)
+    if (!exists) {
       log.debug('Collection does not exist yet, no existing keys')
       return []
     }
@@ -181,11 +296,11 @@ export async function fetchExistingQNTMKeys(): Promise<string[]> {
     const SCROLL_LIMIT = 100
 
     do {
-      const result = await qdrant.scroll(QDRANT_COLLECTION_NAME, {
+      const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
         limit: SCROLL_LIMIT,
         offset,
-        with_payload: { include: ['qntm_keys'] },
-        with_vector: false,
+        withPayload: true,
+        withVector: false,
       })
 
       for (const point of result.points) {
@@ -197,7 +312,7 @@ export async function fetchExistingQNTMKeys(): Promise<string[]> {
         }
       }
 
-      offset = result.next_page_offset
+      offset = result.nextOffset
     } while (offset !== null && offset !== undefined)
 
     const keysArray = Array.from(uniqueKeys)

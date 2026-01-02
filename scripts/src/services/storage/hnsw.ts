@@ -14,7 +14,7 @@
  *   }
  */
 
-import { getQdrantClient } from '.'
+import { getQdrantClient } from './client'
 import {
   QDRANT_COLLECTION_NAME,
   HNSW_M_DEFAULT,

@@ -20,13 +20,19 @@ vi.mock('.', () => ({
   consolidate: mockConsolidate,
 }))
 
-// Mock Qdrant client for dynamic threshold calculation and HNSW toggle
-vi.mock('../../services/storage', () => ({
+// Mock Qdrant client for HNSW toggle
+vi.mock('../../services/storage/client', () => ({
   getQdrantClient: () => ({
     getCollection: mockGetCollection,
     updateCollection: mockUpdateCollection,
   }),
+}))
+
+vi.mock('../../services/storage', () => ({
   withHNSWDisabled: async <T>(fn: () => Promise<T>) => fn(), // Pass through
+  getStorageBackend: () => ({
+    getCollectionInfo: mockGetCollection,
+  }),
 }))
 
 // Now import the module under test (after mock is set up)
@@ -247,7 +253,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog = new ConsolidationWatchdog()
       const state = watchdog.getState()
 
-      expect(state.baseThreshold).toBe(100) // CONSOLIDATION_BASE_THRESHOLD
+      expect(state.baseThreshold).toBe(100) // Default from config schema
       expect(state.isRunning).toBe(false)
       expect(state.isConsolidating).toBe(false)
       expect(state.currentCount).toBe(0)
@@ -501,7 +507,7 @@ describe('ConsolidationWatchdog', () => {
       await watchdog.forceConsolidation()
 
       expect(mockConsolidate).toHaveBeenCalledWith({
-        threshold: 0.8, // CONSOLIDATION_SIMILARITY_THRESHOLD from config
+        threshold: 0.95, // Default from config schema
         limit: 50,
       })
     })

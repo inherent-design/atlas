@@ -12,6 +12,7 @@ const {
   mockQdrantCreate,
   mockQdrantUpsert,
   mockGenerateQNTMKeysBatch,
+  mockCollectionExists,
 } = vi.hoisted(() => ({
   mockVoyageEmbed: vi.fn((input: any) => {
     // Return one embedding per chunk
@@ -33,21 +34,51 @@ const {
       }))
     )
   ),
+  mockCollectionExists: vi.fn(async () => true), // Default: collection exists
 }))
 
 // Setup mocks - hoisted but now have access to hoisted mock functions
-vi.mock('../../services/storage', () => ({
+vi.mock('../../services/storage/client', () => ({
   getQdrantClient: () => ({
     getCollection: mockQdrantGet,
     createCollection: mockQdrantCreate,
+    createPayloadIndex: vi.fn(() => Promise.resolve()),
     upsert: mockQdrantUpsert,
   }),
+}))
+
+vi.mock('../../services/storage', () => ({
+  getStorageBackend: () => ({
+    name: 'qdrant',
+    upsert: mockQdrantUpsert,
+    collectionExists: mockCollectionExists, // Use tracked mock
+    createCollection: mockQdrantCreate,
+    getCollectionInfo: vi.fn(() => Promise.resolve({
+      points_count: 0,
+      vector_dimensions: { text: 1024, code: 1024 }
+    })),
+  }),
+  withHNSWDisabled: async (fn: () => Promise<any>) => fn(),
 }))
 
 vi.mock('../../services/embedding', () => ({
   getVoyageClient: () => ({
     embed: mockVoyageEmbed,
   }),
+  getEmbeddingBackend: () => ({
+    name: 'voyage:text',
+    embedText: async (input: string | string[]) => {
+      const inputs = Array.isArray(input) ? input : [input]
+      return {
+        embeddings: inputs.map(() => new Array(1024).fill(0.1)),
+        model: 'voyage-3-large',
+        strategy: 'snippet' as const,
+        dimensions: 1024,
+        usage: { inputTokens: inputs.length * 10 },
+      }
+    },
+  }),
+  getEmbeddingDimensions: () => 1024, // Mock dimension retrieval
 }))
 
 vi.mock('../../services/chunking', () => ({
@@ -64,8 +95,23 @@ vi.mock('../../services/llm', async () => {
   const actual = await vi.importActual<typeof import('../../services/llm')>('../../services/llm')
   return {
     generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
+    generateQNTMKeys: vi.fn((input: any) => Promise.resolve({
+      keys: ['@test ~ content', '@mock ~ data'],
+      reasoning: 'Test content semantic keys',
+    })),
     sanitizeQNTMKey: actual.sanitizeQNTMKey,
     fetchExistingQNTMKeys: () => Promise.resolve([]),
+    getLLMBackendFor: vi.fn(() => ({
+      name: 'test-backend',
+      capabilities: new Set(['json-completion']),
+      supports: (cap: string) => cap === 'json-completion',
+      completeJSON: vi.fn((prompt: string) => {
+        return Promise.resolve({
+          keys: ['@test ~ content', '@mock ~ data'],
+          reasoning: 'Test content semantic keys',
+        })
+      }),
+    })),
   }
 })
 
@@ -94,14 +140,12 @@ describe('ingestFile', () => {
 
     await ingestFile(testFile, testDir)
 
-    // Should have called voyage.embed
-    expect(mockVoyageEmbed).toHaveBeenCalled()
-
-    // Should have called qdrant.upsert (2 chunks × 2 keys = 4 upserts)
+    // Should have called backend.upsert
     expect(mockQdrantUpsert).toHaveBeenCalled()
 
     const firstUpsertCall = mockQdrantUpsert.mock.calls[0]
-    const point = firstUpsertCall[1].points[0]
+    const points = firstUpsertCall[1] // Second argument is the points array
+    const point = points[0]
 
     // Each point should have correct structure
     expect(point).toHaveProperty('id')
@@ -127,8 +171,8 @@ describe('ingestFile', () => {
 
     await ingestFile(testFile, testDir)
 
-    // Collect all points from all upsert calls (multi-collection indexing)
-    const allPoints = mockQdrantUpsert.mock.calls.flatMap((call: any) => call[1].points)
+    // Collect all points from all upsert calls
+    const allPoints = mockQdrantUpsert.mock.calls.flatMap((call: any) => call[1]) // Second argument is points array
     const texts = allPoints.map((p: any) => p.payload.original_text)
 
     // Should have both chunks
@@ -145,14 +189,14 @@ describe('ingestFile', () => {
 
     await ingestFile(testFile1, testDir)
     const call1 = mockQdrantUpsert.mock.calls[0]
-    const qntmKeys1 = call1[1].points[0].payload.qntm_keys
+    const qntmKeys1 = call1[1][0].payload.qntm_keys // Second arg is points array
 
     mockQdrantUpsert.mockClear()
     mockGenerateQNTMKeysBatch.mockClear()
 
     await ingestFile(testFile2, testDir)
     const call2 = mockQdrantUpsert.mock.calls[0]
-    const qntmKeys2 = call2[1].points[0].payload.qntm_keys
+    const qntmKeys2 = call2[1][0].payload.qntm_keys // Second arg is points array
 
     expect(qntmKeys1).toEqual(qntmKeys2)
   })
@@ -164,7 +208,7 @@ describe('ingestFile', () => {
     await ingestFile(testFile, testDir)
 
     const upsertCall = mockQdrantUpsert.mock.calls[0]
-    const payload = upsertCall[1].points[0].payload
+    const payload = upsertCall[1][0].payload // Second arg is points array
 
     expect(payload.file_name).toBe('test.md')
     expect(payload.file_type).toBe('.md')
@@ -198,8 +242,9 @@ describe('ingest', () => {
     })
 
     expect(result.filesProcessed).toBe(2)
-    // Each file batch upserts all chunks to unified collection = 1 upsert per file = 2 total
-    expect(mockQdrantUpsert).toHaveBeenCalledTimes(2)
+    // Streaming pipeline batches chunks across files for efficiency
+    // With batch size of 50, small files are combined into single upsert
+    expect(mockQdrantUpsert).toHaveBeenCalledTimes(1)
   })
 
   test('expands directories without recursion', async () => {
@@ -226,14 +271,17 @@ describe('ingest', () => {
   })
 
   test('ensures collection exists before ingesting', async () => {
+    // Override mock to return false (collection doesn't exist)
+    mockCollectionExists.mockResolvedValueOnce(false)
+
     writeFileSync(join(testDir, 'test.md'), '# Test Document Title')
 
     await ingest({ paths: [join(testDir, 'test.md')], recursive: false, rootDir: testDir })
 
-    // Should have attempted to get collection
-    expect(mockQdrantGet).toHaveBeenCalled()
+    // Should have checked if collection exists
+    expect(mockCollectionExists).toHaveBeenCalled()
 
-    // Should have created collection (since get failed)
+    // Should have created collection (since collectionExists returned false)
     expect(mockQdrantCreate).toHaveBeenCalled()
   })
 
