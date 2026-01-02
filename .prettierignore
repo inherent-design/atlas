@@ -21,6 +21,7 @@ coverage/
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+bun.lock
 
 # Environment files
 .env
@@ -41,3 +42,4 @@ yarn.lock
 
 # Atlas
 data/
+prev/

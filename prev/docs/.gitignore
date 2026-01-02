@@ -1,5 +1,5 @@
-# Created by https://www.toptal.com/developers/gitignore/api/linux,macos,windows,node,vim,emacs,sublimetext,visualstudiocode,visualstudio,notepadpp
-# Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,windows,node,vim,emacs,sublimetext,visualstudiocode,visualstudio,notepadpp
+# Created by https://www.toptal.com/developers/gitignore/api/vim,node,emacs,linux,macos,windows,notepadpp,sublimetext,visualstudio,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=vim,node,emacs,linux,macos,windows,notepadpp,sublimetext,visualstudio,visualstudiocode
 
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -540,9 +540,9 @@ PublishScripts/
 # NuGet Symbol Packages
 *.snupkg
 # The packages folder can be ignored because of Package Restore
-# **/[Pp]ackages/*  # DISABLED: conflicts with bun monorepo packages/
+**/[Pp]ackages/*
 # except build/, which is used as an MSBuild target.
-# !**/[Pp]ackages/build/
+!**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/[Pp]ackages/repositories.config
 # NuGet v3's project.json files produces more ignorable files
@@ -728,14 +728,7 @@ FodyWeavers.xsd
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
 
-# End of https://www.toptal.com/developers/gitignore/api/linux,macos,windows,node,vim,emacs,sublimetext,visualstudiocode,visualstudio,notepadpp
+# End of https://www.toptal.com/developers/gitignore/api/vim,node,emacs,linux,macos,windows,notepadpp,sublimetext,visualstudio,visualstudiocode
 
-### Atlas ###
-
-# Environment configuration
-.env*
-!.env*.example
-!.env*.template
-
-# Atlas
-data/
+.vitepress/cache/
+.vitepress/dist/

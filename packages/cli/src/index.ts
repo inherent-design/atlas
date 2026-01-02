@@ -5,15 +5,19 @@
  * Unified command-line interface for Atlas context ingestion and search.
  */
 
-import { loadConfig, getConfig, applyRuntimeOverrides } from './src/shared/config.loader'
-import { parseBackendSpecifier } from './src/shared/config.schema'
-import { Command } from 'commander'
 import {
+  loadConfig,
+  getConfig,
+  applyRuntimeOverrides,
+  parseBackendSpecifier,
   CONSOLIDATION_SIMILARITY_THRESHOLD,
   DEFAULT_SEARCH_LIMIT,
   OLLAMA_URL,
-} from './src/shared/config'
-import { createLogger, setLogLevel, setModuleRules } from './src/shared/logger'
+  createLogger,
+  setLogLevel,
+  setModuleRules,
+} from '@inherent.design/atlas-core'
+import { Command } from 'commander'
 
 const log = createLogger('app')
 
@@ -23,10 +27,10 @@ async function main() {
   await loadConfig()
 
   // Dynamic imports AFTER config is loaded
-  const { ingest } = await import('./src/domain/ingest')
-  const { setQNTMProvider } = await import('./src/services/llm')
-  const { formatResults, search, timeline } = await import('./src/domain/search')
-  const { computeRootDir } = await import('./src/shared/utils')
+  const { ingest } = await import('@inherent.design/atlas-core')
+  const { setQNTMProvider } = await import('@inherent.design/atlas-core')
+  const { formatResults, search, timeline } = await import('@inherent.design/atlas-core')
+  const { computeRootDir } = await import('@inherent.design/atlas-core')
 
   const program = new Command()
 
@@ -117,8 +121,7 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends } = await import('./src/services/embedding')
-      const { initializeLLMBackends } = await import('./src/services/llm')
+      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -234,8 +237,7 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends } = await import('./src/services/embedding')
-      const { initializeLLMBackends } = await import('./src/services/llm')
+      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -291,8 +293,7 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends } = await import('./src/services/embedding')
-      const { initializeLLMBackends } = await import('./src/services/llm')
+      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -359,8 +360,7 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends } = await import('./src/services/embedding')
-      const { initializeLLMBackends } = await import('./src/services/llm')
+      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -368,7 +368,7 @@ async function main() {
       if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
 
       try {
-        const { consolidate } = await import('./src/domain/consolidate')
+        const { consolidate } = await import('@inherent.design/atlas-core')
         const result = await consolidate({
           dryRun: options.dryRun,
           threshold: options.threshold,
@@ -421,8 +421,7 @@ async function main() {
           }
 
           try {
-            const { getStorageBackend } = await import('./src/services/storage')
-            const { QDRANT_COLLECTION_NAME } = await import('./src/shared/config')
+            const { getStorageBackend, QDRANT_COLLECTION_NAME } = await import('@inherent.design/atlas-core')
 
             const storage = getStorageBackend()
             if (!storage) {
@@ -476,8 +475,7 @@ async function main() {
           }
 
           try {
-            const { enableHNSW, disableHNSW, isHNSWDisabled } =
-              await import('./src/services/storage')
+            const { enableHNSW, disableHNSW } = await import('@inherent.design/atlas-core')
 
             if (state === 'on') {
               await enableHNSW()
@@ -507,9 +505,8 @@ async function main() {
           }
 
           try {
-            const { getStorageBackend } = await import('./src/services/storage')
-            const { QDRANT_COLLECTION_NAME, DELETION_GRACE_PERIOD_DAYS } =
-              await import('./src/shared/config')
+            const { getStorageBackend, QDRANT_COLLECTION_NAME, DELETION_GRACE_PERIOD_DAYS } =
+              await import('@inherent.design/atlas-core')
 
             const storage = getStorageBackend()
             if (!storage) {
@@ -605,55 +602,6 @@ async function main() {
             log.error('Vacuum failed', error as Error)
             process.exit(1)
           }
-        })
-    )
-
-  // Docker helper command
-  program
-    .command('docker')
-    .description('Docker setup commands')
-    .addCommand(
-      new Command('up').description('Start Atlas services (Qdrant + Ollama)').action(() => {
-        log.info('Starting Atlas services...')
-        const { execSync } = require('child_process')
-        execSync('docker compose up -d', { stdio: 'inherit' })
-        log.info('Qdrant started at http://localhost:6333')
-        log.info('Ollama started at http://localhost:11434')
-      })
-    )
-    .addCommand(
-      new Command('down').description('Stop Atlas services').action(() => {
-        const { execSync } = require('child_process')
-        execSync('docker compose down', { stdio: 'inherit' })
-        log.info('Atlas services stopped')
-      })
-    )
-    .addCommand(
-      new Command('restart').description('Restart Atlas services').action(() => {
-        log.info('Restarting Atlas services...')
-        const { execSync } = require('child_process')
-        execSync('docker compose restart', { stdio: 'inherit' })
-        log.info('Atlas services restarted')
-      })
-    )
-    .addCommand(
-      new Command('logs')
-        .description('View Docker service logs (qdrant|ollama|all)')
-        .argument('[service]', 'Service to view logs for (qdrant, ollama, or all)', 'all')
-        .action((service: string) => {
-          const { execSync } = require('child_process')
-          const validServices = ['qdrant', 'ollama', 'all']
-
-          if (!validServices.includes(service)) {
-            log.error(`Invalid service: ${service}. Use: qdrant, ollama, or all`)
-            process.exit(1)
-          }
-
-          const cmd =
-            service === 'all' ? 'docker compose logs -f' : `docker compose logs -f ${service}`
-
-          log.info(`Viewing ${service} logs (Ctrl+C to exit)...`)
-          execSync(cmd, { stdio: 'inherit' })
         })
     )
 

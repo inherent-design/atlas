@@ -1,9 +1,17 @@
 /**
  * Shim for Bun runtime APIs in Vitest environment
- * Provides minimal compatibility for code that imports from 'bun'
+ * Provides minimal compatibility for code that imports from 'bun' and 'bun-webgpu'
  */
 
 import picomatch from 'picomatch'
+
+/**
+ * Stub for bun-webgpu setupGlobals
+ * GPU detection is not needed in tests
+ */
+export function setupGlobals() {
+  // No-op in test environment
+}
 
 /**
  * Minimal Glob implementation using picomatch

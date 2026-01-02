@@ -251,7 +251,8 @@ export function findFiles(dirPath: string, recursive = false): string[] {
 export function expandPaths(paths: string[], recursive = false): string[] {
   const files: string[] = []
 
-  for (const path of paths) {
+  for (const inputPath of paths) {
+    const path = resolve(inputPath) // Resolve relative paths
     const stat = statSync(path)
 
     if (stat.isDirectory()) {

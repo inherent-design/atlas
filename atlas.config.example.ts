@@ -2,13 +2,14 @@
  * Example Atlas Configuration
  *
  * Copy this file to atlas.config.ts and customize for your setup.
+ * Place in the directory where you run `atlas` commands.
  */
 
-import { defineConfig } from './src/shared/config.schema'
+import { defineConfig } from '@inherent.design/atlas-core'
 
 export default defineConfig({
   backends: {
-    // Embedding backends (Voyage AI)
+    // Embedding backends (Voyage AI - requires VOYAGE_API_KEY)
     'text-embedding': 'voyage:voyage-3-large',
     'code-embedding': 'voyage:voyage-code-3',
     'contextualized-embedding': 'voyage:voyage-context-3',
@@ -24,13 +25,13 @@ export default defineConfig({
     // 'qntm-generation': 'claude-code:haiku',
 
     // Reranking (Voyage AI)
-    'reranking': 'voyage:rerank-2.5',
+    reranking: 'voyage:rerank-2.5',
   },
 
   resources: {
     ollama: {
       // Use 30% of available RAM for Ollama models
-      memoryTarget: 0.30,
+      memoryTarget: 0.3,
 
       // Auto-detect GPU layers based on VRAM
       gpuLayers: 'auto',

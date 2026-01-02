@@ -6,6 +6,8 @@ export default defineConfig({
     alias: {
       // Mock Bun runtime for Vitest compatibility
       bun: fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
+      // Mock bun-webgpu (GPU detection not needed in tests)
+      'bun-webgpu': fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
     },
   },
   test: {

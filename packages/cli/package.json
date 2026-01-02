@@ -1,0 +1,36 @@
+{
+  "name": "@inherent.design/atlas",
+  "version": "0.1.0",
+  "description": "CLI for Atlas semantic memory - ingest, search, and manage context",
+  "module": "src/index.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.2.15"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts"
+  ],
+  "bin": {
+    "atlas": "./src/index.ts"
+  },
+  "scripts": {
+    "atlas": "bun run src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@inherent.design/atlas-core": "^0.1.0",
+    "commander": "^14.0.2"
+  }
+}

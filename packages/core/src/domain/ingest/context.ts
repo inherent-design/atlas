@@ -14,7 +14,7 @@ import { createLogger } from '../../shared/logger'
 import type { EmbeddingBackend } from '../../services/embedding/types'
 import type { StorageBackend } from '../../services/storage'
 import type { LLMBackend, CanCompleteJSON } from '../../services/llm/types'
-import type { IngestConfig } from './index'
+import type { IngestOptions } from '../../shared/types'
 
 const log = createLogger('ingest:context')
 
@@ -44,7 +44,7 @@ export interface IngestContext {
  * Backends are resolved once on first access and cached.
  * Flags are computed eagerly to enable fast capability checks.
  */
-export async function createIngestContext(config: IngestConfig): Promise<IngestContext> {
+export async function createIngestContext(config: IngestOptions): Promise<IngestContext> {
   const rootDir = config.rootDir || process.cwd()
   const existingQNTMKeys = config.existingKeys || []
 

@@ -17,7 +17,7 @@ import { getConfig } from '../../shared/config.loader'
 import { getConsolidationWatchdog, ingestPauseController } from '../consolidate/watchdog'
 import { createLogger, startTimer } from '../../shared/logger'
 import { fetchExistingQNTMKeys, generateQNTMKeys } from '../../services/llm'
-import type { ChunkPayload } from '../../shared/types'
+import type { ChunkPayload, IngestResult, IngestOptions } from '../../shared/types'
 import type { VectorPoint, NamedVectors } from '../../services/storage'
 import { ensureCollection, expandPaths, generateChunkId } from '../../shared/utils'
 import { detectContentType, getRequiredVectors, DOCUMENT_EXTENSIONS } from '../../services/embedding/types'
@@ -47,20 +47,11 @@ function shouldUseContextualized(filePath: string, chunkCount: number): boolean 
   return DOCUMENT_EXTENSIONS.includes(ext as any) && chunkCount >= 3
 }
 
-export interface IngestConfig {
-  paths: string[]
-  recursive?: boolean
-  rootDir?: string
-  verbose?: boolean
-  existingKeys?: string[] // Pre-fetched keys for reuse
-  useHNSWToggle?: boolean // Disable HNSW during batch ingestion (default: auto based on file count)
-}
-
-export interface IngestResult {
-  filesProcessed: number
-  chunksStored: number
-  errors: Array<{ file: string; error: Error }>
-}
+/**
+ * @deprecated Use IngestOptions from '../../shared/types' instead.
+ * This alias is kept for backward compatibility during transition.
+ */
+export type IngestConfig = IngestOptions
 
 // ============================================
 // Streaming Pipeline Implementation
@@ -482,7 +473,7 @@ export async function ingestFile(
 /**
  * Main ingestion function - streaming pipeline for all files.
  */
-export async function ingest(config: IngestConfig): Promise<IngestResult> {
+export async function ingest(config: IngestOptions): Promise<IngestResult> {
   const { paths, recursive = false, rootDir = process.cwd(), verbose = true } = config
   const endTimer = startTimer('ingest (total)')
 
@@ -522,7 +513,7 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
 
   // Core ingestion logic
   const ingestBatch = async (): Promise<IngestResult> => {
-    const errors: Array<{ file: string; error: Error }> = []
+    const errors: Array<{ file: string; error: string }> = []
     let chunksStored = 0
 
     try {
@@ -554,7 +545,7 @@ export async function ingest(config: IngestConfig): Promise<IngestResult> {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
       log.error('Pipeline error', err)
-      errors.push({ file: '<pipeline>', error: err })
+      errors.push({ file: '<pipeline>', error: err.message })
     }
 
     return {
