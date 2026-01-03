@@ -16,6 +16,7 @@ import { getEmbeddingBackend } from '../../services/embedding'
 import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from '../../shared/config'
 import { getConfig } from '../../shared/config.loader'
 import { getLLMBackendFor } from '../../services/llm'
+import { buildConsolidationPrompt } from '../../services/llm/prompts'
 import { createLogger, startTimer } from '../../shared/logger'
 import type { ChunkPayload, ConsolidationType, ConsolidationDirection } from '../../shared/types'
 import type { NamedVectors } from '../../services/storage'
@@ -53,66 +54,6 @@ interface ConsolidationClassification {
 }
 
 /**
- * Build prompt for consolidation classification
- */
-function buildConsolidationPrompt(
-  text1: string,
-  text2: string,
-  keys1: string[],
-  keys2: string[],
-  created1: string,
-  created2: string
-): string {
-  return `# Chunk Consolidation Classification
-
-You are analyzing two similar text chunks to determine their relationship and how to consolidate them.
-
-## Chunk 1 (created: ${created1})
-QNTM Keys: ${keys1.join(', ')}
-\`\`\`
-${text1}
-\`\`\`
-
-## Chunk 2 (created: ${created2})
-QNTM Keys: ${keys2.join(', ')}
-\`\`\`
-${text2}
-\`\`\`
-
-## Classification Types
-
-1. **duplicate_work**: Same or nearly identical content created independently
-   - Keep the more recent/complete version
-   - Example: Same code snippet saved twice
-
-2. **sequential_iteration**: Progressive refinement of the same concept
-   - Shows evolution of an idea over time
-   - Direction matters: forward (improvement) or backward (regression)
-   - Example: Draft → revised → final versions
-
-3. **contextual_convergence**: Different approaches arriving at similar insight
-   - Different contexts but overlapping conclusions
-   - Both perspectives may be valuable
-   - Example: Same technique discovered in different projects
-
-## Instructions
-
-1. Compare the semantic content of both chunks
-2. Consider timestamps to understand temporal relationship
-3. Classify the relationship type
-4. Determine which to keep or if they should be merged
-5. Return ONLY valid JSON
-
-## Output Format
-{
-  "type": "duplicate_work" | "sequential_iteration" | "contextual_convergence",
-  "direction": "forward" | "backward" | "convergent" | "unknown",
-  "reasoning": "1-2 sentence explanation",
-  "keep": "first" | "second" | "merge"
-}`
-}
-
-/**
  * Classify the relationship between two chunks using LLM
  */
 async function classifyConsolidation(
@@ -136,7 +77,9 @@ async function classifyConsolidation(
     payload1.qntm_keys,
     payload2.qntm_keys,
     payload1.created_at,
-    payload2.created_at
+    payload2.created_at,
+    payload1.consolidation_level,
+    payload2.consolidation_level
   )
 
   try {

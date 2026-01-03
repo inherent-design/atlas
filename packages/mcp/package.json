@@ -1,33 +1,33 @@
 {
-  "name": "@inherent.design/atlas-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for Atlas semantic memory - Claude Code integration",
-  "module": "src/index.ts",
-  "type": "module",
-  "engines": {
-    "bun": ">=1.2.15"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "src/**/*.ts"
-  ],
   "bin": {
     "atlas-mcp": "./src/index.ts"
-  },
-  "scripts": {
-    "start": "bun run src/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "@inherent.design/atlas-core": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.25.1",
     "zod-to-json-schema": "^3.25.1"
-  }
+  },
+  "description": "MCP server for Atlas",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": ">=1.2.15"
+  },
+  "files": [
+    "src/**/*.ts"
+  ],
+  "module": "src/index.ts",
+  "name": "@inherent.design/atlas-mcp",
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
+  "type": "module",
+  "version": "0.1.0"
 }

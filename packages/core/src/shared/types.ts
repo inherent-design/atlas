@@ -118,6 +118,10 @@ export const SearchOptionsSchema = z.object({
   rerank: z.boolean().default(false),
   /** How many candidates to rerank (default: 3x limit) */
   rerankTopK: z.number().int().min(1).max(1000).optional(),
+  /** Enable QNTM query expansion (vocabulary bridging) */
+  expandQuery: z.boolean().default(false),
+  /** Filter by consolidation level (0=raw, 1=deduped, 2=topic, 3=principle) */
+  consolidationLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
 })
 export type SearchOptions = z.infer<typeof SearchOptionsSchema>
 
@@ -221,6 +225,14 @@ export const ChunkPayloadSchema = z
     consolidation_direction: ConsolidationDirectionSchema.optional(),
     /** LLM-provided explanation of consolidation */
     consolidation_reasoning: z.string().optional(),
+
+    // === Memory Integration ===
+    /** Memory type classification */
+    memory_type: z.enum(['file', 'conversation', 'compacted', 'consolidated']).optional(),
+    /** Session ID for working memory compactions */
+    session_id: z.string().optional(),
+    /** Entity that sourced this chunk (user_id, agent_id, etc.) */
+    source_entity: z.string().optional(),
 
     // === Provenance DAG ===
     /** Point IDs this was consolidated from (absorbs old consolidated_from) */

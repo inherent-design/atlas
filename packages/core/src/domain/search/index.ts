@@ -13,6 +13,7 @@
 import { getEmbeddingBackend } from '../../services/embedding'
 import { getStorageBackend } from '../../services/storage'
 import { getRerankerBackendFor } from '../../services/reranker'
+import { generateQueryQNTMKeys, fetchExistingQNTMKeys } from '../../services/llm'
 import type { StorageFilter } from '../../services/storage'
 import {
   QDRANT_COLLECTION_NAME,
@@ -115,6 +116,19 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 
   log.debug('Starting search', { query, limit, since, qntmKey })
 
+  // Query expansion (optional)
+  let expandedKeys: string[] = []
+  if (options.expandQuery) {
+    const existingKeys = await fetchExistingQNTMKeys()
+    const expansion = await generateQueryQNTMKeys(query, existingKeys.slice(0, 30))
+    expandedKeys = expansion.keys
+
+    log.debug('Query expanded with QNTM keys', {
+      original: query,
+      expansion: expandedKeys,
+    })
+  }
+
   // Embed query using backend
   const embedStart = startTimer('embed query')
 
@@ -162,6 +176,24 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
     filter.must.push({
       key: 'qntm_keys',
       match: { any: [qntmKey] },
+    })
+  }
+
+  // Add consolidation level filter
+  if (options.consolidationLevel !== undefined) {
+    filter.must = filter.must || []
+    filter.must.push({
+      key: 'consolidation_level',
+      match: { value: options.consolidationLevel },
+    })
+  }
+
+  // Add QNTM key expansion boost (optional)
+  if (expandedKeys.length > 0) {
+    filter.should = filter.should || []
+    filter.should.push({
+      key: 'qntm_keys',
+      match: { any: expandedKeys },
     })
   }
 

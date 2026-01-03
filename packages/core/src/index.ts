@@ -8,6 +8,7 @@
 export * from './domain/ingest'
 export * from './domain/search'
 export * from './domain/consolidate'
+export * from './domain/memory'
 
 // Service exports
 export * from './services/embedding'

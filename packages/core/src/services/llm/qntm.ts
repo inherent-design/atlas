@@ -3,12 +3,23 @@
  *
  * Domain-specific prompt building for QNTM key generation.
  * Uses llm/ module for actual LLM completions.
+ *
+ * Supports abstraction levels:
+ * - L0 (Instance): Specific events, exact references
+ * - L1 (Topic): Deduplicated, topic-level concepts
+ * - L2 (Concept): Summarized, decontextualized facts
+ * - L3 (Principle): Abstract patterns, transferable insights
  */
 
 import pRetry from 'p-retry'
 import type { QNTMGenerationInput, QNTMGenerationResult } from '.'
 import { getLLMBackendFor, type LLMConfig } from '.'
 import { createLogger } from '../../shared/logger'
+import {
+  buildQNTMPrompt as buildQNTMPromptFromRegistry,
+  buildQueryExpansionPrompt,
+  type QNTMAbstractionLevel,
+} from './prompts'
 
 const log = createLogger('qntm/providers')
 
@@ -29,79 +40,40 @@ const RETRY_OPTIONS = {
 
 // Re-export types for backwards compatibility
 export type { LLMConfig as ProviderConfig, LLMProvider as QNTMProvider } from '.'
+export type { QNTMAbstractionLevel } from './prompts'
+
+/**
+ * Extended QNTM generation input with abstraction level.
+ */
+export interface QNTMGenerationInputWithLevel extends QNTMGenerationInput {
+  level?: QNTMAbstractionLevel
+}
 
 /**
  * Build QNTM generation prompt
  *
  * Uses QNTM language spec (EBNF) to ensure proper ternary relationship format.
+ * Supports abstraction levels for consolidation pipeline.
+ *
+ * @param input - Chunk text, existing keys, context, and abstraction level
+ * @returns Prompt string for LLM
  */
-export function buildQNTMPrompt(input: QNTMGenerationInput): string {
-  const { chunk, existingKeys, context } = input
+export function buildQNTMPrompt(input: QNTMGenerationInputWithLevel): string {
+  const { chunk, existingKeys, context, level = 0 } = input
 
-  return `# QNTM Semantic Key Generation
-
-Generate stable semantic addresses (QNTM keys) using the QNTM relationship language.
-Each key is a ternary relationship: subject ~ predicate ~ object
-
-## QNTM Syntax (EBNF)
-relationship = expression, "~", expression, "~", expression
-expression   = concept | collection
-concept      = identifier [ ":" value ]
-collection   = "[" expression_list "]"
-
-## Examples (from atlas.qntm)
-memory ~ type ~ episodic
-memory ~ type ~ semantic
-database ~ strategy ~ indexing
-database ~ property ~ persistent
-retrieval ~ method ~ vector_search
-content ~ domain ~ [machine_learning, systems_design]
-
-## Existing Keys (REUSE when semantically close)
-${existingKeys.length > 0 ? existingKeys.map((k) => `- ${k}`).join('\n') : '(none yet)'}
-
-${
-  context?.fileName
-    ? `## Context
-File: ${context.fileName} (chunk ${context.chunkIndex}/${context.totalChunks})
-`
-    : ''
-}## Chunk Text
-\`\`\`
-${chunk}
-\`\`\`
-
-## Instructions
-1. **Identify 1-3 semantic concepts** in this chunk (main topics/themes)
-2. **Check existing keys** - REUSE if semantically similar (don't create duplicates)
-3. **Format as ternary relationships**: Always 3 parts separated by " ~ "
-   - Subject: Core concept (e.g., "memory", "database", "algorithm")
-   - Predicate: Relationship type (e.g., "type", "strategy", "property", "relates_to")
-   - Object: Classification/value (e.g., "episodic", "indexing", "[concept1, concept2]")
-4. **Use simple identifiers**: snake_case, no special chars except underscore
-5. **Be stable**: Same semantic meaning → same key (invariant to rephrasing)
-6. Return ONLY valid JSON
-
-## Output Format
-{
-  "keys": ["subject ~ predicate ~ object", "..."],
-  "reasoning": "1-2 sentence explanation of semantic choices"
-}
-
-## Quality Checks
-✓ Each key has exactly 3 parts separated by " ~ "
-✓ Identifiers use snake_case (no @, no spaces)
-✓ Keys are semantically meaningful (not just generic)
-✓ Reused existing keys when concepts overlap
-✗ Don't create near-duplicates of existing keys
-✗ Don't use vague predicates like "about" or "has"`
+  // Use the new prompt registry with abstraction level support
+  return buildQNTMPromptFromRegistry(chunk, existingKeys, level, context)
 }
 
 /**
  * Generate QNTM keys using specified provider
+ *
+ * @param input - Chunk text, existing keys, context, and optional abstraction level
+ * @param config - LLM provider configuration
+ * @returns Generated QNTM keys with reasoning
  */
 export async function generateQNTMKeysWithProvider(
-  input: QNTMGenerationInput,
+  input: QNTMGenerationInputWithLevel,
   config: LLMConfig
 ): Promise<QNTMGenerationResult> {
   const prompt = buildQNTMPrompt(input)
@@ -111,6 +83,7 @@ export async function generateQNTMKeysWithProvider(
     model: config.model,
     chunkLength: input.chunk.length,
     existingKeyCount: input.existingKeys.length,
+    level: input.level ?? 0,
   })
 
   // Get JSON-capable LLM backend from registry
@@ -132,6 +105,47 @@ export async function generateQNTMKeysWithProvider(
   )
 
   log.trace('QNTM generation result', { backend: backend.name, result })
+
+  return result
+}
+
+/**
+ * Generate QNTM keys for a search query (query-time expansion).
+ * Bridges vocabulary gap between user query and stored content.
+ *
+ * @param query - User's search query
+ * @param existingKeys - Sample of existing keys in knowledge base
+ * @returns Generated QNTM keys that would match relevant content
+ */
+export async function generateQueryQNTMKeys(
+  query: string,
+  existingKeys: string[]
+): Promise<QNTMGenerationResult> {
+  const prompt = buildQueryExpansionPrompt(query, existingKeys)
+
+  log.debug('Generating query QNTM keys', {
+    queryLength: query.length,
+    existingKeyCount: existingKeys.length,
+  })
+
+  // Get JSON-capable LLM backend from registry
+  const backend = getLLMBackendFor('json-completion')
+  if (!backend) {
+    throw new Error('No JSON-capable LLM backend available for query expansion')
+  }
+
+  if (!('completeJSON' in backend)) {
+    throw new Error('Backend does not implement JSON completion')
+  }
+
+  log.debug('Using LLM backend for query expansion', { backend: backend.name })
+
+  const result = await pRetry(
+    () => backend.completeJSON<QNTMGenerationResult>(prompt),
+    RETRY_OPTIONS
+  )
+
+  log.trace('Query QNTM keys generated', { backend: backend.name, keys: result.keys })
 
   return result
 }

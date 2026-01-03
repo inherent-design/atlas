@@ -198,7 +198,9 @@ export function getLLMConfig(): LLMConfig {
 // QNTM Semantic Key Generation
 // ============================================
 
-import { generateQNTMKeysWithProvider } from './qntm'
+import { generateQNTMKeysWithProvider, generateQueryQNTMKeys } from './qntm'
+export { generateQueryQNTMKeys } from './qntm'
+export type { QNTMAbstractionLevel, QNTMGenerationInputWithLevel } from './qntm'
 
 export interface QNTMGenerationInput {
   chunk: string
