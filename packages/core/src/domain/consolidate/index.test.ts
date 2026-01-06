@@ -38,7 +38,7 @@ vi.mock('../../services/llm', () => ({
 }))
 
 vi.mock('../../shared/utils', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = (await importOriginal()) as Record<string, any>
   return {
     ...actual,
     requireCollection: vi.fn(() => Promise.resolve()),
@@ -61,8 +61,8 @@ describe('domain/consolidate', () => {
     ;(requireCollection as any).mockReset()
 
     // Restore default implementations
-    ;(requireCollection as any).mockImplementation(() => Promise.resolve())
-    mockQdrant.setPayload.mockResolvedValue({})
+    ;(requireCollection as any).mockImplementation((..._args: any[]) => Promise.resolve())
+    mockQdrant.setPayload.mockResolvedValue({} as any)
     mockQdrant.scroll.mockResolvedValue({ points: [], nextOffset: null })
     mockQdrant.search.mockResolvedValue([])
     mockQdrant.retrieve.mockResolvedValue([])
@@ -107,7 +107,7 @@ describe('domain/consolidate', () => {
 
     // Mock scroll to return both points
     mockQdrant.scroll.mockResolvedValue({
-      points: [point1],
+      points: [point1] as any,
       nextOffset: null,
     })
 
@@ -118,10 +118,10 @@ describe('domain/consolidate', () => {
         score: 0.95,
         payload: point2.payload,
       },
-    ])
+    ] as any)
 
     // Mock retrieve to return both points
-    mockQdrant.retrieve.mockResolvedValue([point1, point2])
+    mockQdrant.retrieve.mockResolvedValue([point1, point2] as any)
 
     // Mock LLM classification
     mockLLM.completeJSON.mockResolvedValue({
@@ -254,7 +254,7 @@ describe('domain/consolidate', () => {
     })
 
     // Each point finds the other as similar (mutual discovery)
-    mockQdrant.search.mockImplementation((_, options) => {
+    mockQdrant.search.mockImplementation((_: any, options: any) => {
       const vector = options.vector
       // Point 1 finds point 2
       if (vector[0] === 0.1) {
@@ -334,7 +334,7 @@ describe('domain/consolidate', () => {
     ]
 
     let callCount = 0
-    mockQdrant.scroll.mockImplementation(() => {
+    mockQdrant.scroll.mockImplementation((..._args: any[]) => {
       callCount++
       if (callCount === 1) {
         return Promise.resolve({ points: page1Points, nextOffset: 'offset-1' })
@@ -452,8 +452,8 @@ describe('domain/consolidate', () => {
     expect(calls).toHaveLength(2)
 
     // Find the call that marks secondary as deletion eligible
-    const secondaryCall = calls.find((call: any) => call[2].deletion_eligible === true)
-    expect(secondaryCall[1]).toContain('chunk-1') // Point1 marked for deletion
+    const secondaryCall = calls.find((call: any) => call[2]?.deletion_eligible === true)
+    expect(secondaryCall?.[1]).toContain('chunk-1') // Point1 marked for deletion
   })
 
   test('should keep original when keep=first', async () => {
@@ -572,14 +572,14 @@ describe('domain/consolidate', () => {
     const point1 = createMockQdrantPoint({
       id: 'chunk-1',
       payload: createMockChunkPayload({
-        occurrences: ['2025-12-01T10:00:00Z', '2025-12-02T10:00:00Z']
+        occurrences: ['2025-12-01T10:00:00Z', '2025-12-02T10:00:00Z'],
       }),
     })
 
     const point2 = createMockQdrantPoint({
       id: 'chunk-2',
       payload: createMockChunkPayload({
-        occurrences: ['2025-12-03T10:00:00Z', '2025-12-04T10:00:00Z', '2025-12-05T10:00:00Z']
+        occurrences: ['2025-12-03T10:00:00Z', '2025-12-04T10:00:00Z', '2025-12-05T10:00:00Z'],
       }),
     })
 

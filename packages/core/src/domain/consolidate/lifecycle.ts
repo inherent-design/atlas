@@ -291,8 +291,8 @@ export async function unmarkFromDeletion(pointId: string): Promise<void> {
 
   await storage.setPayload(QDRANT_COLLECTION_NAME, [pointId], {
     deletion_eligible: false,
-    deletion_marked_at: null,
-    superseded_by: null,
+    deletion_marked_at: undefined,
+    superseded_by: undefined,
   })
 
   log.debug('Unmarked chunk from deletion', { pointId })

@@ -20,8 +20,40 @@ import type {
   CollectionConfig,
 } from '../types'
 import type { ChunkPayload } from '../../../shared/types'
+import type { StorageFilter, FilterCondition } from '../types'
 
-const log = createLogger('storage/qdrant')
+const log = createLogger('storage:qdrant')
+
+/**
+ * Translate StorageFilter to Qdrant SDK filter format.
+ * Handles is_null/is_empty conditions that need special structure.
+ */
+function translateFilter(filter: StorageFilter | undefined): any {
+  if (!filter) return undefined
+
+  const translateCondition = (cond: FilterCondition): any => {
+    // is_null condition → { is_null: { key: "field" } }
+    if ('is_null' in cond) {
+      return { is_null: { key: cond.is_null } }
+    }
+    // is_empty condition → { is_empty: { key: "field" } }
+    if ('is_empty' in cond) {
+      return { is_empty: { key: cond.is_empty } }
+    }
+    // has_id condition → pass through
+    if ('has_id' in cond) {
+      return { has_id: cond.has_id }
+    }
+    // match/range conditions → pass through (already correct format)
+    return cond
+  }
+
+  return {
+    must: filter.must?.map(translateCondition),
+    must_not: filter.must_not?.map(translateCondition),
+    should: filter.should?.map(translateCondition),
+  }
+}
 
 /**
  * Qdrant backend implementation.
@@ -36,10 +68,7 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
 
   private client: QdrantClientType
 
-  constructor(config: {
-    dimensions: number
-    distance?: 'cosine' | 'dot' | 'euclidean'
-  }) {
+  constructor(config: { dimensions: number; distance?: 'cosine' | 'dot' | 'euclidean' }) {
     this.dimensions = config.dimensions
     this.distance = config.distance ?? 'dot'
     this.client = getQdrantClient()
@@ -50,7 +79,7 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      await this.client.api('cluster').cluster()
+      await this.client.getCollections()
       return true
     } catch (error) {
       log.warn('Qdrant availability check failed', { error: (error as Error).message })
@@ -154,13 +183,16 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
 
     return {
       points_count: info.points_count ?? 0,
-      vector_dimensions: Object.keys(vectorDimensions).length > 0 ? vectorDimensions : undefined
+      vector_dimensions: Object.keys(vectorDimensions).length > 0 ? vectorDimensions : undefined,
     }
   }
 
   async createPayloadIndex(
     collection: string,
-    config: { field_name: string; field_schema: 'keyword' | 'integer' | 'float' | 'bool' | 'datetime' }
+    config: {
+      field_name: string
+      field_schema: 'keyword' | 'integer' | 'float' | 'bool' | 'datetime'
+    }
   ): Promise<void> {
     await this.client.createPayloadIndex(collection, {
       field_name: config.field_name,
@@ -198,7 +230,7 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
         vector: params.vector,
       },
       limit: params.limit,
-      filter: params.filter as any, // Qdrant SDK accepts our filter structure
+      filter: translateFilter(params.filter),
       score_threshold: params.scoreThreshold,
       with_payload: params.withPayload ?? true,
       with_vector: params.withVector ?? false,
@@ -239,7 +271,7 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
     const response = await this.client.scroll(collection, {
       limit: options.limit,
       offset: options.offset ?? undefined,
-      filter: options.filter as any,
+      filter: translateFilter(options.filter),
       with_payload: options.withPayload ?? true,
       with_vector: options.withVector ?? false,
     })
@@ -250,7 +282,7 @@ export class QdrantBackend implements StorageBackend, CanStoreVectors {
         vector: p.vector as any, // NamedVectors or number[] (backward compatible)
         payload: p.payload as ChunkPayload,
       })),
-      nextOffset: response.next_page_offset ?? null,
+      nextOffset: (response.next_page_offset as string | null) ?? null,
     }
   }
 

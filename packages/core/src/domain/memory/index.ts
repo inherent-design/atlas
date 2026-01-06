@@ -13,11 +13,7 @@ export {
   cleanupStaleSessions,
 } from './working'
 
-export type {
-  ConversationTurn,
-  CompactedMemory,
-  WorkingMemoryConfig,
-} from './working'
+export type { ConversationTurn, CompactedMemory, WorkingMemoryConfig } from './working'
 
 // Activation Layer (multi-level memory retrieval)
 export { activate, formatActivatedMemory } from './activation'

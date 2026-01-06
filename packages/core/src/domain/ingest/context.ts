@@ -36,6 +36,9 @@ export interface IngestContext {
   readonly dimensions: number
   readonly rootDir: string
   readonly existingQNTMKeys: string[]
+
+  // Event emitter (optional, for daemon mode)
+  readonly emit?: (event: any) => void
 }
 
 /**
@@ -58,9 +61,7 @@ export async function createIngestContext(config: IngestOptions): Promise<Ingest
   const codeBackend = getEmbeddingBackend('code-embedding')
 
   // Check if backends support their respective capabilities
-  const contextualizedAvailable = !!(
-    contextBackend && 'embedContextualized' in contextBackend
-  )
+  const contextualizedAvailable = !!(contextBackend && 'embedContextualized' in contextBackend)
   const codeEmbeddingAvailable = !!(codeBackend && 'embedCode' in codeBackend)
 
   // Get dimensions from text backend
@@ -193,5 +194,8 @@ export async function createIngestContext(config: IngestOptions): Promise<Ingest
     dimensions,
     rootDir,
     existingQNTMKeys,
+
+    // Event emitter (optional)
+    emit: config.emit,
   }
 }

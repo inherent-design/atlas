@@ -66,9 +66,9 @@ export type EmbeddingCapability = z.infer<typeof EmbeddingCapabilitySchema>
  * Atlas-specific task capabilities
  */
 export const TaskCapabilitySchema = z.enum([
-  'qntm-generation',    // QNTM semantic key generation
-  'consolidation',      // Chunk consolidation/summarization
-  'reranking',          // Search result reranking
+  'qntm-generation', // QNTM semantic key generation
+  'consolidation', // Chunk consolidation/summarization
+  'reranking', // Search result reranking
 ])
 
 export type TaskCapability = z.infer<typeof TaskCapabilitySchema>
@@ -92,11 +92,11 @@ export type Capability = z.infer<typeof CapabilitySchema>
  * Known providers with their model patterns
  */
 export const ProviderSchema = z.enum([
-  'anthropic',      // Direct Anthropic API (requires ANTHROPIC_API_KEY)
-  'claude-code',    // Claude Code CLI (claude -p)
-  'openai',         // OpenAI API
-  'ollama',         // Local Ollama
-  'voyage',         // Voyage AI embeddings
+  'anthropic', // Direct Anthropic API (requires ANTHROPIC_API_KEY)
+  'claude-code', // Claude Code CLI (claude -p)
+  'openai', // OpenAI API
+  'ollama', // Local Ollama
+  'voyage', // Voyage AI embeddings
 ])
 
 export type Provider = z.infer<typeof ProviderSchema>
@@ -128,36 +128,40 @@ export type BackendSpecifier = z.infer<typeof BackendSpecifierSchema>
 /**
  * Ollama resource management
  */
-export const OllamaResourceConfigSchema = z.object({
-  /**
-   * Target memory usage as fraction of available RAM (0.0 - 1.0)
-   * Default: 0.30 (30%)
-   */
-  memoryTarget: z.number().min(0.1).max(0.9).default(0.30),
+export const OllamaResourceConfigSchema = z
+  .object({
+    /**
+     * Target memory usage as fraction of available RAM (0.0 - 1.0)
+     * Default: 0.30 (30%)
+     */
+    memoryTarget: z.number().min(0.1).max(0.9).default(0.3),
 
-  /**
-   * GPU layer configuration
-   * - 'auto': Auto-detect based on VRAM
-   * - 'none': CPU only
-   * - number: Explicit layer count
-   */
-  gpuLayers: z.union([z.literal('auto'), z.literal('none'), z.number()]).default('auto'),
+    /**
+     * GPU layer configuration
+     * - 'auto': Auto-detect based on VRAM
+     * - 'none': CPU only
+     * - number: Explicit layer count
+     */
+    gpuLayers: z.union([z.literal('auto'), z.literal('none'), z.number()]).default('auto'),
 
-  /**
-   * Prefer quantization level when auto-selecting
-   * Lower = smaller/faster, higher = better quality
-   */
-  preferredQuantization: z.enum(['q4', 'q5', 'q8', 'fp16']).optional(),
-}).partial()
+    /**
+     * Prefer quantization level when auto-selecting
+     * Lower = smaller/faster, higher = better quality
+     */
+    preferredQuantization: z.enum(['q4', 'q5', 'q8', 'fp16']).optional(),
+  })
+  .partial()
 
 export type OllamaResourceConfig = z.infer<typeof OllamaResourceConfigSchema>
 
 /**
  * All resource configurations
  */
-export const ResourceConfigSchema = z.object({
-  ollama: OllamaResourceConfigSchema.optional(),
-}).partial()
+export const ResourceConfigSchema = z
+  .object({
+    ollama: OllamaResourceConfigSchema.optional(),
+  })
+  .partial()
 
 export type ResourceConfig = z.infer<typeof ResourceConfigSchema>
 
@@ -169,19 +173,21 @@ export const LogLevelSchema = z.enum(['trace', 'debug', 'info', 'warn', 'error']
 
 export type LogLevel = z.infer<typeof LogLevelSchema>
 
-export const LoggingConfigSchema = z.object({
-  /**
-   * Global log level fallback
-   */
-  level: LogLevelSchema.default('info'),
+export const LoggingConfigSchema = z
+  .object({
+    /**
+     * Global log level fallback
+     */
+    level: LogLevelSchema.default('info'),
 
-  /**
-   * Module-specific log rules
-   * Format: "module:level,module/*:level"
-   * Example: "ingest:debug,qntm/*:trace,llm/batch:warn"
-   */
-  modules: z.string().optional(),
-}).partial()
+    /**
+     * Module-specific log rules
+     * Format: "module:level,module/*:level"
+     * Example: "ingest:debug,qntm/*:trace,llm/batch:warn"
+     */
+    modules: z.string().optional(),
+  })
+  .partial()
 
 export type LoggingConfig = z.infer<typeof LoggingConfigSchema>
 
@@ -192,10 +198,7 @@ export type LoggingConfig = z.infer<typeof LoggingConfigSchema>
 /**
  * Maps capabilities to backend specifiers
  */
-export const BackendMappingSchema = z.record(
-  z.string(),
-  BackendSpecifierSchema
-).optional()
+export const BackendMappingSchema = z.record(z.string(), BackendSpecifierSchema).optional()
 
 export type BackendMapping = z.infer<typeof BackendMappingSchema>
 
@@ -206,95 +209,161 @@ export type BackendMapping = z.infer<typeof BackendMappingSchema>
 /**
  * Ingestion configuration
  */
-export const IngestionConfigSchema = z.object({
-  /**
-   * Embedding strategy selection
-   * - 'auto': Auto-detect based on content type and document length
-   * - 'snippet': Always use snippet embeddings
-   * - 'contextualized': Always use contextualized embeddings
-   */
-  embeddingStrategy: z.enum(['auto', 'snippet', 'contextualized']).default('auto'),
+export const IngestionConfigSchema = z
+  .object({
+    /**
+     * Embedding strategy selection
+     * - 'auto': Auto-detect based on content type and document length
+     * - 'snippet': Always use snippet embeddings
+     * - 'contextualized': Always use contextualized embeddings
+     */
+    embeddingStrategy: z.enum(['auto', 'snippet', 'contextualized']).default('auto'),
 
-  /**
-   * Upsert batch size (chunks per upsert call)
-   * Higher = fewer API calls, but more memory usage
-   */
-  batchSize: z.number().min(1).max(500).default(50),
+    /**
+     * Upsert batch size (chunks per upsert call)
+     * Higher = fewer API calls, but more memory usage
+     */
+    batchSize: z.number().min(1).max(500).default(50),
 
-  /**
-   * Upsert batch timeout (milliseconds)
-   * Flush batch if no new chunks arrive within this time
-   */
-  batchTimeoutMs: z.number().min(1000).max(60000).default(15000),
+    /**
+     * Upsert batch timeout (milliseconds)
+     * Flush batch if no new chunks arrive within this time
+     */
+    batchTimeoutMs: z.number().min(1000).max(60000).default(15000),
 
-  /**
-   * Adaptive concurrency monitoring interval (milliseconds)
-   * How often to check system pressure and adjust concurrency
-   */
-  monitoringIntervalMs: z.number().min(5000).max(120000).default(30000),
+    /**
+     * Adaptive concurrency monitoring interval (milliseconds)
+     * How often to check system pressure and adjust concurrency
+     */
+    monitoringIntervalMs: z.number().min(5000).max(120000).default(30000),
 
-  /**
-   * Initial QNTM generation concurrency
-   * Adjusted at runtime based on system pressure
-   */
-  qntmConcurrency: z.number().min(1).max(32).default(8),
+    /**
+     * Initial QNTM generation concurrency
+     * Adjusted at runtime based on system pressure
+     */
+    qntmConcurrency: z.number().min(1).max(32).default(8),
 
-  /**
-   * Minimum QNTM concurrency (floor during pressure)
-   */
-  qntmConcurrencyMin: z.number().min(1).max(16).default(2),
+    /**
+     * Minimum QNTM concurrency (floor during pressure)
+     */
+    qntmConcurrencyMin: z.number().min(1).max(16).default(2),
 
-  /**
-   * Maximum QNTM concurrency (ceiling when nominal)
-   */
-  qntmConcurrencyMax: z.number().min(2).max(64).default(16),
-}).partial()
+    /**
+     * Maximum QNTM concurrency (ceiling when nominal)
+     */
+    qntmConcurrencyMax: z.number().min(2).max(64).default(16),
+  })
+  .partial()
 
 export type IngestionConfig = z.infer<typeof IngestionConfigSchema>
 
 /**
  * Search configuration
  */
-export const SearchConfigSchema = z.object({
-  /**
-   * Rerank candidate multiplier (default: 3)
-   * When reranking enabled, retrieves (limit × multiplier) candidates before reranking.
-   * Higher = better recall but more expensive.
-   */
-  rerankCandidateMultiplier: z.number().min(1).max(10).default(3),
-}).partial()
+export const SearchConfigSchema = z
+  .object({
+    /**
+     * Rerank candidate multiplier (default: 3)
+     * When reranking enabled, retrieves (limit × multiplier) candidates before reranking.
+     * Higher = better recall but more expensive.
+     */
+    rerankCandidateMultiplier: z.number().min(1).max(10).default(3),
+  })
+  .partial()
 
 export type SearchConfig = z.infer<typeof SearchConfigSchema>
 
 /**
  * Consolidation configuration
  */
-export const ConsolidationConfigSchema = z.object({
-  /**
-   * Similarity threshold for consolidation candidates (0-1)
-   * Higher = more strict (only very similar chunks consolidated)
-   */
-  similarityThreshold: z.number().min(0).max(1).default(0.95),
+export const ConsolidationConfigSchema = z
+  .object({
+    /**
+     * Similarity threshold for consolidation candidates (0-1)
+     * Higher = more strict (only very similar chunks consolidated)
+     */
+    similarityThreshold: z.number().min(0).max(1).default(0.95),
 
-  /**
-   * Base threshold for triggering consolidation (documents ingested)
-   */
-  baseThreshold: z.number().min(1).default(100),
+    /**
+     * Base threshold for triggering consolidation (documents ingested)
+     */
+    baseThreshold: z.number().min(1).default(100),
 
-  /**
-   * Scale factor for dynamic threshold calculation
-   * Formula: baseThreshold + (scaleFactor × collection_size)
-   */
-  scaleFactor: z.number().min(0).max(1).default(0.05),
+    /**
+     * Scale factor for dynamic threshold calculation
+     * Formula: baseThreshold + (scaleFactor × collection_size)
+     */
+    scaleFactor: z.number().min(0).max(1).default(0.05),
 
-  /**
-   * Poll interval for consolidation watchdog (milliseconds)
-   * Default: 180000 (3 minutes)
-   */
-  pollIntervalMs: z.number().min(1000).default(180000),
-}).partial()
+    /**
+     * Poll interval for consolidation watchdog (milliseconds)
+     * Default: 180000 (3 minutes)
+     */
+    pollIntervalMs: z.number().min(1000).default(180000),
+  })
+  .partial()
 
 export type ConsolidationConfig = z.infer<typeof ConsolidationConfigSchema>
+
+/**
+ * Daemon configuration
+ */
+export const DaemonConfigSchema = z
+  .object({
+    /**
+     * Auto-start schedulers when daemon starts
+     */
+    autoStart: z
+      .object({
+        consolidationWatchdog: z.boolean().default(true),
+        systemPressureMonitor: z.boolean().default(true),
+        fileWatcher: z.boolean().default(false), // Disabled until implemented
+      })
+      .partial()
+      .default({
+        consolidationWatchdog: true,
+        systemPressureMonitor: true,
+        fileWatcher: false,
+      }),
+
+    /**
+     * File watcher configuration
+     * Uses whitelist approach: only files with embeddable extensions are watched.
+     */
+    fileWatcher: z
+      .object({
+        /**
+         * Directories to watch for new files.
+         * Default: ['~/.atlas'] (changed from ~/.atlas/inbox to watch entire Atlas directory)
+         */
+        paths: z.array(z.string()).default(['~/.atlas']),
+        /**
+         * File patterns to watch (e.g., ['*.md', '*.ts']).
+         * If not specified, defaults to all embeddable extensions from getAllEmbeddableExtensions().
+         * Whitelist approach: only specified patterns are watched.
+         */
+        patterns: z.array(z.string()).optional(),
+        /**
+         * Patterns to ignore (e.g., ['*.tmp', '*.log']).
+         * Empty by default - whitelist handles filtering.
+         */
+        ignorePatterns: z.array(z.string()).default([]),
+      })
+      .partial()
+      .default({
+        paths: ['~/.atlas'],
+        ignorePatterns: [],
+      }),
+
+    /**
+     * System pressure monitor interval (milliseconds)
+     * Default: 30000 (30 seconds)
+     */
+    pressureMonitorIntervalMs: z.number().min(5000).default(30000),
+  })
+  .partial()
+
+export type DaemonConfig = z.infer<typeof DaemonConfigSchema>
 
 // ============================================
 // Main Configuration Schema
@@ -332,10 +401,13 @@ export const AtlasConfigSchema = z.object({
   /**
    * Qdrant configuration
    */
-  qdrant: z.object({
-    url: z.string().url().default('http://localhost:6333'),
-    collection: z.string().default('atlas'),
-  }).partial().optional(),
+  qdrant: z
+    .object({
+      url: z.string().url().default('http://localhost:6333'),
+      collection: z.string().default('atlas'),
+    })
+    .partial()
+    .optional(),
 
   /**
    * Ingestion configuration
@@ -351,6 +423,11 @@ export const AtlasConfigSchema = z.object({
    * Consolidation configuration
    */
   consolidation: ConsolidationConfigSchema.optional(),
+
+  /**
+   * Daemon configuration
+   */
+  daemon: DaemonConfigSchema.optional(),
 })
 
 export type AtlasConfig = z.infer<typeof AtlasConfigSchema>
@@ -383,11 +460,11 @@ export const defaultConfig: AtlasConfig = {
     'text-completion': 'ollama:ministral-3:3b',
     'json-completion': 'ollama:ministral-3:3b',
     'qntm-generation': 'ollama:ministral-3:3b',
-    'reranking': 'voyage:rerank-2.5',
+    reranking: 'voyage:rerank-2.5',
   },
   resources: {
     ollama: {
-      memoryTarget: 0.30,
+      memoryTarget: 0.3,
       gpuLayers: 'auto',
     },
   },
@@ -547,39 +624,55 @@ export function getRecommendedOllamaModel(
  */
 export const providerCapabilities: Record<Provider, Capability[]> = {
   anthropic: [
-    'text-completion', 'json-completion', 'code-completion',
-    'extended-thinking', 'vision', 'tool-use', 'streaming',
-    'qntm-generation', 'consolidation',
+    'text-completion',
+    'json-completion',
+    'code-completion',
+    'extended-thinking',
+    'vision',
+    'tool-use',
+    'streaming',
+    'qntm-generation',
+    'consolidation',
   ],
   'claude-code': [
-    'text-completion', 'json-completion', 'code-completion',
-    'vision', 'tool-use', 'streaming',
-    'qntm-generation', 'consolidation',
+    'text-completion',
+    'json-completion',
+    'code-completion',
+    'vision',
+    'tool-use',
+    'streaming',
+    'qntm-generation',
+    'consolidation',
   ],
   openai: [
-    'text-completion', 'json-completion', 'code-completion',
-    'vision', 'tool-use', 'streaming',
-    'qntm-generation', 'consolidation',
+    'text-completion',
+    'json-completion',
+    'code-completion',
+    'vision',
+    'tool-use',
+    'streaming',
+    'qntm-generation',
+    'consolidation',
   ],
   ollama: [
-    'text-completion', 'json-completion', 'code-completion',
-    'extended-thinking', 'streaming',
-    'text-embedding', 'code-embedding', 'contextualized-embedding',
-    'qntm-generation', 'consolidation',
+    'text-completion',
+    'json-completion',
+    'code-completion',
+    'extended-thinking',
+    'streaming',
+    'text-embedding',
+    'code-embedding',
+    'contextualized-embedding',
+    'qntm-generation',
+    'consolidation',
   ],
-  voyage: [
-    'text-embedding', 'code-embedding', 'contextualized-embedding',
-    'reranking',
-  ],
+  voyage: ['text-embedding', 'code-embedding', 'contextualized-embedding', 'reranking'],
 }
 
 /**
  * Validate that a provider supports a capability
  */
-export function validateProviderCapability(
-  provider: Provider,
-  capability: Capability
-): boolean {
+export function validateProviderCapability(provider: Provider, capability: Capability): boolean {
   return providerCapabilities[provider]?.includes(capability) ?? false
 }
 
@@ -598,7 +691,7 @@ export function parseBackendSpecifier(specifier: BackendSpecifier): {
   if (!ProviderSchema.safeParse(provider).success) {
     throw new Error(
       `Invalid provider '${provider}' in backend specifier '${specifier}'. ` +
-      `Valid providers: ${ProviderSchema.options.join(', ')}`
+        `Valid providers: ${ProviderSchema.options.join(', ')}`
     )
   }
 

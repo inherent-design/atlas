@@ -8,14 +8,30 @@
 
 import { createLogger } from './logger'
 import { getConfig } from './config.loader'
+import {
+  getAllEmbeddableExtensions,
+  TEXT_EXTENSIONS,
+  CODE_EXTENSIONS,
+  MEDIA_EXTENSIONS,
+} from '../services/embedding/types'
 
 const log = createLogger('config')
 
 // Get config (will use defaults if not loaded)
 const atlasConfig = getConfig()
 
-// Collection config
+// Collection config - legacy constant (reads at module load time)
+// Prefer getCollectionName() for runtime-overridable collection name
 export const QDRANT_COLLECTION_NAME = atlasConfig.qdrant?.collection || 'atlas'
+
+/**
+ * Get current collection name (runtime-overridable).
+ * Use this instead of QDRANT_COLLECTION_NAME when collection name
+ * needs to respect runtime config changes (e.g., in tests).
+ */
+export function getCollectionName(): string {
+  return getConfig().qdrant?.collection || 'atlas'
+}
 
 // Voyage AI config (Step 3)
 export const VOYAGE_MODEL = 'voyage-3-large' as const
@@ -71,7 +87,23 @@ export const QDRANT_COLLECTION_CONFIG = {
         },
       },
     },
-    // Future: media vector (voyage-multimodal-3.5)
+    media: {
+      size: EMBEDDING_DIM,
+      distance: 'Dot' as const,
+      on_disk: true,
+      hnsw_config: {
+        m: 16, // Balanced for multimodal content
+        ef_construct: 100,
+        on_disk: false,
+      },
+      quantization_config: {
+        scalar: {
+          type: 'int8' as const,
+          quantile: 0.99,
+          always_ram: true,
+        },
+      },
+    },
   },
 }
 
@@ -119,31 +151,47 @@ export function buildCollectionConfig(dimensions: number) {
           },
         },
       },
+      media: {
+        size: dimensions,
+        distance: 'Dot' as const,
+        on_disk: true,
+        hnsw_config: {
+          m: 16,
+          ef_construct: 100,
+          on_disk: false,
+        },
+        quantization_config: {
+          scalar: {
+            type: 'int8' as const,
+            quantile: 0.99,
+            always_ram: true,
+          },
+        },
+      },
     },
   }
 }
 
-// File patterns
-export const TEXT_FILE_EXTENSIONS = [
-  '.md',
-  '.txt',
-  '.ts',
-  '.tsx',
-  '.js',
-  '.jsx',
-  '.json',
-  '.yaml',
-  '.yml',
-  '.toml',
-  '.qntm',
-  '.rs',
-  '.go',
-  '.py',
-  '.sh',
-  '.css',
-  '.html',
-]
+// ============================================
+// Extension Re-exports (for backwards compatibility)
+// ============================================
 
+/**
+ * Re-export extension constants from embedding/types.ts
+ * Use these for consistent file type detection across the codebase.
+ */
+export { getAllEmbeddableExtensions, TEXT_EXTENSIONS, CODE_EXTENSIONS, MEDIA_EXTENSIONS }
+
+/**
+ * Legacy alias for backwards compatibility.
+ * @deprecated Use TEXT_EXTENSIONS and CODE_EXTENSIONS directly instead
+ */
+export const TEXT_FILE_EXTENSIONS = [...TEXT_EXTENSIONS, ...CODE_EXTENSIONS] as const
+
+/**
+ * Directory and file patterns to ignore during recursive file operations.
+ * Used by expandPaths() in utils.ts for file discovery.
+ */
 export const IGNORE_PATTERNS = [
   'node_modules',
   '.git',
@@ -174,7 +222,7 @@ export const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 // Consolidation config
 export const CONSOLIDATION_BASE_THRESHOLD = 500 // chunks, not files
 export const CONSOLIDATION_SCALE_FACTOR = 0.05
-export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.80
+export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.8
 export const CONSOLIDATION_POLL_INTERVAL_MS = 30000 // 30 seconds
 
 // Deletion config

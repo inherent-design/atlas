@@ -23,23 +23,20 @@ describe('createTextSplitter', () => {
 
   test('should use CHUNK_SIZE from config', () => {
     const splitter = createTextSplitter()
-    // @ts-expect-error - accessing private field for validation
-    expect(splitter.chunkSize).toBe(CHUNK_SIZE)
-    expect(splitter.chunkSize).toBe(768)
+    expect((splitter as any).chunkSize).toBe(CHUNK_SIZE)
+    expect((splitter as any).chunkSize).toBe(768)
   })
 
   test('should use CHUNK_OVERLAP from config', () => {
     const splitter = createTextSplitter()
-    // @ts-expect-error - accessing private field for validation
-    expect(splitter.chunkOverlap).toBe(CHUNK_OVERLAP)
-    expect(splitter.chunkOverlap).toBe(100)
+    expect((splitter as any).chunkOverlap).toBe(CHUNK_OVERLAP)
+    expect((splitter as any).chunkOverlap).toBe(100)
   })
 
   test('should use CHUNK_SEPARATORS from config', () => {
     const splitter = createTextSplitter()
-    // @ts-expect-error - accessing private field for validation
-    expect(splitter.separators).toEqual(CHUNK_SEPARATORS)
-    expect(splitter.separators).toEqual(['\n\n', '\n', '. ', ' ', ''])
+    expect((splitter as any).separators).toEqual(CHUNK_SEPARATORS)
+    expect((splitter as any).separators).toEqual(['\n\n', '\n', '. ', ' ', ''])
   })
 })
 
@@ -101,8 +98,13 @@ describe('text splitting behavior', () => {
       const nextChunk = chunks[i + 1]
 
       // Check if end of current chunk appears in beginning of next chunk
-      const currentEnd = currentChunk.slice(-50) // Last 50 chars
-      if (nextChunk.includes(currentEnd.trim()) && currentEnd.trim().length > 0) {
+      const currentEnd = currentChunk?.slice(-50) // Last 50 chars
+      if (
+        nextChunk &&
+        currentEnd &&
+        nextChunk.includes(currentEnd.trim()) &&
+        currentEnd.trim().length > 0
+      ) {
         hasOverlap = true
         break
       }

@@ -58,10 +58,12 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
       // Follow supersession chain to current version
       while (targetPayload.superseded_by) {
         try {
-          const successor = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [targetPayload.superseded_by])
+          const successor = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [
+            targetPayload.superseded_by,
+          ])
           if (successor.length === 0) break
-          targetId = successor[0].id
-          targetPayload = successor[0].payload as ChunkPayload
+          targetId = successor[0]!.id
+          targetPayload = successor[0]!.payload as ChunkPayload
         } catch {
           break // Chain broken, use last valid target
         }
@@ -76,7 +78,7 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
       const target = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [targetId])
       if (target.length === 0) continue
 
-      const currentPayload = target[0].payload as ChunkPayload
+      const currentPayload = target[0]!.payload as ChunkPayload
       await storageBackend.setPayload(QDRANT_COLLECTION_NAME, [targetId], {
         access_count: (currentPayload.access_count ?? 0) + incrementBy,
         last_accessed_at: now,
@@ -100,204 +102,250 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
 // Semantic search with optional temporal filtering
 export async function search(options: SearchOptions): Promise<SearchResult[]> {
   const endTimer = startTimer('search')
+  const startTime = Date.now()
 
-  // Get backends from registries
-  const embeddingBackend = getEmbeddingBackend('text-embedding')
-  if (!embeddingBackend) {
-    throw new Error('No text embedding backend available')
-  }
-
-  const storageBackend = getStorageBackend('vector-storage')
-  if (!storageBackend) {
-    throw new Error('No vector storage backend available')
-  }
-
-  const { query, limit = DEFAULT_SEARCH_LIMIT, since, qntmKey } = options
-
-  log.debug('Starting search', { query, limit, since, qntmKey })
-
-  // Query expansion (optional)
-  let expandedKeys: string[] = []
-  if (options.expandQuery) {
-    const existingKeys = await fetchExistingQNTMKeys()
-    const expansion = await generateQueryQNTMKeys(query, existingKeys.slice(0, 30))
-    expandedKeys = expansion.keys
-
-    log.debug('Query expanded with QNTM keys', {
-      original: query,
-      expansion: expandedKeys,
-    })
-  }
-
-  // Embed query using backend
-  const embedStart = startTimer('embed query')
-
-  log.trace('Embedding request', { query, backend: embeddingBackend.name })
-
-  const embedResult = await embeddingBackend.embedText(query)
-
-  log.trace('Embedding response', {
-    embeddingCount: embedResult.embeddings.length,
-    embeddingDim: embedResult.embeddings[0]?.length,
-    usage: embedResult.usage,
+  // Emit search.started event
+  options.emit?.({
+    type: 'search.started',
+    data: {
+      query: options.query,
+      sessionId: undefined, // Could be passed in options if needed
+      limit: options.limit ?? DEFAULT_SEARCH_LIMIT,
+    },
   })
 
-  embedStart()
+  try {
+    // Get backends from registries
+    const embeddingBackend = getEmbeddingBackend('text-embedding')
+    if (!embeddingBackend) {
+      throw new Error('No text embedding backend available')
+    }
 
-  // Safety check for embedding
-  const queryVector = embedResult.embeddings[0]
-  if (!queryVector) {
-    throw new Error('Failed to generate query embedding')
-  }
+    const storageBackend = getStorageBackend('vector-storage')
+    if (!storageBackend) {
+      throw new Error('No vector storage backend available')
+    }
 
-  // Build typed filter for temporal/semantic constraints
-  const filter: StorageFilter = {
-    // Always exclude deleted and superseded chunks
-    must_not: [
-      { key: 'deletion_eligible', match: { value: true } },
-      { key: 'superseded_by', match: { except: [null] } }, // Exclude if superseded_by is set
-    ],
-  }
+    const { query, limit = DEFAULT_SEARCH_LIMIT, since, qntmKey } = options
 
-  // Add temporal filter
-  if (since) {
-    filter.must = filter.must || []
-    filter.must.push({
-      key: 'created_at',
-      range: {
-        gte: since,
+    log.debug('Starting search', { query, limit, since, qntmKey })
+
+    // Query expansion (optional)
+    let expandedKeys: string[] = []
+    if (options.expandQuery) {
+      const existingKeys = await fetchExistingQNTMKeys()
+      const expansion = await generateQueryQNTMKeys(query, existingKeys.slice(0, 30))
+      expandedKeys = expansion.keys
+
+      log.debug('Query expanded with QNTM keys', {
+        original: query,
+        expansion: expandedKeys,
+      })
+    }
+
+    // Embed query using backend
+    const embedStart = startTimer('embed query')
+
+    log.trace('Embedding request', { query, backend: embeddingBackend.name })
+
+    const embedResult = await embeddingBackend.embedText!(query)
+
+    log.trace('Embedding response', {
+      embeddingCount: embedResult.embeddings.length,
+      embeddingDim: embedResult.embeddings[0]?.length,
+      usage: embedResult.usage,
+    })
+
+    embedStart()
+
+    // Safety check for embedding
+    const queryVector = embedResult.embeddings[0]
+    if (!queryVector) {
+      throw new Error('Failed to generate query embedding')
+    }
+
+    // Build typed filter for temporal/semantic constraints
+    const filter: StorageFilter = {
+      // Always exclude deleted chunks
+      must_not: [{ key: 'deletion_eligible', match: { value: true } }],
+      // Only include chunks where superseded_by is null (not superseded)
+      must: [{ is_null: 'superseded_by' }],
+    }
+
+    // Add temporal filter
+    if (since) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'created_at',
+        range: {
+          gte: since,
+        },
+      })
+    }
+
+    // Add QNTM key filter
+    if (qntmKey) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'qntm_keys',
+        match: { any: [qntmKey] },
+      })
+    }
+
+    // Add consolidation level filter
+    if (options.consolidationLevel !== undefined) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'consolidation_level',
+        match: { value: options.consolidationLevel },
+      })
+    }
+
+    // Add QNTM key expansion boost (optional)
+    if (expandedKeys.length > 0) {
+      filter.should = filter.should || []
+      filter.should.push({
+        key: 'qntm_keys',
+        match: { any: expandedKeys },
+      })
+    }
+
+    // Search using backend
+    // Default to 'text' vector, future: add CLI flag to search 'code' vector
+    const searchStart = startTimer('storage search')
+
+    log.trace('Storage search request', {
+      collection: QDRANT_COLLECTION_NAME,
+      vectorName: 'text',
+      vectorDim: queryVector.length,
+      limit,
+      hasFilter:
+        Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0,
+      backend: storageBackend.name,
+    })
+
+    let results: Array<
+      import('../../services/storage').SearchResult<ChunkPayload> & { rerank_score?: number }
+    > = await storageBackend.search(QDRANT_COLLECTION_NAME, {
+      vectorName: 'text', // Phase 2: Default to text vector
+      vector: queryVector,
+      limit,
+      filter:
+        Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0
+          ? filter
+          : undefined,
+    })
+
+    log.trace('Storage search response', {
+      collection: QDRANT_COLLECTION_NAME,
+      resultCount: results.length,
+      topScore: results[0]?.score,
+    })
+
+    searchStart()
+
+    log.info('Search complete', { resultsFound: results.length })
+
+    // Rerank results automatically if Voyage reranker available (unless explicitly disabled)
+    const shouldRerank = options.rerank !== false && results.length > 0
+    if (shouldRerank) {
+      const rerankStart = startTimer('reranker')
+      const reranker = getRerankerBackendFor('text-reranking')
+
+      if (reranker && 'rerank' in reranker) {
+        const rerankTopK = options.rerankTopK ?? limit * 3
+
+        // Get more candidates for reranking (up to rerankTopK, but don't exceed results)
+        const candidateCount = Math.min(rerankTopK, results.length)
+        const candidates = results.slice(0, candidateCount)
+        const documents = candidates.map((hit) => (hit.payload as ChunkPayload).original_text)
+
+        log.debug('Reranking results', {
+          candidates: candidates.length,
+          finalLimit: limit,
+          backend: reranker.name,
+        })
+
+        try {
+          const reranked = await (reranker as any).rerank(query, documents, { topK: limit })
+
+          // Reorder results by rerank score (reranker returns sorted by relevance)
+          results = reranked.results.map((r: any) => {
+            const originalHit = candidates[r.index]
+            return {
+              ...originalHit,
+              rerank_score: r.relevance_score,
+            }
+          })
+
+          log.debug('Reranking complete', {
+            results: results.length,
+            topRerankScore: results[0]?.rerank_score,
+          })
+        } catch (error) {
+          log.warn('Reranking failed, using vector search results', {
+            error: (error as Error).message,
+          })
+        }
+
+        rerankStart()
+      } else {
+        log.debug('Reranker not available, using vector search results only')
+      }
+    }
+
+    // Extract point IDs for access tracking
+    const pointIds = results.map((hit) => hit.id)
+
+    // Update access tracking (non-blocking, fire-and-forget)
+    updateAccessTracking(pointIds).catch((err) => {
+      log.warn('Access tracking update failed', { error: err.message })
+    })
+
+    // Format results
+    const formatted = results.map((hit) => {
+      const payload = hit.payload as ChunkPayload
+      return {
+        text: payload.original_text,
+        file_path: payload.file_path,
+        chunk_index: payload.chunk_index,
+        score: hit.score,
+        created_at: payload.created_at,
+        qntm_key: payload.qntm_keys[0] || 'unknown', // Use first key for display
+        rerank_score: (hit as any).rerank_score, // Preserve rerank score if present
+      }
+    })
+
+    // Emit search.completed event
+    const reranker = getRerankerBackendFor('text-reranking')
+    const wasReranked = shouldRerank && reranker && 'rerank' in reranker
+    options.emit?.({
+      type: 'search.completed',
+      data: {
+        results: formatted.length,
+        took: Date.now() - startTime,
+        reranked: wasReranked,
       },
     })
-  }
 
-  // Add QNTM key filter
-  if (qntmKey) {
-    filter.must = filter.must || []
-    filter.must.push({
-      key: 'qntm_keys',
-      match: { any: [qntmKey] },
+    endTimer()
+    return formatted
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error))
+
+    // Emit search.error event
+    options.emit?.({
+      type: 'search.error',
+      data: {
+        query: options.query,
+        error: err.message,
+        phase: 'search', // Could be 'embed', 'search', or 'rerank' depending on where it failed
+      },
     })
+
+    // Re-throw error
+    throw error
   }
-
-  // Add consolidation level filter
-  if (options.consolidationLevel !== undefined) {
-    filter.must = filter.must || []
-    filter.must.push({
-      key: 'consolidation_level',
-      match: { value: options.consolidationLevel },
-    })
-  }
-
-  // Add QNTM key expansion boost (optional)
-  if (expandedKeys.length > 0) {
-    filter.should = filter.should || []
-    filter.should.push({
-      key: 'qntm_keys',
-      match: { any: expandedKeys },
-    })
-  }
-
-  // Search using backend
-  // Default to 'text' vector, future: add CLI flag to search 'code' vector
-  const searchStart = startTimer('storage search')
-
-  log.trace('Storage search request', {
-    collection: QDRANT_COLLECTION_NAME,
-    vectorName: 'text',
-    vectorDim: queryVector.length,
-    limit,
-    hasFilter: Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0,
-    backend: storageBackend.name,
-  })
-
-  let results = await storageBackend.search(QDRANT_COLLECTION_NAME, {
-    vectorName: 'text', // Phase 2: Default to text vector
-    vector: queryVector,
-    limit,
-    filter: Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0 ? filter : undefined,
-  })
-
-  log.trace('Storage search response', {
-    collection: QDRANT_COLLECTION_NAME,
-    resultCount: results.length,
-    topScore: results[0]?.score,
-  })
-
-  searchStart()
-
-  log.info('Search complete', { resultsFound: results.length })
-
-  // Rerank results if requested
-  if (options.rerank && results.length > 0) {
-    const rerankStart = startTimer('reranker')
-    const reranker = getRerankerBackendFor('text-reranking')
-
-    if (reranker && 'rerank' in reranker) {
-      const rerankTopK = options.rerankTopK ?? (limit * 3)
-
-      // Get more candidates for reranking (up to rerankTopK, but don't exceed results)
-      const candidateCount = Math.min(rerankTopK, results.length)
-      const candidates = results.slice(0, candidateCount)
-      const documents = candidates.map((hit) => (hit.payload as ChunkPayload).original_text)
-
-      log.debug('Reranking results', {
-        candidates: candidates.length,
-        finalLimit: limit,
-        backend: reranker.name
-      })
-
-      try {
-        const reranked = await reranker.rerank(query, documents, { topK: limit })
-
-        // Reorder results by rerank score (reranker returns sorted by relevance)
-        results = reranked.results.map((r) => {
-          const originalHit = candidates[r.index]
-          return {
-            ...originalHit,
-            rerank_score: r.relevance_score,
-          }
-        })
-
-        log.debug('Reranking complete', {
-          results: results.length,
-          topRerankScore: results[0]?.rerank_score
-        })
-      } catch (error) {
-        log.warn('Reranking failed, using vector search results', {
-          error: (error as Error).message,
-        })
-      }
-
-      rerankStart()
-    } else {
-      log.warn('Reranker requested but not available')
-    }
-  }
-
-  // Extract point IDs for access tracking
-  const pointIds = results.map((hit) => hit.id)
-
-  // Update access tracking (non-blocking, fire-and-forget)
-  updateAccessTracking(pointIds).catch((err) => {
-    log.warn('Access tracking update failed', { error: err.message })
-  })
-
-  // Format results
-  const formatted = results.map((hit) => {
-    const payload = hit.payload as ChunkPayload
-    return {
-      text: payload.original_text,
-      file_path: payload.file_path,
-      chunk_index: payload.chunk_index,
-      score: hit.score,
-      created_at: payload.created_at,
-      qntm_key: payload.qntm_keys[0] || 'unknown', // Use first key for display
-      rerank_score: (hit as any).rerank_score, // Preserve rerank score if present
-    }
-  })
-
-  endTimer()
-  return formatted
 }
 
 // Get chronological timeline (temporal-only query)
@@ -317,12 +365,11 @@ export async function timeline(since: string, limit = 20): Promise<SearchResult[
         key: 'created_at',
         range: { gte: since },
       },
+      // Only include chunks where superseded_by is null (not superseded)
+      { is_null: 'superseded_by' },
     ],
-    // Exclude deleted and superseded chunks
-    must_not: [
-      { key: 'deletion_eligible', match: { value: true } },
-      { key: 'superseded_by', match: { except: [null] } },
-    ],
+    // Exclude deleted chunks
+    must_not: [{ key: 'deletion_eligible', match: { value: true } }],
   }
 
   log.trace('Storage scroll request', {
@@ -368,9 +415,10 @@ export function formatResults(results: SearchResult[]): string {
 
   return results
     .map((result, i) => {
-      const scoreDisplay = result.rerank_score !== undefined
-        ? `Vector: ${result.score.toFixed(3)} | Rerank: ${result.rerank_score.toFixed(3)}`
-        : `Score: ${result.score.toFixed(3)}`
+      const scoreDisplay =
+        result.rerank_score !== undefined
+          ? `Vector: ${result.score.toFixed(3)} | Rerank: ${result.rerank_score.toFixed(3)}`
+          : `Score: ${result.score.toFixed(3)}`
       const header = `[${i + 1}] ${result.file_path} (chunk ${result.chunk_index}) - ${scoreDisplay}`
       const meta = `QNTM: ${result.qntm_key} | Created: ${result.created_at}`
       const divider = '─'.repeat(80)

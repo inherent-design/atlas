@@ -121,7 +121,8 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
+      const { initializeEmbeddingBackends, initializeLLMBackends } =
+        await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -179,7 +180,7 @@ async function main() {
         if (result.errors.length > 0) {
           log.error(`${result.errors.length} file(s) failed to ingest`)
           for (const { file, error } of result.errors) {
-            log.error(`  ${file}`, error)
+            log.error(`  ${file}`, new Error(error))
           }
         }
 
@@ -237,7 +238,8 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
+      const { initializeEmbeddingBackends, initializeLLMBackends } =
+        await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -293,7 +295,8 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
+      const { initializeEmbeddingBackends, initializeLLMBackends } =
+        await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -360,7 +363,8 @@ async function main() {
       }
 
       // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } = await import('@inherent.design/atlas-core')
+      const { initializeEmbeddingBackends, initializeLLMBackends } =
+        await import('@inherent.design/atlas-core')
       initializeEmbeddingBackends()
       initializeLLMBackends()
 
@@ -421,7 +425,8 @@ async function main() {
           }
 
           try {
-            const { getStorageBackend, QDRANT_COLLECTION_NAME } = await import('@inherent.design/atlas-core')
+            const { getStorageBackend, QDRANT_COLLECTION_NAME } =
+              await import('@inherent.design/atlas-core')
 
             const storage = getStorageBackend()
             if (!storage) {
@@ -441,7 +446,7 @@ async function main() {
             log.warn('Dropping collection', {
               collection: QDRANT_COLLECTION_NAME,
               points: info.points_count,
-              dimensions: info.vector_dimensions
+              dimensions: info.vector_dimensions,
             })
 
             // Perform deletion
@@ -557,8 +562,7 @@ async function main() {
                 // Force delete or no timestamp (legacy)
                 toDelete.push(point.id as string)
               } else {
-                const daysSinceMarked =
-                  (now.getTime() - markedAt.getTime()) / (1000 * 60 * 60 * 24)
+                const daysSinceMarked = (now.getTime() - markedAt.getTime()) / (1000 * 60 * 60 * 24)
                 if (daysSinceMarked >= DELETION_GRACE_PERIOD_DAYS) {
                   toDelete.push(point.id as string)
                 } else {
@@ -605,8 +609,291 @@ async function main() {
         })
     )
 
+  // Daemon command - start daemon (ssh-agent style output)
+  program
+    .command('daemon')
+    .description('Start Atlas daemon for event-driven operation')
+    .option('--detach', 'Run daemon in background', false)
+    .option('--watch', 'Enable file watcher for auto-ingestion', false)
+    .option('--tcp <port>', 'Also listen on TCP port', parseInt)
+    .action(async (options) => {
+      try {
+        const { startDaemon } = await import('@inherent.design/atlas-core')
+        await startDaemon({
+          detach: options.detach,
+          enableFileWatcher: options.watch,
+          tcpPort: options.tcp,
+        })
+      } catch (error) {
+        log.error('Failed to start daemon', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Daemon stop command
+  program
+    .command('daemon:stop')
+    .description('Stop Atlas daemon')
+    .action(async () => {
+      try {
+        const { isDaemonRunning, killDaemon } = await import('@inherent.design/atlas-core')
+
+        if (!isDaemonRunning()) {
+          console.log('Atlas daemon is not running')
+          return
+        }
+
+        await killDaemon()
+        console.log('Atlas daemon stopped')
+      } catch (error) {
+        log.error('Failed to stop daemon', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Daemon status command
+  program
+    .command('daemon:status')
+    .description('Check Atlas daemon status')
+    .action(async () => {
+      try {
+        const { isDaemonRunning, getDaemonPid } = await import('@inherent.design/atlas-core')
+
+        if (isDaemonRunning()) {
+          const pid = getDaemonPid()
+          console.log(`Atlas daemon running (PID ${pid})`)
+          // Could also connect and get full status via JSON-RPC
+          console.log('Use atlas client to get detailed status')
+        } else {
+          console.log('Atlas daemon is not running')
+        }
+      } catch (error) {
+        log.error('Failed to check daemon status', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Doctor command - diagnose environment
+  program
+    .command('doctor')
+    .description('Diagnose Atlas environment and service availability')
+    .action(async () => {
+      try {
+        const { runDiagnostics } = await import('@inherent.design/atlas-core')
+        const report = await runDiagnostics()
+
+        // Print header
+        console.log('Atlas Doctor')
+        console.log('============\n')
+
+        // Environment
+        console.log('Environment:')
+        for (const check of report.environment) {
+          const status = formatStatus(check.status)
+          console.log(`  ${check.name.padEnd(20)} ${status} (${check.value})`)
+        }
+        console.log('')
+
+        // Services
+        console.log('Services:')
+        for (const service of report.services) {
+          const status = formatStatus(service.status)
+          let line = `  ${service.name.padEnd(20)} ${status}`
+          if (service.version) {
+            line += ` (v${service.version})`
+          }
+          if (service.details) {
+            line += ` - ${service.details}`
+          }
+          if (service.extra?.points !== undefined) {
+            line += `, ${service.extra.points} points`
+          }
+          console.log(line)
+        }
+        console.log('')
+
+        // Ollama models
+        if (report.models.ollama.available.length > 0 || report.models.ollama.missing.length > 0) {
+          console.log('Ollama Models:')
+          if (report.models.ollama.available.length > 0) {
+            console.log(
+              `  Available: ${report.models.ollama.available.slice(0, 5).join(', ')}${report.models.ollama.available.length > 5 ? ` (+ ${report.models.ollama.available.length - 5} more)` : ''}`
+            )
+          }
+          if (report.models.ollama.missing.length > 0) {
+            console.log(
+              `  Missing:   ${report.models.ollama.missing.join(', ')} (configured but not pulled)`
+            )
+          }
+          console.log('')
+        }
+
+        // Configuration
+        console.log('Configuration:')
+        console.log(`  Config file: ${report.configuration.path ?? 'not found'}`)
+        console.log(
+          `  Validation:  ${report.configuration.valid ? 'ok' : `error: ${report.configuration.error}`}`
+        )
+        console.log('')
+
+        // Tracking database
+        console.log('Tracking Database:')
+        if (report.tracking) {
+          console.log(`  Path:    ${report.tracking.path}`)
+          console.log(`  Sources: ${report.tracking.sources} files tracked`)
+          console.log(
+            `  Chunks:  ${report.tracking.activeChunks} active, ${report.tracking.supersededChunks} superseded`
+          )
+        } else {
+          console.log('  Status:  not initialized')
+        }
+        console.log('')
+
+        // Summary
+        const { ok, warning, error, notConfigured } = report.summary
+        const parts: string[] = []
+        if (ok > 0) parts.push(`${ok} ok`)
+        if (warning > 0) parts.push(`${warning} warning`)
+        if (error > 0) parts.push(`${error} error`)
+        if (notConfigured > 0) parts.push(`${notConfigured} not configured`)
+        console.log(`Summary: ${parts.join(', ')}`)
+
+        // Exit code based on errors
+        if (error > 0) {
+          process.exit(1)
+        }
+      } catch (error) {
+        log.error('Doctor failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Watch command - manual file watching
+  program
+    .command('watch')
+    .description('Watch directories for new files to ingest')
+    .option('--path <paths...>', 'Directories to watch (default: ~/.atlas/inbox)')
+    .option('--pattern <patterns...>', 'File patterns (default: *.md, *.txt)')
+    .action(async (options) => {
+      try {
+        const { getFileWatcher } = await import('@inherent.design/atlas-core')
+
+        const watcher = getFileWatcher()
+
+        log.info('Starting file watcher...')
+        log.info('Press Ctrl+C to stop')
+
+        watcher.start()
+
+        // Keep process alive
+        process.on('SIGINT', () => {
+          log.info('Stopping file watcher...')
+          watcher.stop()
+          process.exit(0)
+        })
+
+        // Prevent exit
+        await new Promise(() => {})
+      } catch (error) {
+        log.error('Watch failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Tracking subcommand group
+  const trackingCommand = program
+    .command('tracking')
+    .description('File tracking database management')
+
+  trackingCommand
+    .command('status')
+    .description('Show tracking database statistics')
+    .action(async () => {
+      try {
+        const { getFileTracker } = await import('@inherent.design/atlas-core')
+        const tracker = getFileTracker()
+        const stats = tracker.getStats()
+
+        console.log('Tracking Database Status')
+        console.log('========================')
+        console.log(`Active sources:      ${stats.sources}`)
+        console.log(`Active chunks:       ${stats.activeChunks}`)
+        console.log(`Superseded chunks:   ${stats.supersededChunks}`)
+      } catch (error) {
+        log.error('Failed to get tracking status', error as Error)
+        process.exit(1)
+      }
+    })
+
+  trackingCommand
+    .command('vacuum')
+    .description('Clean up old superseded chunk records (14+ days old)')
+    .option('-n, --dry-run', 'Preview what would be removed')
+    .action(async (options) => {
+      try {
+        const { getFileTracker } = await import('@inherent.design/atlas-core')
+        const tracker = getFileTracker()
+
+        if (options.dryRun) {
+          // For dry run, just show stats
+          const stats = tracker.getStats()
+          console.log(`Would clean up: ${stats.supersededChunks} superseded chunk records`)
+          return
+        }
+
+        const result = await tracker.vacuum()
+        console.log(`Cleaned up ${result.removed} old chunk records`)
+      } catch (error) {
+        log.error('Vacuum failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  trackingCommand
+    .command('check')
+    .description('Check if a file needs ingestion')
+    .argument('<path>', 'File path to check')
+    .action(async (filePath: string) => {
+      try {
+        const { resolve } = await import('path')
+        const { getFileTracker } = await import('@inherent.design/atlas-core')
+
+        const absolutePath = resolve(filePath)
+        const tracker = getFileTracker()
+        const result = await tracker.needsIngestion(absolutePath)
+
+        console.log(`File: ${absolutePath}`)
+        console.log(`Needs ingestion: ${result.needsIngest}`)
+        console.log(`Reason: ${result.reason}`)
+        if (result.existingChunks) {
+          console.log(`Existing chunks: ${result.existingChunks.length}`)
+        }
+      } catch (error) {
+        log.error('Check failed', error as Error)
+        process.exit(1)
+      }
+    })
+
   // Run CLI
   program.parse()
+}
+
+/**
+ * Format status indicator
+ */
+function formatStatus(status: string): string {
+  switch (status) {
+    case 'ok':
+      return 'ok'
+    case 'warning':
+      return 'warning'
+    case 'error':
+      return 'error'
+    case 'not_configured':
+      return 'not configured'
+    default:
+      return status
+  }
 }
 
 // Execute main function

@@ -23,8 +23,10 @@ import type {
 import { CLAUDE_MODELS } from '../types'
 import type { LLMCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities'
 import { createLogger } from '../../../shared/logger'
+import { AnthropicAdapter } from '../adapters/anthropic'
+import type { UnifiedRequest, UnifiedResponse } from '../message'
 
-const log = createLogger('llm/anthropic')
+const log = createLogger('llm:anthropic')
 
 /**
  * Get Anthropic API key from environment
@@ -49,6 +51,9 @@ export class AnthropicBackend implements LLMBackend, CanComplete, CanCompleteJSO
   readonly latency: LatencyClass
   readonly pricing?: PricingInfo
   readonly capabilities: ReadonlySet<LLMCapability>
+
+  /** Message adapter for unified format conversion */
+  readonly adapter = new AnthropicAdapter()
 
   private client: Anthropic
   private modelKey: ClaudeModelKey
@@ -201,7 +206,7 @@ export class AnthropicBackend implements LLMBackend, CanComplete, CanCompleteJSO
 
     // Strip markdown code fences if present
     const codeBlockMatch = jsonText.match(/```(?:json)?\s*\n([\s\S]*?)\n```/)
-    if (codeBlockMatch) {
+    if (codeBlockMatch && codeBlockMatch[1]) {
       jsonText = codeBlockMatch[1]
     }
 
@@ -213,6 +218,55 @@ export class AnthropicBackend implements LLMBackend, CanComplete, CanCompleteJSO
         error: (error as Error).message,
       })
       throw new Error(`Failed to parse JSON response: ${(error as Error).message}`)
+    }
+  }
+
+  /**
+   * Generate a completion using unified message format
+   * Uses the message adapter for format conversion
+   */
+  async completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse> {
+    if (!this.client) {
+      throw new Error('Anthropic client not initialized (missing API key)')
+    }
+
+    log.debug('Anthropic unified message request', {
+      model: request.model ?? this.modelId,
+      messageCount: request.messages.length,
+    })
+
+    try {
+      // Extract system messages (Anthropic requires separate parameter)
+      const [systemPrompt, messages] = AnthropicAdapter.extractSystemMessage(request.messages)
+
+      // Convert to native format
+      const nativeRequest = this.adapter.toNativeRequest({
+        ...request,
+        messages, // Use filtered messages without system
+        model: request.model ?? this.modelId,
+      })
+
+      // Add system prompt if present
+      const requestWithSystem = systemPrompt
+        ? { ...nativeRequest, system: systemPrompt }
+        : nativeRequest
+
+      // Call Anthropic API
+      const response = await this.client.messages.create(requestWithSystem)
+
+      // Convert response to unified format
+      const unifiedResponse = this.adapter.fromNativeResponse(response)
+
+      log.debug('Anthropic unified message response', {
+        model: unifiedResponse.model,
+        stopReason: unifiedResponse.stopReason,
+        usage: unifiedResponse.usage,
+      })
+
+      return unifiedResponse
+    } catch (error) {
+      log.error('Anthropic unified message completion failed', error as Error)
+      throw new Error(`Anthropic completion failed: ${(error as Error).message}`)
     }
   }
 }

@@ -8,7 +8,7 @@ const { mockAssessSystemCapacity, mockResetCapacityCache } = vi.hoisted(() => ({
     canSpawnWorker: true,
     cpuUtilization: 30,
     memoryUtilization: 50,
-    pressureLevel: 'nominal' as const,
+    pressureLevel: 'nominal',
     details: {
       availableMemory: 8000000000,
       swapUsage: 0,
@@ -30,7 +30,7 @@ vi.mock('./system', () => ({
 const { AdaptiveConcurrencyController } = await import('./watchdog')
 
 describe('AdaptiveConcurrencyController', () => {
-  let controller: AdaptiveConcurrencyController
+  let controller: InstanceType<typeof AdaptiveConcurrencyController>
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -40,7 +40,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: true,
       cpuUtilization: 30,
       memoryUtilization: 50,
-      pressureLevel: 'nominal' as const,
+      pressureLevel: 'nominal',
       details: {
         availableMemory: 8000000000,
         swapUsage: 0,
@@ -231,7 +231,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: false,
       cpuUtilization: 95,
       memoryUtilization: 98,
-      pressureLevel: 'critical' as const,
+      pressureLevel: 'critical',
       details: {
         availableMemory: 200000000,
         swapUsage: 0.8,
@@ -264,7 +264,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: true,
       cpuUtilization: 75,
       memoryUtilization: 82,
-      pressureLevel: 'warning' as const,
+      pressureLevel: 'warning',
       details: {
         availableMemory: 2000000000,
         swapUsage: 0.3,
@@ -333,7 +333,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: true,
       cpuUtilization: 75,
       memoryUtilization: 82,
-      pressureLevel: 'warning' as const,
+      pressureLevel: 'warning',
       details: {
         availableMemory: 2000000000,
         swapUsage: 0.3,
@@ -398,7 +398,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: false,
       cpuUtilization: 95,
       memoryUtilization: 98,
-      pressureLevel: 'critical' as const,
+      pressureLevel: 'critical',
       details: {
         availableMemory: 200000000,
         swapUsage: 0.8,
@@ -436,7 +436,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: false,
       cpuUtilization: 95,
       memoryUtilization: 98,
-      pressureLevel: 'critical' as const,
+      pressureLevel: 'critical',
       details: {
         availableMemory: 200000000,
         swapUsage: 0.8,
@@ -457,7 +457,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: true,
       cpuUtilization: 30,
       memoryUtilization: 50,
-      pressureLevel: 'nominal' as const,
+      pressureLevel: 'nominal',
       details: {
         availableMemory: 8000000000,
         swapUsage: 0,
@@ -478,7 +478,7 @@ describe('AdaptiveConcurrencyController', () => {
       canSpawnWorker: true,
       cpuUtilization: 75,
       memoryUtilization: 82,
-      pressureLevel: 'warning' as const,
+      pressureLevel: 'warning',
       details: {
         availableMemory: 2000000000,
         swapUsage: 0.3,

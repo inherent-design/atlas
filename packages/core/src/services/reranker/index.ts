@@ -53,15 +53,14 @@ async function ensureRerankerBackend(): Promise<void> {
     const { getVoyageRerank25, getVoyageRerank25Lite } = await import('./backends/voyage')
     try {
       // Select appropriate factory based on model
-      const voyageBackend = modelKey === 'rerank-2.5-lite'
-        ? getVoyageRerank25Lite()
-        : getVoyageRerank25()
+      const voyageBackend =
+        modelKey === 'rerank-2.5-lite' ? getVoyageRerank25Lite() : getVoyageRerank25()
 
       if (await voyageBackend.isAvailable()) {
         rerankerRegistry.register(voyageBackend)
         log.debug('Registered Voyage reranker from config', {
           backend: rerankingBackend,
-          model: voyageBackend.model
+          model: voyageBackend.model,
         })
       }
     } catch (error) {
@@ -122,7 +121,7 @@ export async function rerank(
     throw new Error('Backend does not implement text-reranking')
   }
 
-  return backend.rerank(query, documents, options)
+  return (backend as import('./types').CanRerankText).rerank(query, documents, options)
 }
 
 // ============================================

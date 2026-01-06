@@ -10,7 +10,12 @@
  * - Future: Jina Reranker v2, Qwen3 Reranking, Cohere Rerank
  */
 
-import type { BackendDescriptor, LatencyClass, PricingInfo, RerankerCapability } from '../../shared/capabilities'
+import type {
+  BackendDescriptor,
+  LatencyClass,
+  PricingInfo,
+  RerankerCapability,
+} from '../../shared/capabilities'
 
 // ============================================
 // Result Types

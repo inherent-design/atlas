@@ -53,10 +53,12 @@ vi.mock('../../services/storage', () => ({
     upsert: mockQdrantUpsert,
     collectionExists: mockCollectionExists, // Use tracked mock
     createCollection: mockQdrantCreate,
-    getCollectionInfo: vi.fn(() => Promise.resolve({
-      points_count: 0,
-      vector_dimensions: { text: 1024, code: 1024 }
-    })),
+    getCollectionInfo: vi.fn(() =>
+      Promise.resolve({
+        points_count: 0,
+        vector_dimensions: { text: 1024, code: 1024 },
+      })
+    ),
   }),
   withHNSWDisabled: async (fn: () => Promise<any>) => fn(),
 }))
@@ -95,10 +97,12 @@ vi.mock('../../services/llm', async () => {
   const actual = await vi.importActual<typeof import('../../services/llm')>('../../services/llm')
   return {
     generateQNTMKeysBatch: mockGenerateQNTMKeysBatch,
-    generateQNTMKeys: vi.fn((input: any) => Promise.resolve({
-      keys: ['@test ~ content', '@mock ~ data'],
-      reasoning: 'Test content semantic keys',
-    })),
+    generateQNTMKeys: vi.fn((input: any) =>
+      Promise.resolve({
+        keys: ['@test ~ content', '@mock ~ data'],
+        reasoning: 'Test content semantic keys',
+      })
+    ),
     sanitizeQNTMKey: actual.sanitizeQNTMKey,
     fetchExistingQNTMKeys: () => Promise.resolve([]),
     getLLMBackendFor: vi.fn(() => ({
@@ -117,6 +121,7 @@ vi.mock('../../services/llm', async () => {
 
 // Import after mocks are set up
 import { ingest, ingestFile } from '.'
+import { getFileTracker } from '../../services/tracking'
 
 const testDir = '/tmp/atlas-test-ingest'
 
@@ -132,6 +137,16 @@ describe('ingestFile', () => {
     // Setup test directory
     rmSync(testDir, { recursive: true, force: true })
     mkdirSync(testDir, { recursive: true })
+
+    // Reset file tracker database (clear all records from sources and source_chunks tables)
+    const tracker = getFileTracker()
+    // Tables are created automatically by getFileTracker(), so we can safely delete
+    try {
+      tracker.db.exec('DELETE FROM sources')
+      tracker.db.exec('DELETE FROM source_chunks')
+    } catch {
+      // Tables might not exist yet, that's okay
+    }
   })
 
   test('ingests single file successfully', async () => {
@@ -143,9 +158,11 @@ describe('ingestFile', () => {
     // Should have called backend.upsert
     expect(mockQdrantUpsert).toHaveBeenCalled()
 
-    const firstUpsertCall = mockQdrantUpsert.mock.calls[0]
-    const points = firstUpsertCall[1] // Second argument is the points array
-    const point = points[0]
+    const firstUpsertCall = (mockQdrantUpsert.mock.calls as any[][])[0]
+    expect(firstUpsertCall).toBeDefined()
+    const points = firstUpsertCall![1] as any[] // Second argument is the points array
+    expect(points).toBeDefined()
+    const point = points[0] as any
 
     // Each point should have correct structure
     expect(point).toHaveProperty('id')
@@ -188,15 +205,17 @@ describe('ingestFile', () => {
     writeFileSync(testFile2, content)
 
     await ingestFile(testFile1, testDir)
-    const call1 = mockQdrantUpsert.mock.calls[0]
-    const qntmKeys1 = call1[1][0].payload.qntm_keys // Second arg is points array
+    const call1 = (mockQdrantUpsert.mock.calls as any[][])[0]
+    expect(call1).toBeDefined()
+    const qntmKeys1 = call1![1][0].payload.qntm_keys // Second arg is points array
 
     mockQdrantUpsert.mockClear()
     mockGenerateQNTMKeysBatch.mockClear()
 
     await ingestFile(testFile2, testDir)
-    const call2 = mockQdrantUpsert.mock.calls[0]
-    const qntmKeys2 = call2[1][0].payload.qntm_keys // Second arg is points array
+    const call2 = (mockQdrantUpsert.mock.calls as any[][])[0]
+    expect(call2).toBeDefined()
+    const qntmKeys2 = call2![1][0].payload.qntm_keys // Second arg is points array
 
     expect(qntmKeys1).toEqual(qntmKeys2)
   })
@@ -207,8 +226,9 @@ describe('ingestFile', () => {
 
     await ingestFile(testFile, testDir)
 
-    const upsertCall = mockQdrantUpsert.mock.calls[0]
-    const payload = upsertCall[1][0].payload // Second arg is points array
+    const upsertCall = (mockQdrantUpsert.mock.calls as any[][])[0]
+    expect(upsertCall).toBeDefined()
+    const payload = upsertCall![1][0].payload // Second arg is points array
 
     expect(payload.file_name).toBe('test.md')
     expect(payload.file_type).toBe('.md')

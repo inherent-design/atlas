@@ -10,7 +10,13 @@ export const qntmGenerationPrompt: PromptDefinition = {
   id: 'qntm-generation',
   description: 'Generate QNTM semantic keys for a text chunk',
   category: 'qntm',
-  variables: ['chunk', 'existingKeys', 'contextFileName', 'contextChunkIndex', 'contextTotalChunks'],
+  variables: [
+    'chunk',
+    'existingKeys',
+    'contextFileName',
+    'contextChunkIndex',
+    'contextTotalChunks',
+  ],
   variants: [
     {
       target: '*',

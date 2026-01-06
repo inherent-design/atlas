@@ -99,11 +99,22 @@ collection   = "[" expression_list "]"
 ${QNTM_LEVEL_INSTRUCTIONS[level]}
 
 ## Existing Keys (REUSE when semantically close)
-${existingKeys.length > 0 ? existingKeys.slice(-50).map(k => `- ${k}`).join('\n') : '(none yet)'}
+${
+  existingKeys.length > 0
+    ? existingKeys
+        .slice(-50)
+        .map((k) => `- ${k}`)
+        .join('\n')
+    : '(none yet)'
+}
 
-${context?.fileName ? `## Context
+${
+  context?.fileName
+    ? `## Context
 File: ${context.fileName} (chunk ${context.chunkIndex}/${context.totalChunks})
-` : ''}## Chunk Text
+`
+    : ''
+}## Chunk Text
 \`\`\`
 ${chunk}
 \`\`\`
@@ -205,9 +216,11 @@ Return a JSON object with structured memories:
 /**
  * Build working memory compaction prompt with conversation.
  */
-export function buildCompactionPrompt(conversation: Array<{ role: string; content: string }>): string {
+export function buildCompactionPrompt(
+  conversation: Array<{ role: string; content: string }>
+): string {
   const formattedConversation = conversation
-    .map(turn => `[${turn.role.toUpperCase()}]\n${turn.content}`)
+    .map((turn) => `[${turn.role.toUpperCase()}]\n${turn.content}`)
     .join('\n\n---\n\n')
 
   return `${WORKING_MEMORY_COMPACTION_PROMPT}
@@ -306,7 +319,10 @@ Think about what semantic concepts the user is trying to find.
 "${query}"
 
 ## Existing Keys in Knowledge Base (sample)
-${existingKeys.slice(0, 30).map(k => `- ${k}`).join('\n')}
+${existingKeys
+  .slice(0, 30)
+  .map((k) => `- ${k}`)
+  .join('\n')}
 
 ## Instructions
 1. Identify 2-4 semantic concepts the query is seeking

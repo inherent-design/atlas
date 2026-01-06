@@ -11,15 +11,10 @@ import type {
   RenderedPrompt,
   RenderOptions,
 } from './types'
-import {
-  scoreVariant,
-  compareVariantMatches,
-  renderTemplate,
-  validateVariables,
-} from './types'
+import { scoreVariant, compareVariantMatches, renderTemplate, validateVariables } from './types'
 import { createLogger } from '../../shared/logger'
 
-const log = createLogger('prompts/registry')
+const log = createLogger('prompts:registry')
 
 class PromptRegistry {
   private prompts = new Map<string, PromptDefinition>()
@@ -49,12 +44,12 @@ class PromptRegistry {
 
     // Force specific target if requested
     if (options?.forceTarget) {
-      return definition.variants.find(v => v.target === options.forceTarget)
+      return definition.variants.find((v) => v.target === options.forceTarget)
     }
 
     // Score and sort variants
     const matches = definition.variants
-      .map(v => scoreVariant(v, backend, options))
+      .map((v) => scoreVariant(v, backend, options))
       .filter((m): m is NonNullable<typeof m> => m !== null)
       .sort(compareVariantMatches)
 
@@ -63,7 +58,7 @@ class PromptRegistry {
       return undefined
     }
 
-    return matches[0].variant
+    return matches[0]!.variant
   }
 
   render(

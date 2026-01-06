@@ -53,7 +53,7 @@ export function parsePromptTarget(target: PromptTarget): {
   if (target === '*') return { provider: '*' }
 
   const [provider, model] = target.split(':')
-  return { provider, model }
+  return { provider: provider!, model }
 }
 
 /**
@@ -247,7 +247,7 @@ export function extractVariables(template: string): string[] {
  */
 export function renderTemplate(template: string, variables: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return key in variables ? variables[key] : match
+    return key in variables ? variables[key]! : match
   })
 }
 
@@ -378,7 +378,26 @@ export function compareVariantMatches(a: VariantMatch, b: VariantMatch): number 
  * Extend as prompts are added.
  */
 export type KnownPromptId =
+  // Task prompts
   | 'qntm-generation' // Generate QNTM semantic keys
   | 'consolidation-classify' // Classify chunk relationships
   | 'content-classify' // Classify content type (text/code/media)
+  // Agent prompts
+  | 'agent-sensor' // Sensor: perception + pattern recognition
+  | 'agent-reasoner' // Reasoner: hypothesis generation + testing
+  | 'agent-integrator' // Integrator: task execution + synthesis
   | string // Extensible
+
+/**
+ * Agent role type (consolidated from INTERSTITIA 5-role model)
+ */
+export type AgentRole = 'sensor' | 'reasoner' | 'integrator'
+
+/**
+ * Map from agent role to prompt ID
+ */
+export const agentPromptMap: Record<AgentRole, KnownPromptId> = {
+  sensor: 'agent-sensor',
+  reasoner: 'agent-reasoner',
+  integrator: 'agent-integrator',
+}

@@ -10,10 +10,7 @@
  * 3. Qdrant's vacuum optimizer handles soft-deleted chunks automatically
  */
 
-import {
-  QDRANT_COLLECTION_NAME,
-  BATCH_HNSW_THRESHOLD,
-} from '../../shared/config'
+import { QDRANT_COLLECTION_NAME, BATCH_HNSW_THRESHOLD } from '../../shared/config'
 import { getConfig } from '../../shared/config.loader'
 import { consolidate } from '.'
 import { createLogger } from '../../shared/logger'
@@ -151,6 +148,7 @@ export const ingestPauseController = new IngestPauseController()
  * Default: 100 + (0.05 × point_count)
  */
 export class ConsolidationWatchdog {
+  readonly name = 'consolidation-watchdog'
   private scheduler: PollingScheduler
   private lastConsolidationCount = 0
   private currentCount = 0
@@ -168,7 +166,8 @@ export class ConsolidationWatchdog {
 
     this.baseThreshold = config.baseThreshold ?? consolidationConfig?.baseThreshold ?? 100
     this.scaleFactor = config.scaleFactor ?? consolidationConfig?.scaleFactor ?? 0.05
-    this.similarityThreshold = config.similarityThreshold ?? consolidationConfig?.similarityThreshold ?? 0.95
+    this.similarityThreshold =
+      config.similarityThreshold ?? consolidationConfig?.similarityThreshold ?? 0.95
     this.useHNSWToggle = config.useHNSWToggle ?? true
 
     this.scheduler = new PollingScheduler({

@@ -1,36 +1,36 @@
 {
-  "name": "@inherent.design/atlas",
-  "version": "0.1.0",
+  "bin": {
+    "atlas": "./src/index.ts"
+  },
+  "dependencies": {
+    "@inherent.design/atlas-core": "^0.0.0-alpha.1",
+    "commander": "^14.0.2"
+  },
   "description": "CLI for Atlas semantic memory - ingest, search, and manage context",
-  "module": "src/index.ts",
-  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitest": "^4.0.16"
+  },
   "engines": {
     "bun": ">=1.2.15"
   },
+  "files": [
+    "!src/**/*.test.ts",
+    "src/**/*.ts"
+  ],
+  "module": "src/index.ts",
+  "name": "@inherent.design/atlas-cli",
+  "peerDependencies": {
+    "typescript": "^5"
+  },
   "publishConfig": {
     "access": "public"
-  },
-  "files": [
-    "src/**/*.ts",
-    "!src/**/*.test.ts"
-  ],
-  "bin": {
-    "atlas": "./src/index.ts"
   },
   "scripts": {
     "atlas": "bun run src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "vitest": "^4.0.16"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@inherent.design/atlas-core": "^0.1.0",
-    "commander": "^14.0.2"
-  }
+  "type": "module",
+  "version": "0.0.0-alpha.1"
 }

@@ -19,8 +19,12 @@ import { createLogger, startTimer } from '../../shared/logger'
 import { fetchExistingQNTMKeys, generateQNTMKeys } from '../../services/llm'
 import type { ChunkPayload, IngestResult, IngestOptions } from '../../shared/types'
 import type { VectorPoint, NamedVectors } from '../../services/storage'
-import { ensureCollection, expandPaths, generateChunkId } from '../../shared/utils'
-import { detectContentType, getRequiredVectors, DOCUMENT_EXTENSIONS } from '../../services/embedding/types'
+import { ensureCollection, expandPaths, generateChunkId, hashContent } from '../../shared/utils'
+import {
+  detectContentType,
+  getRequiredVectors,
+  DOCUMENT_EXTENSIONS,
+} from '../../services/embedding/types'
 import type { CanEmbedContextualized } from '../../services/embedding/types'
 import { parallel, batch } from '../../core/pipeline'
 import { adaptiveParallel } from '../../core/adaptive-parallel'
@@ -28,8 +32,20 @@ import { createIngestContext } from './context'
 import type { IngestContext } from './context'
 import type { ChunkWithContext, EmbeddedChunk, KeyedChunk } from './types'
 import type { QNTMGenerationInput } from '../../services/llm'
+import { getFileTracker } from '../../services/tracking'
+import {
+  splitIntoDocumentsFast,
+  estimateTotalTokens,
+  VOYAGE_SAFE_LIMIT,
+} from '../../services/tokenization'
 
 const log = createLogger('ingest')
+
+/**
+ * Cache for contextualized embeddings to avoid duplicate API calls.
+ * Key: filePath, Value: Promise<ContextualizedEmbeddingResult[][]>
+ */
+const contextualizedEmbeddingCache = new Map<string, Promise<any>>()
 
 /**
  * Determine if a file should use contextualized embeddings.
@@ -60,21 +76,42 @@ export type IngestConfig = IngestOptions
 /**
  * Stream chunks from a single file with context.
  * Output: ChunkWithContext
+ *
+ * Integrates file tracker to skip unchanged files.
  */
 async function* streamChunks(
   filePath: string,
   ctx: IngestContext
 ): AsyncGenerator<ChunkWithContext> {
   const splitter = getTextSplitter()
-  const content = readFileSync(filePath, 'utf-8')
   const relativePath = relative(ctx.rootDir, filePath)
+
+  // Check if file needs ingestion (file tracker)
+  const tracker = getFileTracker()
+  const trackResult = await tracker.needsIngestion(filePath)
+
+  if (!trackResult.needsIngest) {
+    // Emit skip event
+    ctx.emit?.({
+      type: 'ingest.file.skipped',
+      data: {
+        path: relativePath,
+        reason: trackResult.reason,
+      },
+    })
+    log.debug('File unchanged, skipping', { file: relativePath })
+    return // Don't yield any chunks for this file
+  }
+
+  // Emit file started event
+  const content = readFileSync(filePath, 'utf-8')
   const contentType = detectContentType(filePath)
 
   log.debug('Reading file', { file: relativePath, sizeBytes: content.length })
 
   // Chunk text
   const rawChunks = await splitter.splitText(content)
-  const chunks = rawChunks.filter(chunk => chunk.trim().length >= CHUNK_MIN_CHARS)
+  const chunks = rawChunks.filter((chunk) => chunk.trim().length >= CHUNK_MIN_CHARS)
 
   if (rawChunks.length !== chunks.length) {
     log.debug('Filtered tiny chunks', {
@@ -88,18 +125,69 @@ async function* streamChunks(
   log.debug('Chunked text', { file: relativePath, chunks: chunks.length })
   log.info(`Ingesting: ${relativePath}`, { chunks: chunks.length, contentType })
 
-  // Yield each chunk with context
-  for (let i = 0; i < chunks.length; i++) {
-    yield {
-      chunk: chunks[i]!,
-      context: {
-        filePath: relativePath,
-        fileName: basename(filePath),
-        fileType: extname(filePath),
-        chunkIndex: i,
-        totalChunks: chunks.length,
-        contentType,
-      },
+  ctx.emit?.({
+    type: 'ingest.file.started',
+    data: {
+      path: relativePath,
+      chunkCount: chunks.length,
+    },
+  })
+
+  // Check if document exceeds context window and needs splitting
+  const estimatedTokens = estimateTotalTokens(chunks)
+  const needsSplit = estimatedTokens > VOYAGE_SAFE_LIMIT
+
+  if (needsSplit) {
+    // Split into sub-documents for contextualized embedding
+    const subDocuments = splitIntoDocumentsFast(chunks, VOYAGE_SAFE_LIMIT)
+    log.info('Large document split for contextualized embedding', {
+      file: relativePath,
+      originalChunks: chunks.length,
+      estimatedTokens,
+      subDocuments: subDocuments.length,
+    })
+
+    // Track global chunk index across splits
+    let globalChunkIndex = 0
+
+    for (let splitIndex = 0; splitIndex < subDocuments.length; splitIndex++) {
+      const subDoc = subDocuments[splitIndex]!
+
+      for (let localIndex = 0; localIndex < subDoc.length; localIndex++) {
+        yield {
+          chunk: subDoc[localIndex]!,
+          context: {
+            filePath: relativePath,
+            fileName: basename(filePath),
+            fileType: extname(filePath),
+            chunkIndex: localIndex, // Local index within sub-document
+            totalChunks: subDoc.length, // Chunks in this sub-document
+            contentType,
+            allChunks: subDoc, // Only this sub-document's chunks
+            // Split metadata
+            splitIndex,
+            splitTotal: subDocuments.length,
+            chunkIndexGlobal: globalChunkIndex,
+          },
+        }
+        globalChunkIndex++
+      }
+    }
+  } else {
+    // Normal case: document fits in context window
+    for (let i = 0; i < chunks.length; i++) {
+      yield {
+        chunk: chunks[i]!,
+        context: {
+          filePath: relativePath,
+          fileName: basename(filePath),
+          fileType: extname(filePath),
+          chunkIndex: i,
+          totalChunks: chunks.length,
+          contentType,
+          allChunks: chunks, // Pass all chunks for contextualized embedding
+        },
+      }
     }
   }
 }
@@ -110,16 +198,14 @@ async function* streamChunks(
  */
 async function embedChunk(
   chunkWithContext: ChunkWithContext,
-  ctx: IngestContext,
-  allChunks?: string[] // For contextualized embedding (all chunks from same file)
+  ctx: IngestContext
 ): Promise<EmbeddedChunk> {
   const { chunk, context } = chunkWithContext
   const requiredVectors = getRequiredVectors(context.contentType)
 
   // Determine if we should use contextualized
   const useContextualized =
-    shouldUseContextualized(context.filePath, context.totalChunks) &&
-    ctx.contextualizedAvailable
+    shouldUseContextualized(context.filePath, context.totalChunks) && ctx.contextualizedAvailable
 
   let embedding: number[]
   let embeddingModel: string
@@ -128,46 +214,72 @@ async function embedChunk(
 
   // Text embedding (always present)
   if (requiredVectors.includes('text')) {
-    if (useContextualized) {
-      // Use contextualized embeddings
+    if (useContextualized && context.allChunks) {
+      // Use contextualized embeddings (allChunks provided in context)
       const contextBackend = await ctx.getContextualizedEmbeddingBackend()
       if (contextBackend && 'embedContextualized' in contextBackend) {
-        // Need all chunks for contextualized embedding
-        if (!allChunks) {
-          throw new Error('Contextualized embedding requires all chunks from file')
+
+        // Check cache first (avoid duplicate API calls for same file/split)
+        // Include split index in cache key for large documents split into sub-documents
+        const splitSuffix = context.splitIndex !== undefined ? `:split${context.splitIndex}` : ''
+        const cacheKey = `${context.filePath}${splitSuffix}`
+        if (!contextualizedEmbeddingCache.has(cacheKey)) {
+          log.trace('Embedding request (contextualized)', {
+            file: context.filePath,
+            backend: contextBackend.name,
+            totalChunks: context.totalChunks,
+            splitIndex: context.splitIndex,
+            splitTotal: context.splitTotal,
+          })
+
+          // Cache the promise (so concurrent chunks await the same call)
+          const embedPromise = (contextBackend as CanEmbedContextualized).embedContextualized([
+            context.allChunks,
+          ])
+          contextualizedEmbeddingCache.set(cacheKey, embedPromise)
+        } else {
+          log.trace('Using cached contextualized embeddings', {
+            file: context.filePath,
+            chunkIndex: context.chunkIndex,
+            splitIndex: context.splitIndex,
+          })
         }
 
-        log.trace('Embedding request (contextualized)', {
-          file: context.filePath,
-          chunkIndex: context.chunkIndex,
-          backend: contextBackend.name,
-        })
-
-        const contextResult = await (contextBackend as CanEmbedContextualized).embedContextualized(
-          [allChunks]
-        )
+        const contextResult = await contextualizedEmbeddingCache.get(cacheKey)!
         // Get this chunk's embedding from the batch
-        embedding = contextResult[0][context.chunkIndex]!.embedding
+        embedding = contextResult[0]![context.chunkIndex]!.embedding
         embeddingModel = (contextBackend as any).model ?? 'voyage-context-3'
         embeddingStrategy = 'contextualized'
 
         log.trace('Embedding response (contextualized)', {
           file: context.filePath,
           chunkIndex: context.chunkIndex,
+          splitIndex: context.splitIndex,
           embeddingDim: embedding.length,
           model: embeddingModel,
         })
       } else {
-        // Fallback to snippet
-        log.warn('Contextualized backend not available, falling back to snippet', {
+        // Fallback to snippet (backend not available)
+        log.debug('Contextualized backend not available, falling back to snippet', {
           file: context.filePath,
         })
         const textBackend = await ctx.getEmbeddingBackend()
-        const textResult = await textBackend.embedText([chunk])
+        const textResult = await textBackend.embedText!([chunk])
         embedding = textResult.embeddings[0]!
         embeddingModel = textResult.model
         embeddingStrategy = 'snippet'
       }
+    } else if (useContextualized && !context.allChunks) {
+      // Fallback to snippet (allChunks not provided)
+      log.debug('Contextualized embedding skipped (no allChunks), using snippet embedding', {
+        file: context.filePath,
+        chunkIndex: context.chunkIndex,
+      })
+      const textBackend = await ctx.getEmbeddingBackend()
+      const textResult = await textBackend.embedText!([chunk])
+      embedding = textResult.embeddings[0]!
+      embeddingModel = textResult.model
+      embeddingStrategy = 'snippet'
     } else {
       // Use snippet embeddings
       const textBackend = await ctx.getEmbeddingBackend()
@@ -178,7 +290,7 @@ async function embedChunk(
         backend: textBackend.name,
       })
 
-      const textResult = await textBackend.embedText([chunk])
+      const textResult = await textBackend.embedText!([chunk])
       embedding = textResult.embeddings[0]!
       embeddingModel = textResult.model
       embeddingStrategy = 'snippet'
@@ -204,7 +316,7 @@ async function embedChunk(
         backend: codeBackend.name,
       })
 
-      const codeResult = await codeBackend.embedCode([chunk])
+      const codeResult = await codeBackend.embedCode!([chunk])
       codeEmbedding = codeResult.embeddings[0]
 
       log.trace('Embedding response (code)', {
@@ -218,6 +330,16 @@ async function embedChunk(
       })
     }
   }
+
+  // Emit chunk embedded event
+  ctx.emit?.({
+    type: 'ingest.chunk.embedded',
+    data: {
+      path: context.filePath,
+      index: context.chunkIndex,
+      strategy: embeddingStrategy,
+    },
+  })
 
   return {
     ...chunkWithContext,
@@ -307,6 +429,8 @@ async function* streamAllFiles(
  * Upsert chunks in batches.
  * Consumes: AsyncIterable<KeyedChunk>
  * Returns: Total chunks stored
+ *
+ * Also records ingestion in file tracker.
  */
 async function upsertChunks(
   chunks: AsyncIterable<KeyedChunk>,
@@ -315,8 +439,12 @@ async function upsertChunks(
   timeoutMs: number
 ): Promise<number> {
   const storageBackend = await ctx.getStorageBackend()
+  const tracker = getFileTracker()
   const timestamp = new Date().toISOString()
   let totalStored = 0
+
+  // Group chunks by file for tracker recording
+  const fileChunksMap = new Map<string, { chunks: any[]; filePath: string }>()
 
   // Batch chunks for efficient upsert
   const batches = batch(chunks, { maxSize: batchSize, timeoutMs })
@@ -325,8 +453,15 @@ async function upsertChunks(
     const points: VectorPoint<ChunkPayload>[] = []
 
     for (const keyedChunk of chunkBatch) {
-      const { chunk, context, embedding, codeEmbedding, embeddingModel, embeddingStrategy, qntmKeys } =
-        keyedChunk
+      const {
+        chunk,
+        context,
+        embedding,
+        codeEmbedding,
+        embeddingModel,
+        embeddingStrategy,
+        qntmKeys,
+      } = keyedChunk
 
       const chunkId = generateChunkId(context.filePath, context.chunkIndex)
 
@@ -340,7 +475,7 @@ async function upsertChunks(
       }
 
       const requiredVectors = getRequiredVectors(context.contentType)
-      const vectorsPresent = requiredVectors.filter(v =>
+      const vectorsPresent = requiredVectors.filter((v) =>
         v === 'text' ? namedVectors.text : v === 'code' ? namedVectors.code : false
       ) as ('text' | 'code' | 'media')[]
 
@@ -362,12 +497,40 @@ async function upsertChunks(
         embedding_strategy: embeddingStrategy,
         content_type: context.contentType,
         vectors_present: vectorsPresent,
+
+        // Split metadata (for large documents exceeding context window)
+        ...(context.splitIndex !== undefined && {
+          split_index: context.splitIndex,
+          split_total: context.splitTotal,
+          chunk_index_global: context.chunkIndexGlobal,
+        }),
       }
 
       points.push({
         id: chunkId,
         vector: namedVectors,
         payload,
+      })
+
+      // Track chunks by file for later recording
+      const absolutePath = `${ctx.rootDir}/${context.filePath}`.replace(/\/\//g, '/')
+      if (!fileChunksMap.has(absolutePath)) {
+        fileChunksMap.set(absolutePath, { chunks: [], filePath: absolutePath })
+      }
+      fileChunksMap.get(absolutePath)!.chunks.push({
+        index: context.chunkIndex,
+        contentHash: hashContent(chunk),
+        qdrantPointId: chunkId,
+      })
+
+      // Emit chunk stored event
+      ctx.emit?.({
+        type: 'ingest.chunk.stored',
+        data: {
+          path: context.filePath,
+          index: context.chunkIndex,
+          id: chunkId,
+        },
       })
     }
 
@@ -391,6 +554,28 @@ async function upsertChunks(
       getConsolidationWatchdog().recordIngestion(points.length)
 
       log.debug(`Stored batch of ${points.length} chunks`, { totalStored })
+    }
+  }
+
+  // Record ingestion in file tracker (after all batches complete)
+  for (const [filePath, { chunks: fileChunks }] of fileChunksMap) {
+    try {
+      await tracker.recordIngestion(filePath, fileChunks)
+
+      // Emit file completed event
+      const relativePath = relative(ctx.rootDir, filePath)
+      ctx.emit?.({
+        type: 'ingest.file.completed',
+        data: {
+          path: relativePath,
+          chunks: fileChunks.length,
+        },
+      })
+    } catch (error) {
+      log.error('Failed to record ingestion in file tracker', {
+        filePath,
+        error: (error as Error).message,
+      })
     }
   }
 
@@ -418,6 +603,8 @@ export async function ingestFile(
     paths: [filePath],
     rootDir,
     existingKeys,
+    recursive: false,
+    verbose,
   })
 
   // Wait if ingestion is paused for consolidation
@@ -435,14 +622,14 @@ export async function ingestFile(
     const chunks = streamChunks(filePath, ctx)
 
     // Embed chunks (concurrency: 3 for API rate limits)
-    const embedded = parallel(chunks, chunk => embedChunk(chunk, ctx), 3)
+    const embedded = parallel(chunks, (chunk) => embedChunk(chunk, ctx), 3)
 
     // Get ingestion config for tuning parameters
     const atlasConfig = getConfig()
     const ingestionConfig = atlasConfig.ingestion ?? {}
 
     // Generate QNTM keys (adaptive concurrency based on config + system pressure)
-    const keyed = adaptiveParallel(embedded, chunk => generateKeysForChunk(chunk, ctx), {
+    const keyed = adaptiveParallel(embedded, (chunk) => generateKeysForChunk(chunk, ctx), {
       initialConcurrency: ingestionConfig.qntmConcurrency ?? 8,
       min: ingestionConfig.qntmConcurrencyMin ?? 2,
       max: ingestionConfig.qntmConcurrencyMax ?? 16,
@@ -467,6 +654,9 @@ export async function ingestFile(
   } finally {
     // Complete in-flight operation
     ingestPauseController.completeInFlight()
+
+    // Clear contextualized embedding cache
+    contextualizedEmbeddingCache.clear()
   }
 }
 
@@ -489,9 +679,17 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
   const filesToIngest = expandPaths(paths, recursive)
   log.info('Files to ingest', { count: filesToIngest.length })
 
+  // Emit ingest.started event
+  config.emit?.({
+    type: 'ingest.started',
+    data: {
+      paths,
+      fileCount: filesToIngest.length,
+    },
+  })
+
   // Determine if we should use HNSW toggle (auto: based on file count threshold)
-  const shouldToggleHNSW =
-    config.useHNSWToggle ?? filesToIngest.length >= BATCH_HNSW_THRESHOLD
+  const shouldToggleHNSW = config.useHNSWToggle ?? filesToIngest.length >= BATCH_HNSW_THRESHOLD
 
   if (shouldToggleHNSW) {
     log.info('Batch mode: HNSW indexing will be disabled during ingestion', {
@@ -499,10 +697,6 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
       threshold: BATCH_HNSW_THRESHOLD,
     })
   }
-
-  // Start consolidation watchdog to monitor ingestion and trigger consolidation
-  const consolidationWatchdog = getConsolidationWatchdog()
-  consolidationWatchdog.start()
 
   // Create ingest context
   const ctx = await createIngestContext({
@@ -515,6 +709,7 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
   const ingestBatch = async (): Promise<IngestResult> => {
     const errors: Array<{ file: string; error: string }> = []
     let chunksStored = 0
+    let skippedCount = 0
 
     try {
       // Stream all files through unified pipeline
@@ -525,10 +720,10 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
       const ingestionConfig = atlasConfig.ingestion ?? {}
 
       // Embed chunks (concurrency: 3 for API rate limits)
-      const embedded = parallel(allChunks, chunk => embedChunk(chunk, ctx), 3)
+      const embedded = parallel(allChunks, (chunk) => embedChunk(chunk, ctx), 3)
 
       // Generate QNTM keys (adaptive concurrency based on config + system pressure)
-      const keyed = adaptiveParallel(embedded, chunk => generateKeysForChunk(chunk, ctx), {
+      const keyed = adaptiveParallel(embedded, (chunk) => generateKeysForChunk(chunk, ctx), {
         initialConcurrency: ingestionConfig.qntmConcurrency ?? 8,
         min: ingestionConfig.qntmConcurrencyMin ?? 2,
         max: ingestionConfig.qntmConcurrencyMax ?? 16,
@@ -546,6 +741,15 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
       const err = error instanceof Error ? error : new Error(String(error))
       log.error('Pipeline error', err)
       errors.push({ file: '<pipeline>', error: err.message })
+
+      // Emit error event
+      config.emit?.({
+        type: 'ingest.error',
+        data: {
+          error: err.message,
+          phase: 'store',
+        },
+      })
     }
 
     return {
@@ -560,9 +764,17 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
   try {
     // Run with or without HNSW toggle
     result = shouldToggleHNSW ? await withHNSWDisabled(ingestBatch) : await ingestBatch()
-  } finally {
-    // Stop consolidation watchdog
-    consolidationWatchdog.stop()
+  } catch (error) {
+    // Emit error event for outer exception
+    const err = error instanceof Error ? error : new Error(String(error))
+    config.emit?.({
+      type: 'ingest.error',
+      data: {
+        error: err.message,
+        phase: 'store',
+      },
+    })
+    throw error
   }
 
   log.info('Ingestion complete', {
@@ -576,6 +788,21 @@ export async function ingest(config: IngestOptions): Promise<IngestResult> {
     log.warn('Some files failed to ingest', { errorCount: result.errors.length })
   }
 
+  // Emit ingest.completed event
+  config.emit?.({
+    type: 'ingest.completed',
+    data: {
+      files: result.filesProcessed,
+      chunks: result.chunksStored,
+      skipped: 0, // Note: we'd need to track this separately if needed
+      errors: result.errors.length,
+    },
+  })
+
   endTimer()
+
+  // Clear contextualized embedding cache
+  contextualizedEmbeddingCache.clear()
+
   return result
 }

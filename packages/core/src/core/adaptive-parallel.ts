@@ -7,13 +7,13 @@
  *
  * Key difference from batch.ts:
  * - batch.ts: Per-batch concurrency control (spawns multiple watchdogs)
- * - adaptive-parallel.ts: Pipeline-level control (single watchdog for entire pipeline)
+ * - adaptive-parallel.ts: Pipeline-level control (subscribes to global pressure monitor)
  */
 
 import { pMapIterable } from 'p-map'
 import { createLogger } from '../shared/logger'
-import { PollingScheduler } from './scheduler'
-import { assessSystemCapacity, type PressureLevel } from './system'
+import { getSystemPressureMonitor } from './system-pressure-monitor'
+import type { PressureLevel, SystemCapacity } from './system'
 
 const log = createLogger('adaptive-parallel')
 
@@ -59,13 +59,8 @@ export async function* adaptiveParallel<T, R>(
   source: AsyncIterable<T>,
   fn: (item: T) => Promise<R>,
   options: AdaptiveParallelOptions
-): AsyncGenerator<R> {
-  const {
-    initialConcurrency,
-    min = 1,
-    max = 10,
-    monitoringIntervalMs = 30000,
-  } = options
+): AsyncGenerator<Awaited<R>> {
+  const { initialConcurrency, min = 1, max = 10, monitoringIntervalMs = 30000 } = options
 
   let currentConcurrency = Math.max(min, Math.min(initialConcurrency, max))
 
@@ -79,62 +74,26 @@ export async function* adaptiveParallel<T, R>(
   // Shared state for monitoring
   let activeCount = 0
   let totalProcessed = 0
-  let shouldStop = false
-  let lastLoggedState: { activeCount: number; concurrency: number; pressureLevel: PressureLevel } | null = null
 
-  // Create scheduler for pressure monitoring
-  const scheduler = new PollingScheduler({
-    name: 'adaptive-parallel',
-    tick: async () => {
-      const capacity = await assessSystemCapacity()
-      const newConcurrency = calculateTargetConcurrency(
-        capacity.pressureLevel,
-        currentConcurrency,
-        min,
-        max
-      )
+  // Subscribe to global pressure monitor
+  const monitor = getSystemPressureMonitor()
+  const unsubscribe = monitor.subscribe((pressure: PressureLevel, capacity: SystemCapacity) => {
+    const newConcurrency = calculateTargetConcurrency(pressure, currentConcurrency, min, max)
 
-      // Log pressure level changes (significant events)
-      const pressureLevelChanged =
-        !lastLoggedState || lastLoggedState.pressureLevel !== capacity.pressureLevel
+    // Adjust concurrency if needed
+    if (newConcurrency !== currentConcurrency) {
+      const oldConcurrency = currentConcurrency
+      currentConcurrency = newConcurrency
 
-      if (pressureLevelChanged && activeCount > 0) {
-        log.info('System pressure level changed', {
-          previousLevel: lastLoggedState?.pressureLevel ?? 'unknown',
-          currentLevel: capacity.pressureLevel,
-          activeCount,
-          cpuUtilization: capacity.cpuUtilization.toFixed(1),
-          memoryUtilization: capacity.memoryUtilization.toFixed(1),
-        })
-      }
-
-      // Adjust concurrency if needed
-      if (newConcurrency !== currentConcurrency) {
-        const oldConcurrency = currentConcurrency
-        currentConcurrency = newConcurrency
-
-        log.debug('Adaptive parallel concurrency adjusted', {
-          from: oldConcurrency,
-          to: newConcurrency,
-          pressureLevel: capacity.pressureLevel,
-          reason: getAdjustmentReason(capacity.pressureLevel),
-        })
-      }
-
-      // Update last logged state
-      if (activeCount > 0) {
-        lastLoggedState = {
-          activeCount,
-          concurrency: currentConcurrency,
-          pressureLevel: capacity.pressureLevel,
-        }
-      }
-    },
-    logger: log,
+      log.debug('Adaptive parallel concurrency adjusted', {
+        from: oldConcurrency,
+        to: newConcurrency,
+        pressureLevel: pressure,
+        reason: getAdjustmentReason(pressure),
+        activeCount,
+      })
+    }
   })
-
-  // Start monitoring
-  scheduler.start(monitoringIntervalMs)
 
   try {
     // Wrap fn to track active count
@@ -152,12 +111,14 @@ export async function* adaptiveParallel<T, R>(
     // Note: pMapIterable doesn't support mid-flight concurrency changes
     // We accept this limitation for simplicity - concurrency changes take effect
     // when new items enter the pipeline
-    yield* pMapIterable(source, wrappedFn, {
+    for await (const result of pMapIterable(source, wrappedFn, {
       concurrency: currentConcurrency,
-    })
+    })) {
+      yield result as Awaited<R>
+    }
   } finally {
-    shouldStop = true
-    scheduler.stop()
+    // Unsubscribe from pressure monitor
+    unsubscribe()
 
     log.debug('Adaptive parallel processing complete', {
       totalProcessed,

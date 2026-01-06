@@ -108,7 +108,7 @@ export class BackendRegistry<B extends BackendDescriptor<string>> {
   getFor(capability: string): B | undefined {
     const names = this.capabilityIndex.get(capability)
     if (!names?.size) return undefined
-    const firstName = [...names][0]
+    const firstName = [...names][0]!
     return this.backends.get(firstName)
   }
 

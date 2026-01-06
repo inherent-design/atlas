@@ -18,7 +18,7 @@ import type {
   BatchEmbeddingResult,
 } from '../types'
 
-const log = createLogger('embedding/voyage')
+const log = createLogger('embedding:voyage')
 
 // Singleton Voyage client
 function createVoyageClient(): VoyageAIClient {
@@ -75,17 +75,15 @@ export class VoyageSnippetBackend implements EmbeddingBackend, CanEmbedText {
     const response = await this.client.embed({
       input: inputs,
       model: this.model,
-      input_type: 'document',
+      inputType: 'document',
     })
 
     return {
-      embeddings: response.data.map((item) => item.embedding ?? []),
+      embeddings: response.data?.map((item) => item.embedding ?? []) ?? [],
       model: this.model,
       strategy: 'snippet',
       dimensions: this.dimensions,
-      usage: response.usage?.totalTokens
-        ? { inputTokens: response.usage.totalTokens }
-        : undefined,
+      usage: response.usage?.totalTokens ? { inputTokens: response.usage.totalTokens } : undefined,
     }
   }
 }
@@ -137,17 +135,15 @@ export class VoyageCodeBackend implements EmbeddingBackend, CanEmbedText, CanEmb
     const response = await this.client.embed({
       input: inputs,
       model: this.model,
-      input_type: 'document',
+      inputType: 'document',
     })
 
     return {
-      embeddings: response.data.map((item) => item.embedding ?? []),
+      embeddings: response.data?.map((item) => item.embedding ?? []) ?? [],
       model: this.model,
       strategy: 'snippet',
       dimensions: this.dimensions,
-      usage: response.usage?.totalTokens
-        ? { inputTokens: response.usage.totalTokens }
-        : undefined,
+      usage: response.usage?.totalTokens ? { inputTokens: response.usage.totalTokens } : undefined,
     }
   }
 
@@ -158,17 +154,15 @@ export class VoyageCodeBackend implements EmbeddingBackend, CanEmbedText, CanEmb
     const response = await this.client.embed({
       input: inputs,
       model: this.model,
-      input_type: 'document',
+      inputType: 'document',
     })
 
     return {
-      embeddings: response.data.map((item) => item.embedding ?? []),
+      embeddings: response.data?.map((item) => item.embedding ?? []) ?? [],
       model: this.model,
-      strategy: 'code',
+      strategy: 'snippet', // Code embeddings use snippet strategy (no separate 'code' strategy)
       dimensions: this.dimensions,
-      usage: response.usage?.totalTokens
-        ? { inputTokens: response.usage.totalTokens }
-        : undefined,
+      usage: response.usage?.totalTokens ? { inputTokens: response.usage.totalTokens } : undefined,
     }
   }
 }

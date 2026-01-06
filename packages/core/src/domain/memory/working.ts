@@ -20,7 +20,7 @@ import { buildCompactionPrompt } from '../../services/llm/prompts'
 import { ingest } from '../ingest'
 import type { IngestResult } from '../../shared/types'
 
-const log = createLogger('memory/working')
+const log = createLogger('memory:working')
 
 // ============================================
 // Types
@@ -177,7 +177,7 @@ export class WorkingMemoryManager {
     })
 
     // Build compaction prompt
-    const conversation = this.buffer.map(turn => ({
+    const conversation = this.buffer.map((turn) => ({
       role: turn.role,
       content: turn.content,
     }))
@@ -189,8 +189,10 @@ export class WorkingMemoryManager {
       throw new Error('No JSON-capable LLM backend available for compaction')
     }
 
-    // Run compaction
-    const result = await backend.completeJSON<CompactedMemory>(prompt)
+    // Run compaction (type assertion: we verified completeJSON exists)
+    const result = await (
+      backend as { completeJSON<T>(prompt: string): Promise<T> }
+    ).completeJSON<CompactedMemory>(prompt)
 
     log.debug('Compaction complete', {
       sessionId: this.sessionId,
@@ -234,6 +236,7 @@ export class WorkingMemoryManager {
       paths: [tempPath],
       rootDir: '/tmp',
       verbose: false,
+      recursive: false,
     })
 
     // Record compaction in history
@@ -389,7 +392,10 @@ const sessions = new Map<string, WorkingMemoryManager>()
 /**
  * Get or create a working memory session.
  */
-export function getWorkingMemory(sessionId: string, config?: WorkingMemoryConfig): WorkingMemoryManager {
+export function getWorkingMemory(
+  sessionId: string,
+  config?: WorkingMemoryConfig
+): WorkingMemoryManager {
   let session = sessions.get(sessionId)
 
   if (!session || session.isStale()) {
@@ -411,7 +417,7 @@ export function removeWorkingMemory(sessionId: string): boolean {
  * Get all active session IDs.
  */
 export function getActiveSessions(): string[] {
-  return Array.from(sessions.keys()).filter(id => {
+  return Array.from(sessions.keys()).filter((id) => {
     const session = sessions.get(id)
     return session && !session.isStale()
   })

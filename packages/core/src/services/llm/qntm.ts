@@ -21,7 +21,7 @@ import {
   type QNTMAbstractionLevel,
 } from './prompts'
 
-const log = createLogger('qntm/providers')
+const log = createLogger('qntm:providers')
 
 // Retry configuration for QNTM generation
 const RETRY_OPTIONS = {
@@ -100,7 +100,7 @@ export async function generateQNTMKeysWithProvider(
   log.debug('Using LLM backend for QNTM generation', { backend: backend.name })
 
   const result = await pRetry(
-    () => backend.completeJSON<QNTMGenerationResult>(prompt),
+    () => (backend as import('./types').CanCompleteJSON).completeJSON<QNTMGenerationResult>(prompt),
     RETRY_OPTIONS
   )
 
@@ -141,7 +141,7 @@ export async function generateQueryQNTMKeys(
   log.debug('Using LLM backend for query expansion', { backend: backend.name })
 
   const result = await pRetry(
-    () => backend.completeJSON<QNTMGenerationResult>(prompt),
+    () => (backend as import('./types').CanCompleteJSON).completeJSON<QNTMGenerationResult>(prompt),
     RETRY_OPTIONS
   )
 

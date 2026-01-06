@@ -104,7 +104,7 @@ function parseMacOSMemory(): MemoryStats | null {
 
   // Parse "System-wide memory free percentage: XX%"
   const freeMatch = pressureOutput.match(/System-wide memory free percentage:\s*(\d+)%/)
-  const freePercent = freeMatch ? parseInt(freeMatch[1], 10) : null
+  const freePercent = freeMatch?.[1] ? parseInt(freeMatch[1], 10) : null
 
   if (freePercent === null) {
     return parseMacOSVmStat(total)
@@ -118,8 +118,8 @@ function parseMacOSMemory(): MemoryStats | null {
   const swapInMatch = pressureOutput.match(/Swapins:\s*(\d+)/)
   const swapOutMatch = pressureOutput.match(/Swapouts:\s*(\d+)/)
   const hasSwapActivity =
-    (swapInMatch && parseInt(swapInMatch[1], 10) > 0) ||
-    (swapOutMatch && parseInt(swapOutMatch[1], 10) > 0)
+    (swapInMatch?.[1] && parseInt(swapInMatch[1], 10) > 0) ||
+    (swapOutMatch?.[1] && parseInt(swapOutMatch[1], 10) > 0)
 
   return {
     total,
@@ -140,12 +140,12 @@ function parseMacOSVmStat(total: number): MemoryStats | null {
 
   // Parse page size
   const pageSizeMatch = vmStatOutput.match(/page size of (\d+) bytes/)
-  const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
+  const pageSize = pageSizeMatch?.[1] ? parseInt(pageSizeMatch[1], 10) : 16384
 
   // Parse page counts
   const parsePages = (key: string): number => {
     const match = vmStatOutput.match(new RegExp(`${key}:\\s*([\\d.]+)`))
-    return match ? Math.floor(parseFloat(match[1])) : 0
+    return match?.[1] ? Math.floor(parseFloat(match[1])) : 0
   }
 
   const pagesFree = parsePages('Pages free')
@@ -179,7 +179,7 @@ function parseMacOSCPU(): CPUStats | null {
 
   // Format: "{ 1.26 2.13 3.33 }"
   const loadMatch = loadAvgStr.match(/\{\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\}/)
-  if (!loadMatch) return null
+  if (!loadMatch?.[1] || !loadMatch?.[2] || !loadMatch?.[3]) return null
 
   return {
     loadAvg1m: parseFloat(loadMatch[1]),
@@ -198,7 +198,7 @@ function parseLinuxMemory(): MemoryStats | null {
 
   const parseKB = (key: string): number => {
     const match = meminfo.match(new RegExp(`${key}:\\s*(\\d+)\\s*kB`))
-    return match ? parseInt(match[1], 10) * 1024 : 0 // Convert to bytes
+    return match?.[1] ? parseInt(match[1], 10) * 1024 : 0 // Convert to bytes
   }
 
   const total = parseKB('MemTotal')
@@ -227,7 +227,7 @@ function parseLinuxCPU(): CPUStats | null {
 
   // Format: "0.05 0.09 0.08 1/591 1005398"
   const parts = loadavg.split(' ')
-  if (parts.length < 3) return null
+  if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return null
 
   return {
     loadAvg1m: parseFloat(parts[0]),

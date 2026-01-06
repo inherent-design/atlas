@@ -29,7 +29,7 @@ const MCPSearchInputSchema = z.object({
 
 export function registerSearchTool(server: McpServer) {
   // Generate JSON Schema from Zod schema for MCP
-  const inputSchema = zodToJsonSchema(MCPSearchInputSchema, {
+  const inputSchema = zodToJsonSchema(MCPSearchInputSchema as any, {
     $refStrategy: 'none',
     target: 'jsonSchema7',
   })

@@ -77,10 +77,16 @@ export function generateQNTMKey(text: string): string {
   return `atlas_${hash}`
 }
 
-// Generate stable ID for chunk
+// Generate stable ID for chunk (UUID format for Qdrant compatibility)
 export function generateChunkId(filePath: string, chunkIndex: number): string {
   const hash = createHash('md5').update(`${filePath}:${chunkIndex}`).digest('hex')
-  return hash
+  // Format MD5 hash as UUID (8-4-4-4-12 format)
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`
+}
+
+// Generate SHA-256 hash of content (for file tracking)
+export function hashContent(content: string): string {
+  return createHash('sha256').update(content, 'utf-8').digest('hex')
 }
 
 // Payload index definitions for filtered queries
@@ -109,8 +115,10 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
     // Validate dimensions match expected
     const collectionInfo = await backend.getCollectionInfo(name)
     if (collectionInfo.vector_dimensions) {
-      const textVectorDims = collectionInfo.vector_dimensions.text
-      const codeVectorDims = collectionInfo.vector_dimensions.code
+      const dims = collectionInfo.vector_dimensions
+      // Handle both single dimension (number) and multi-vector (Record<string, number>)
+      const textVectorDims = typeof dims === 'number' ? dims : dims.text
+      const codeVectorDims = typeof dims === 'object' ? dims.code : undefined
 
       if (textVectorDims && textVectorDims !== expectedDimensions) {
         const errorMsg = `Collection '${name}' dimension mismatch: collection has ${textVectorDims} dimensions but configured embedding model outputs ${expectedDimensions}.\nEither:\n1. Change embedding.backend in config to match existing collection\n2. Run 'atlas qdrant drop --yes' to recreate collection with new dimensions`
@@ -126,16 +134,17 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
 
       log.debug('Collection dimensions validated', {
         collection: name,
-        dimensions: expectedDimensions
+        dimensions: expectedDimensions,
       })
     }
   } else {
     log.info('Creating collection with production config', {
       collection: name,
-      dimensions: expectedDimensions
+      dimensions: expectedDimensions,
     })
     const collectionConfig = buildCollectionConfig(expectedDimensions)
-    await backend.createCollection(name, collectionConfig)
+    // QdrantBackend accepts both CollectionConfig and Qdrant-specific config
+    await backend.createCollection(name, collectionConfig as any)
     log.info('Collection created', {
       collection: name,
       dimensions: expectedDimensions,
@@ -236,7 +245,7 @@ export function findFiles(dirPath: string, recursive = false): string[] {
         walk(fullPath)
       } else if (entry.isFile()) {
         const ext = extname(entry.name)
-        if (TEXT_FILE_EXTENSIONS.includes(ext)) {
+        if ((TEXT_FILE_EXTENSIONS as readonly string[]).includes(ext)) {
           files.push(fullPath)
         }
       }

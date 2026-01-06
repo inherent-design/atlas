@@ -13,7 +13,10 @@ const CLI_PATH = resolve(__dirname, 'index.ts')
 const ROOT_DIR = resolve(__dirname, '../../..')
 
 // Helper to run CLI command and capture output
-function runCLI(args: string[], options?: { cwd?: string }): { stdout: string; stderr: string; status: number | null } {
+function runCLI(
+  args: string[],
+  options?: { cwd?: string }
+): { stdout: string; stderr: string; status: number | null } {
   const result = spawnSync('bun', ['run', CLI_PATH, ...args], {
     cwd: options?.cwd || ROOT_DIR,
     encoding: 'utf-8',

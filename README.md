@@ -59,11 +59,11 @@ atlas/
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
+| Package                       | Description                                |
+| ----------------------------- | ------------------------------------------ |
 | `@inherent.design/atlas-core` | Core library (embeddings, storage, search) |
-| `@inherent.design/atlas` | CLI |
-| `@inherent.design/atlas-mcp` | MCP server for Claude Code |
+| `@inherent.design/atlas`      | CLI                                        |
+| `@inherent.design/atlas-mcp`  | MCP server for Claude Code                 |
 
 ## Configuration
 
@@ -81,7 +81,7 @@ export default defineConfig({
     'text-embedding': 'voyage:voyage-3-large',
     'code-embedding': 'voyage:voyage-code-3',
     'qntm-generation': 'ollama:ministral-3:3b',
-    'reranking': 'voyage:rerank-2.5',
+    reranking: 'voyage:rerank-2.5',
   },
   qdrant: {
     url: 'http://localhost:6333',

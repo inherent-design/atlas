@@ -62,9 +62,10 @@ describe('generateChunkId', () => {
     expect(id1).not.toBe(id2)
   })
 
-  test('generates valid MD5 hash', () => {
+  test('generates valid UUID format', () => {
     const id = generateChunkId('test.md', 0)
-    expect(id).toMatch(/^[a-f0-9]{32}$/) // MD5 is 32 hex chars
+    // UUID format: 8-4-4-4-12 hex chars with hyphens
+    expect(id).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/)
   })
 })
 

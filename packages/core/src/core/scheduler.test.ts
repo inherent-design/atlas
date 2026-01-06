@@ -37,6 +37,7 @@ describe('PollingScheduler', () => {
 
     test('accepts custom logger', () => {
       const customLog = {
+        trace: vi.fn(() => {}),
         debug: vi.fn(() => {}),
         info: vi.fn(() => {}),
         warn: vi.fn(() => {}),

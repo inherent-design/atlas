@@ -20,6 +20,9 @@ import type {
   PricingInfo,
 } from '../../shared/capabilities'
 
+// Re-export for backend implementations
+export type { EmbeddingCapability, EmbeddingStrategy } from '../../shared/capabilities'
+
 // ============================================
 // Result Types
 // ============================================
@@ -94,8 +97,10 @@ export interface BatchEmbeddingResult {
 /**
  * Embedding backend descriptor.
  * Extends base descriptor with embedding-specific metadata.
+ * Capabilities (embedText, embedCode, etc.) are optional and capability-specific.
  */
-export interface EmbeddingBackend extends BackendDescriptor<EmbeddingCapability> {
+export interface EmbeddingBackend
+  extends BackendDescriptor<EmbeddingCapability>, Partial<CanEmbedText>, Partial<CanEmbedCode> {
   /** Vector dimensions produced by this backend */
   readonly dimensions: number
 
@@ -251,14 +256,30 @@ export interface EmbeddingBackendConfig {
 export const CODE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.py', '.rs', '.go', '.sh'] as const
 
 /**
- * File extensions that should use contextualized embeddings (prose with semantic flow)
+ * File extensions for text-based content (documents, configs, data)
+ * All get chunked and embedded as text.
+ *
+ * Includes:
+ * - Documents: .md, .txt, .rst, .html (prose with semantic flow)
+ * - Configs/Data: .json, .yaml, .yml, .toml, .csv (self-contained)
  */
-export const DOCUMENT_EXTENSIONS = ['.md', '.txt', '.rst', '.html'] as const
+export const TEXT_EXTENSIONS = [
+  '.md',
+  '.txt',
+  '.rst',
+  '.html',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.csv',
+] as const
 
 /**
- * File extensions that should use basic snippet embeddings (self-contained)
+ * Legacy alias for document extensions.
+ * @deprecated Use TEXT_EXTENSIONS directly instead
  */
-export const SNIPPET_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.csv'] as const
+export const DOCUMENT_EXTENSIONS = ['.md', '.txt', '.rst', '.html'] as const
 
 /**
  * File extensions that require multimodal embeddings
@@ -278,6 +299,16 @@ export const MULTIMODAL_MIME_TYPES = [
 
 export type MultimodalMimeType = (typeof MULTIMODAL_MIME_TYPES)[number]
 
+/**
+ * Get all file extensions that Atlas can embed.
+ * Used by FileWatcher to filter watchable files.
+ *
+ * @returns Array of all embeddable file extensions
+ */
+export function getAllEmbeddableExtensions(): string[] {
+  return [...TEXT_EXTENSIONS, ...CODE_EXTENSIONS, ...MEDIA_EXTENSIONS]
+}
+
 // ============================================
 // Content Type Detection
 // ============================================
@@ -285,7 +316,7 @@ export type MultimodalMimeType = (typeof MULTIMODAL_MIME_TYPES)[number]
 /**
  * Content type classification based on file extension
  */
-export type ContentType = 'text' | 'code' | 'mixed'
+export type ContentType = 'text' | 'code' | 'media'
 
 /**
  * Detect content type from file path.
@@ -297,9 +328,8 @@ export function detectContentType(filePath: string): ContentType {
   const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
 
   if (CODE_EXTENSIONS.includes(ext as any)) return 'code'
-  if (DOCUMENT_EXTENSIONS.includes(ext as any)) return 'text'
-  if (SNIPPET_EXTENSIONS.includes(ext as any)) return 'text'
-  if (MEDIA_EXTENSIONS.includes(ext as any)) return 'mixed'
+  if (TEXT_EXTENSIONS.includes(ext as any)) return 'text'
+  if (MEDIA_EXTENSIONS.includes(ext as any)) return 'media'
 
   return 'text' // Default to text for unknown extensions
 }
@@ -316,7 +346,7 @@ export function getRequiredVectors(contentType: ContentType): ('text' | 'code' |
       return ['text', 'code'] // Code files get both text and code vectors
     case 'text':
       return ['text'] // Text/documents get only text vector
-    case 'mixed':
+    case 'media':
       return ['text', 'media'] // Media gets text (from extraction) + media vector
     default:
       return ['text']

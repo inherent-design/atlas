@@ -75,7 +75,7 @@ function getEnvironmentDefaults(): Partial<AtlasConfig> {
       'text-embedding': 'voyage:voyage-3-large',
       'code-embedding': 'voyage:voyage-code-3',
       'contextualized-embedding': 'voyage:voyage-context-3',
-      'reranking': 'voyage:rerank-2.5',
+      reranking: 'voyage:rerank-2.5',
     }
   } else {
     log.debug('VOYAGE_API_KEY not found, using Ollama for embeddings')
@@ -202,6 +202,21 @@ export function getConfig(): AtlasConfig {
     return defaultConfig
   }
   return globalConfig
+}
+
+/**
+ * Get resolved config file path (or null if not found)
+ */
+export function getConfigPath(): string | null {
+  const paths = [join(process.cwd(), 'atlas.config.ts'), join(process.cwd(), 'atlas.config.js')]
+
+  for (const path of paths) {
+    if (existsSync(path)) {
+      return path
+    }
+  }
+
+  return null
 }
 
 /**

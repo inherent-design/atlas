@@ -33,12 +33,7 @@ export type ConsolidationType = z.infer<typeof ConsolidationTypeSchema>
 /**
  * Direction of consolidation relationship
  */
-export const ConsolidationDirectionSchema = z.enum([
-  'forward',
-  'backward',
-  'convergent',
-  'unknown',
-])
+export const ConsolidationDirectionSchema = z.enum(['forward', 'backward', 'convergent', 'unknown'])
 export type ConsolidationDirection = z.infer<typeof ConsolidationDirectionSchema>
 
 /**
@@ -75,12 +70,7 @@ export type CausalRelation = z.infer<typeof CausalRelationSchema>
 /**
  * Inference source for causal relationships
  */
-export const InferredBySchema = z.enum([
-  'consolidator',
-  'explainer',
-  'user',
-  'heuristic',
-])
+export const InferredBySchema = z.enum(['consolidator', 'explainer', 'user', 'heuristic'])
 export type InferredBy = z.infer<typeof InferredBySchema>
 
 /**
@@ -115,15 +105,18 @@ export const SearchOptionsSchema = z.object({
   /** Filter by specific QNTM key */
   qntmKey: z.string().optional(),
   /** Enable reranking with cross-encoder */
-  rerank: z.boolean().default(false),
+  rerank: z.boolean().optional(),
   /** How many candidates to rerank (default: 3x limit) */
   rerankTopK: z.number().int().min(1).max(1000).optional(),
   /** Enable QNTM query expansion (vocabulary bridging) */
-  expandQuery: z.boolean().default(false),
+  expandQuery: z.boolean().optional(),
   /** Filter by consolidation level (0=raw, 1=deduped, 2=topic, 3=principle) */
   consolidationLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
 })
-export type SearchOptions = z.infer<typeof SearchOptionsSchema>
+export type SearchOptions = z.infer<typeof SearchOptionsSchema> & {
+  /** Event emitter function (opt-in, for daemon mode) */
+  emit?: (event: any) => void
+}
 
 /**
  * Single search result
@@ -234,6 +227,14 @@ export const ChunkPayloadSchema = z
     /** Entity that sourced this chunk (user_id, agent_id, etc.) */
     source_entity: z.string().optional(),
 
+    // === Document Split Metadata (for large documents exceeding context window) ===
+    /** Index of sub-document this chunk belongs to (0-based) */
+    split_index: z.number().int().min(0).optional(),
+    /** Total number of sub-documents the original was split into */
+    split_total: z.number().int().min(1).optional(),
+    /** Original chunk index before splitting (for retrieval context) */
+    chunk_index_global: z.number().int().min(0).optional(),
+
     // === Provenance DAG ===
     /** Point IDs this was consolidated from (absorbs old consolidated_from) */
     parents: z.array(z.string()).optional(),
@@ -302,17 +303,20 @@ export const IngestOptionsSchema = z.object({
   /** File or directory paths to ingest */
   paths: z.array(z.string()).min(1, 'At least one path required'),
   /** Recursively process directories */
-  recursive: z.boolean().default(false),
+  recursive: z.boolean().optional(),
   /** Root directory for relative paths */
   rootDir: z.string().optional(),
   /** Enable verbose logging */
-  verbose: z.boolean().default(true),
+  verbose: z.boolean().optional(),
   /** Pre-fetched QNTM keys for reuse */
   existingKeys: z.array(z.string()).optional(),
   /** Disable HNSW during batch ingestion (auto based on file count if undefined) */
   useHNSWToggle: z.boolean().optional(),
 })
-export type IngestOptions = z.infer<typeof IngestOptionsSchema>
+export type IngestOptions = z.infer<typeof IngestOptionsSchema> & {
+  /** Event emitter function (opt-in, for daemon mode) */
+  emit?: (event: any) => void
+}
 
 /**
  * Result of ingestion operation

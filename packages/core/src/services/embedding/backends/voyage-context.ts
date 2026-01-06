@@ -21,7 +21,7 @@ import type {
   ContextualizedEmbeddingResult,
 } from '../types'
 
-const log = createLogger('embedding/voyage-context')
+const log = createLogger('embedding:voyage-context')
 
 // Singleton Voyage client (shared with other Voyage backends)
 function createVoyageClient(): VoyageAIClient {
@@ -50,7 +50,9 @@ const voyageSingleton = createSingleton(createVoyageClient, 'voyage')
  * - Max 16,000 chunks total
  * - Max 120K tokens total
  */
-export class VoyageContextBackend implements EmbeddingBackend, CanEmbedText, CanEmbedContextualized {
+export class VoyageContextBackend
+  implements EmbeddingBackend, CanEmbedText, CanEmbedContextualized
+{
   readonly name = 'voyage:context'
   readonly capabilities: ReadonlySet<EmbeddingCapability> = new Set([
     'text-embedding',
@@ -121,9 +123,7 @@ export class VoyageContextBackend implements EmbeddingBackend, CanEmbedText, Can
       model: this.model,
       strategy: 'snippet',
       dimensions: this.dimensions,
-      usage: response.usage?.totalTokens
-        ? { inputTokens: response.usage.totalTokens }
-        : undefined,
+      usage: response.usage?.totalTokens ? { inputTokens: response.usage.totalTokens } : undefined,
     }
   }
 

@@ -22,7 +22,7 @@ import { VOYAGE_RERANKER_MODELS, formatInstructedQuery } from '../types'
 import type { RerankerCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities'
 import { createLogger } from '../../../shared/logger'
 
-const log = createLogger('reranker/voyage')
+const log = createLogger('reranker:voyage')
 
 /**
  * Get Voyage API key from environment
@@ -170,7 +170,7 @@ export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
         results: data.data.map((item) => ({
           index: item.index,
           score: item.relevance_score,
-          document: item.document ?? documents[item.index],
+          document: item.document ?? documents[item.index]!,
         })),
         model: this.model,
         usage: data.usage

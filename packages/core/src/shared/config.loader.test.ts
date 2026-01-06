@@ -108,7 +108,7 @@ describe('Config Loader', () => {
       const config = await loadConfig()
 
       // Should have defaults from config.schema.ts
-      expect(config.resources?.ollama?.memoryTarget).toBe(0.30)
+      expect(config.resources?.ollama?.memoryTarget).toBe(0.3)
       expect(config.resources?.ollama?.gpuLayers).toBe('auto')
       expect(config.logging?.level).toBe('info')
     })
@@ -173,7 +173,7 @@ describe('Config Loader', () => {
     it('should default to 30% memory target for Ollama', async () => {
       const config = await loadConfig()
 
-      expect(config.resources?.ollama?.memoryTarget).toBe(0.30)
+      expect(config.resources?.ollama?.memoryTarget).toBe(0.3)
     })
 
     it('should default to auto GPU layer detection', async () => {

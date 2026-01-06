@@ -119,8 +119,8 @@ describe('search', () => {
 
     // Should return formatted results
     expect(results).toHaveLength(2)
-    expect(results[0].text).toContain('memory consolidation')
-    expect(results[0].score).toBe(0.95)
+    expect(results[0]?.text).toContain('memory consolidation')
+    expect(results[0]?.score).toBe(0.95)
   })
 
   test('applies limit parameter', async () => {
@@ -129,8 +129,9 @@ describe('search', () => {
       limit: 10,
     })
 
-    const searchCall = mockQdrantSearch.mock.calls[0]
-    expect(searchCall[1].limit).toBe(10)
+    const searchCall = (mockQdrantSearch.mock.calls as any[][])[0]
+    expect(searchCall).toBeDefined()
+    expect(searchCall![1].limit).toBe(10)
   })
 
   test('filters by temporal constraint (since)', async () => {
@@ -139,13 +140,14 @@ describe('search', () => {
       since: '2025-12-01T00:00:00Z',
     })
 
-    const searchCall = mockQdrantSearch.mock.calls[0]
-    const filter = searchCall[1].filter
+    const searchCall = (mockQdrantSearch.mock.calls as any[][])[0]
+    expect(searchCall).toBeDefined()
+    const filter = searchCall![1].filter
 
     expect(filter).toBeDefined()
-    expect(filter.must).toBeDefined()
-    expect(filter.must[0].key).toBe('created_at')
-    expect(filter.must[0].range.gte).toBe('2025-12-01T00:00:00Z')
+    expect(filter!.must).toBeDefined()
+    expect(filter!.must![0].key).toBe('created_at')
+    expect(filter!.must![0].range.gte).toBe('2025-12-01T00:00:00Z')
   })
 
   test('filters by QNTM key', async () => {
@@ -154,12 +156,13 @@ describe('search', () => {
       qntmKey: 'atlas_specific',
     })
 
-    const searchCall = mockQdrantSearch.mock.calls[0]
-    const filter = searchCall[1].filter
+    const searchCall = (mockQdrantSearch.mock.calls as any[][])[0]
+    expect(searchCall).toBeDefined()
+    const filter = searchCall![1].filter
 
     expect(filter).toBeDefined()
-    expect(filter.must).toBeDefined()
-    const qntmFilter = filter.must.find((f: any) => f.key === 'qntm_keys')
+    expect(filter!.must).toBeDefined()
+    const qntmFilter = filter!.must!.find((f: any) => f.key === 'qntm_keys')
     expect(qntmFilter).toBeDefined()
     expect(qntmFilter.match.any).toEqual(['atlas_specific'])
   })
@@ -171,17 +174,19 @@ describe('search', () => {
       qntmKey: 'atlas_specific',
     })
 
-    const searchCall = mockQdrantSearch.mock.calls[0]
-    const filter = searchCall[1].filter
+    const searchCall = (mockQdrantSearch.mock.calls as any[][])[0]
+    expect(searchCall).toBeDefined()
+    const filter = searchCall![1].filter
 
-    expect(filter.must).toHaveLength(2) // Both filters applied
+    expect(filter!.must).toHaveLength(2) // Both filters applied
   })
 
   test('calls backend search with correct parameters', async () => {
     await search({ query: 'test' })
 
-    const searchCall = mockQdrantSearch.mock.calls[0]
-    const params = searchCall[1]
+    const searchCall = (mockQdrantSearch.mock.calls as any[][])[0]
+    expect(searchCall).toBeDefined()
+    const params = searchCall![1]
 
     expect(params.vector).toHaveLength(1024)
     expect(params.limit).toBeGreaterThan(0)
@@ -212,11 +217,12 @@ describe('timeline', () => {
     // Should have called backend.scroll
     expect(mockQdrantScroll).toHaveBeenCalled()
 
-    const scrollCall = mockQdrantScroll.mock.calls[0]
+    const scrollCall = (mockQdrantScroll.mock.calls as any[][])[0]
+    expect(scrollCall).toBeDefined()
 
     // Should have temporal filter
-    expect(scrollCall[1].filter.must[0].key).toBe('created_at')
-    expect(scrollCall[1].filter.must[0].range.gte).toBe('2025-12-01T00:00:00Z')
+    expect((scrollCall![1] as any).filter!.must![0].key).toBe('created_at')
+    expect((scrollCall![1] as any).filter!.must![0].range.gte).toBe('2025-12-01T00:00:00Z')
 
     // Should return results
     expect(results).toHaveLength(2)
@@ -225,8 +231,9 @@ describe('timeline', () => {
   test('applies limit parameter', async () => {
     await timeline('2025-12-01T00:00:00Z', 10)
 
-    const scrollCall = mockQdrantScroll.mock.calls[0]
-    expect(scrollCall[1].limit).toBe(10)
+    const scrollCall = (mockQdrantScroll.mock.calls as any[][])[0]
+    expect(scrollCall).toBeDefined()
+    expect(scrollCall![1].limit).toBe(10)
   })
 
   test('returns results with score 1.0 (no similarity)', async () => {
@@ -241,8 +248,8 @@ describe('timeline', () => {
     const results = await timeline('2025-12-01T00:00:00Z')
 
     // Results should be in order (assuming mock returns them ordered)
-    const date1 = new Date(results[0].created_at).getTime()
-    const date2 = new Date(results[1].created_at).getTime()
+    const date1 = new Date(results[0]!.created_at).getTime()
+    const date2 = new Date(results[1]!.created_at).getTime()
     expect(date1).toBeLessThan(date2)
   })
 })

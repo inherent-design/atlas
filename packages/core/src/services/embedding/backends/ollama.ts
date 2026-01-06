@@ -12,14 +12,10 @@
 
 import { OLLAMA_URL } from '../../../shared/config'
 import { createLogger } from '../../../shared/logger'
-import type {
-  EmbeddingBackend,
-  CanEmbedText,
-  BatchEmbeddingResult,
-} from '../types'
+import type { EmbeddingBackend, CanEmbedText, BatchEmbeddingResult } from '../types'
 import type { EmbeddingCapability, LatencyClass } from '../../../shared/capabilities'
 
-const log = createLogger('embedding/ollama')
+const log = createLogger('embedding:ollama')
 
 /**
  * Ollama embedding model dimension mapping
@@ -250,12 +246,13 @@ export class OllamaEmbeddingBackend implements EmbeddingBackend, CanEmbedText {
       model: this.model,
       strategy: 'snippet',
       dimensions,
-      usage: totalTokens > 0
-        ? {
-            inputTokens: totalTokens,
-            durationMs: totalDurationNs > 0 ? Math.round(totalDurationNs / 1_000_000) : undefined,
-          }
-        : undefined,
+      usage:
+        totalTokens > 0
+          ? {
+              inputTokens: totalTokens,
+              durationMs: totalDurationNs > 0 ? Math.round(totalDurationNs / 1_000_000) : undefined,
+            }
+          : undefined,
     }
   }
 }

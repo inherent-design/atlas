@@ -3,7 +3,7 @@
     "atlas-mcp": "./src/index.ts"
   },
   "dependencies": {
-    "@inherent.design/atlas-core": "^0.1.0",
+    "@inherent.design/atlas-core": "^0.0.0-alpha.1",
     "@modelcontextprotocol/sdk": "^1.25.1",
     "zod-to-json-schema": "^3.25.1"
   },

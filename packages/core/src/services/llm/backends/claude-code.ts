@@ -10,16 +10,18 @@
 
 import type {
   LLMBackend,
-  LLMCapability,
   CanComplete,
   CanCompleteJSON,
   CompletionResult,
   CompletionOptions,
 } from '../types'
+import type { LLMCapability } from '../../../shared/capabilities'
 import type { LatencyClass } from '../../../shared/capabilities'
 import { createLogger, startTimer } from '../../../shared/logger'
+import { ClaudeCodeAdapter } from '../adapters/claude-code'
+import type { UnifiedRequest, UnifiedResponse } from '../message'
 
-const log = createLogger('llm/claude-code')
+const log = createLogger('llm:claude-code')
 
 /**
  * Claude Code backend using `claude -p` CLI.
@@ -32,6 +34,9 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
   readonly maxOutputTokens = 64_000
   readonly latency: LatencyClass = 'fast'
   readonly capabilities: ReadonlySet<LLMCapability>
+
+  /** Message adapter for unified format conversion */
+  readonly adapter = new ClaudeCodeAdapter()
 
   constructor(model: string = 'haiku') {
     this.modelId = model
@@ -79,7 +84,7 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
    * Preserves exact behavior from providers.ts lines 38-109.
    */
   async complete(prompt: string, options?: CompletionOptions): Promise<CompletionResult> {
-    const model = options?.model ?? this.modelId
+    const model = this.modelId
     const endTimer = startTimer(`claude -p --model ${model}`)
 
     log.trace('Claude Code completion request', {
@@ -170,6 +175,75 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
         error: (error as Error).message,
       })
       throw new Error(`Failed to parse JSON response: ${error}`)
+    }
+  }
+
+  /**
+   * Generate a completion using unified message format
+   * Uses the message adapter for format conversion
+   */
+  async completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse> {
+    const model = request.model ?? this.modelId
+    const endTimer = startTimer(`claude -p --model ${model} (unified)`)
+
+    log.debug('Claude Code unified message request', {
+      model,
+      messageCount: request.messages.length,
+    })
+
+    try {
+      // Convert to prompt string (extracts last user message)
+      const prompt = this.adapter.toNativeRequest(request)
+
+      const args = [
+        'claude',
+        '-p',
+        '--model',
+        model,
+        '--output-format',
+        'json',
+        '--tools',
+        '""',
+        '--strict-mcp-config',
+        '--max-turns',
+        '1',
+      ]
+
+      log.trace('Claude CLI process spawned (unified)', { args })
+
+      const process = Bun.spawn(args, {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+
+      process.stdin.write(prompt)
+      process.stdin.end()
+
+      const output = await new Response(process.stdout).text()
+      const stderr = await new Response(process.stderr).text()
+
+      log.trace('Claude CLI raw output (unified)', {
+        outputLength: output.length,
+        stderrLength: stderr.length,
+      })
+
+      // Parse raw output using adapter
+      const parsedResponse = this.adapter.parseRawOutput(output)
+
+      // Convert to unified response
+      const unifiedResponse = this.adapter.fromNativeResponse(parsedResponse, model)
+
+      log.debug('Claude Code unified message response', {
+        model: unifiedResponse.model,
+        stopReason: unifiedResponse.stopReason,
+      })
+
+      endTimer()
+      return unifiedResponse
+    } catch (error) {
+      log.error('Claude Code unified message completion failed', error as Error)
+      throw new Error(`Claude Code completion failed: ${error}`)
     }
   }
 }

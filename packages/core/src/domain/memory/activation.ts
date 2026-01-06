@@ -18,7 +18,7 @@ import { getWorkingMemory } from './working'
 import type { ConversationTurn } from './working'
 import type { SearchResult } from '../../shared/types'
 
-const log = createLogger('memory/activation')
+const log = createLogger('memory:activation')
 
 export interface ActivationOptions {
   query: string
@@ -59,13 +59,7 @@ const DEFAULT_WEIGHTS = { L0: 0.4, L1: 0.3, L2: 0.2, L3: 0.1 }
  * @returns Activated memories from all levels
  */
 export async function activate(options: ActivationOptions): Promise<ActivatedMemory> {
-  const {
-    query,
-    agentId,
-    sessionId,
-    limit = 20,
-    levelWeights = DEFAULT_WEIGHTS,
-  } = options
+  const { query, agentId, sessionId, limit = 20, levelWeights = DEFAULT_WEIGHTS } = options
 
   log.info('Activating memory', { query, agentId, sessionId, limit })
 
@@ -97,10 +91,10 @@ export async function activate(options: ActivationOptions): Promise<ActivatedMem
 
   // 4. Multi-level search (parallel)
   const [L0, L1, L2, L3] = await Promise.all([
-    search({ query, limit: l0Limit, consolidationLevel: 0 }),
-    search({ query, limit: l1Limit, consolidationLevel: 1 }),
-    search({ query, limit: l2Limit, consolidationLevel: 2 }),
-    search({ query, limit: l3Limit, consolidationLevel: 3 }),
+    search({ query, limit: l0Limit, consolidationLevel: 0, rerank: false, expandQuery: false }),
+    search({ query, limit: l1Limit, consolidationLevel: 1, rerank: false, expandQuery: false }),
+    search({ query, limit: l2Limit, consolidationLevel: 2, rerank: false, expandQuery: false }),
+    search({ query, limit: l3Limit, consolidationLevel: 3, rerank: false, expandQuery: false }),
   ])
 
   const totalResults = L0.length + L1.length + L2.length + L3.length

@@ -15,11 +15,7 @@
  */
 
 import { getQdrantClient } from './client'
-import {
-  QDRANT_COLLECTION_NAME,
-  HNSW_M_DEFAULT,
-  HNSW_M_DISABLED,
-} from '../../shared/config'
+import { QDRANT_COLLECTION_NAME, HNSW_M_DEFAULT, HNSW_M_DISABLED } from '../../shared/config'
 import { createLogger } from '../../shared/logger'
 
 const log = createLogger('hnsw')

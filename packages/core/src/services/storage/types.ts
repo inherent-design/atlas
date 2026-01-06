@@ -19,9 +19,9 @@ export type StorageCapability = 'vector-storage'
 
 /**
  * Storage backend descriptor.
- * Extends base descriptor with storage-specific metadata.
+ * Extends base descriptor with storage-specific metadata and capabilities.
  */
-export interface StorageBackend extends BackendDescriptor<StorageCapability> {
+export interface StorageBackend extends BackendDescriptor<StorageCapability>, CanStoreVectors {
   /** Vector dimensions supported by this backend */
   readonly dimensions: number
   /** Distance metric used */
@@ -123,13 +123,26 @@ export interface StorageFilter {
 
 /**
  * Individual filter condition
+ * Maps to Qdrant filter conditions:
+ * - match.value → MatchValue
+ * - match.any → MatchAny
+ * - match.except → MatchExcept (excludes listed values)
+ * - range → Range condition
+ * - has_id → HasIdCondition
+ * - is_null → IsNullCondition (true = field is null)
+ * - is_empty → IsEmptyCondition (true = field is null or empty)
  */
 export type FilterCondition =
   | { key: string; match: { value: string | number | boolean } }
   | { key: string; match: { any: string[] } }
-  | { key: string; match: { except: (string | null)[] } }
-  | { key: string; range: { gte?: string | number; lte?: string | number; lt?: number; gt?: number } }
+  | { key: string; match: { except: string[] } } // Note: null not valid here, use is_null instead
+  | {
+      key: string
+      range: { gte?: string | number; lte?: string | number; lt?: number; gt?: number }
+    }
   | { has_id: string[] }
+  | { is_null: string } // Field name - condition passes if field IS null
+  | { is_empty: string } // Field name - condition passes if field IS null or empty array
 
 // ============================================
 // Scroll Types
@@ -273,9 +286,13 @@ export interface CanStoreVectors {
    * Get collection information (point count, status, etc.)
    *
    * @param collection - Collection name
-   * @returns Collection info including points_count
+   * @returns Collection info including points_count, vector_dimensions, and segments_count
    */
-  getCollectionInfo(collection: string): Promise<{ points_count: number }>
+  getCollectionInfo(collection: string): Promise<{
+    points_count: number
+    vector_dimensions?: number | Record<string, number>
+    segments_count?: number
+  }>
 
   /**
    * Create a payload index for filtered queries (Qdrant-specific).
@@ -286,6 +303,9 @@ export interface CanStoreVectors {
    */
   createPayloadIndex?(
     collection: string,
-    config: { field_name: string; field_schema: 'keyword' | 'integer' | 'float' | 'bool' | 'datetime' }
+    config: {
+      field_name: string
+      field_schema: 'keyword' | 'integer' | 'float' | 'bool' | 'datetime'
+    }
   ): Promise<void>
 }

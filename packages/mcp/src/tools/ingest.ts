@@ -23,7 +23,7 @@ const MCPIngestInputSchema = z.object({
 
 export function registerIngestTool(server: McpServer) {
   // Generate JSON Schema from Zod schema for MCP
-  const inputSchema = zodToJsonSchema(MCPIngestInputSchema, {
+  const inputSchema = zodToJsonSchema(MCPIngestInputSchema as any, {
     $refStrategy: 'none',
     target: 'jsonSchema7',
   })

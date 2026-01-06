@@ -23,7 +23,7 @@ const MCPTimelineInputSchema = z.object({
 
 export function registerTimelineTool(server: McpServer) {
   // Generate JSON Schema from Zod schema for MCP
-  const inputSchema = zodToJsonSchema(MCPTimelineInputSchema, {
+  const inputSchema = zodToJsonSchema(MCPTimelineInputSchema as any, {
     $refStrategy: 'none',
     target: 'jsonSchema7',
   })

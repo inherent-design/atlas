@@ -1,0 +1,31 @@
+{
+  "dependencies": {
+    "@inherent.design/atlas-core": "^0.0.0-alpha.1"
+  },
+  "description": "Claude Code plugin for Atlas semantic memory",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": ">=1.2.15"
+  },
+  "files": [
+    ".claude-plugin",
+    "hooks",
+    "scripts"
+  ],
+  "module": "index.ts",
+  "name": "@inherent.design/atlas-claude-code",
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "type": "module",
+  "version": "0.0.0-alpha.1"
+}

@@ -5,6 +5,7 @@
 import { BackendRegistry } from '../../shared/registry'
 import { VoyageSnippetBackend, VoyageCodeBackend } from './backends/voyage'
 import { VoyageContextBackend } from './backends/voyage-context'
+import { VoyageMultimodalBackend } from './backends/voyage-multimodal'
 import { OllamaEmbeddingBackend, getOllamaDimensions } from './backends/ollama'
 import { getConfig } from '../../shared/config.loader'
 import { parseBackendSpecifier } from '../../shared/config.schema'
@@ -44,12 +45,15 @@ export function initializeEmbeddingBackends(): void {
 
   const textEmbedding = (config.backends?.['text-embedding'] || 'voyage:voyage-3-large') as string
   const codeEmbedding = (config.backends?.['code-embedding'] || 'voyage:voyage-code-3') as string
-  const contextEmbedding = (config.backends?.['contextualized-embedding'] || 'voyage:voyage-context-3') as string
+  const contextEmbedding = (config.backends?.['contextualized-embedding'] ||
+    'voyage:voyage-context-3') as string
+  const multimodalEmbedding = (config.backends?.['multimodal-embedding'] || 'voyage:voyage-multimodal-3') as string
 
   log.debug('Initializing embedding backends', {
     textEmbedding,
     codeEmbedding,
     contextEmbedding,
+    multimodalEmbedding,
   })
 
   // Register embedding backends based on config
@@ -66,6 +70,10 @@ export function initializeEmbeddingBackends(): void {
     embeddingRegistry.register(new VoyageContextBackend())
   }
 
+  if (parseBackendSpecifier(multimodalEmbedding).provider === 'voyage') {
+    embeddingRegistry.register(new VoyageMultimodalBackend())
+  }
+
   // Ollama backends (fallback when VOYAGE_API_KEY not present)
   if (parseBackendSpecifier(textEmbedding).provider === 'ollama') {
     const model = parseBackendSpecifier(textEmbedding).model || 'nomic-embed-text'
@@ -76,7 +84,7 @@ export function initializeEmbeddingBackends(): void {
   initialized = true
 
   log.debug('Embedding backends initialized', {
-    backends: embeddingRegistry.getAll().map(b => b.name),
+    backends: embeddingRegistry.getAll().map((b) => b.name),
   })
 }
 

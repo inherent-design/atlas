@@ -23,7 +23,11 @@ export class AdaptiveConcurrencyController {
   private minWorkers: number
   private maxWorkers: number
   private scheduler: PollingScheduler
-  private lastLoggedState: { activeWorkers: number; pendingTasks: number; concurrency: number } | null = null
+  private lastLoggedState: {
+    activeWorkers: number
+    pendingTasks: number
+    concurrency: number
+  } | null = null
 
   constructor(initialConcurrency: number, min = 1, max = 10) {
     this.currentConcurrency = Math.max(min, Math.min(initialConcurrency, max))
@@ -100,7 +104,8 @@ export class AdaptiveConcurrencyController {
 
     // Only log when state changes or when there's actual work
     const hasWork = state.activeWorkers > 0 || state.pendingTasks > 0
-    const stateChanged = !this.lastLoggedState ||
+    const stateChanged =
+      !this.lastLoggedState ||
       this.lastLoggedState.activeWorkers !== state.activeWorkers ||
       this.lastLoggedState.pendingTasks !== state.pendingTasks ||
       this.lastLoggedState.concurrency !== state.currentConcurrency

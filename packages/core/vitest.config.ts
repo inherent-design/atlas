@@ -8,6 +8,8 @@ export default defineConfig({
       bun: fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
       // Mock bun-webgpu (GPU detection not needed in tests)
       'bun-webgpu': fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
+      // Mock bun:sqlite using better-sqlite3 (for test compatibility)
+      'bun:sqlite': fileURLToPath(new URL('./test-bun-sqlite-shim.ts', import.meta.url)),
     },
   },
   test: {
@@ -26,9 +28,9 @@ export default defineConfig({
     // Global APIs (describe, test, expect, vi) without imports
     globals: true,
 
-    // Test file patterns
+    // Test file patterns (unit tests only)
     include: ['src/**/*.test.ts'],
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', 'src/**/*.e2e.test.ts', 'src/__tests__/e2e/**'],
 
     // Timeouts
     testTimeout: 10000,

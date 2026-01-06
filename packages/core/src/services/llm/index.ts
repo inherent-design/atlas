@@ -80,13 +80,17 @@ export function initializeLLMBackends(): void {
   }
 
   // Always register Ollama backends (local, commonly used)
-  const ollamaModel = (config.backends?.['text-completion'] || 'ollama:ministral-3:3b').split(':').slice(1).join(':') || 'ministral-3:3b'
+  const ollamaModel =
+    (config.backends?.['text-completion'] || 'ollama:ministral-3:3b')
+      .split(':')
+      .slice(1)
+      .join(':') || 'ministral-3:3b'
   llmRegistry.register(new OllamaLLMBackend(ollamaModel))
 
   initialized = true
 
   log.debug('LLM backends initialized', {
-    backends: llmRegistry.getAll().map(b => b.name),
+    backends: llmRegistry.getAll().map((b) => b.name),
     capabilities: llmRegistry.getCapabilities(),
   })
 }
@@ -152,7 +156,7 @@ export type { CompletionResult } from './types'
  * Used for backward compatibility with QNTM code.
  * New code should use backend registry directly.
  */
-export type LLMProvider = 'anthropic' | 'ollama'
+export type LLMProvider = 'anthropic' | 'claude-code' | 'ollama' | 'openai' | 'voyage'
 
 export interface LLMConfig {
   provider: LLMProvider

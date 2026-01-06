@@ -38,6 +38,8 @@ storageRegistry.register(
  * @param capability - Storage capability to look for
  * @returns Storage backend or undefined
  */
-export function getStorageBackend(capability: 'vector-storage' = 'vector-storage'): StorageBackend | undefined {
+export function getStorageBackend(
+  capability: 'vector-storage' = 'vector-storage'
+): StorageBackend | undefined {
   return storageRegistry.getFor(capability)
 }

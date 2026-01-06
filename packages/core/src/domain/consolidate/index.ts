@@ -13,7 +13,7 @@
 
 import { getStorageBackend } from '../../services/storage'
 import { getEmbeddingBackend } from '../../services/embedding'
-import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from '../../shared/config'
+import { getCollectionName, VOYAGE_MODEL } from '../../shared/config'
 import { getConfig } from '../../shared/config.loader'
 import { getLLMBackendFor } from '../../services/llm'
 import { buildConsolidationPrompt } from '../../services/llm/prompts'
@@ -27,6 +27,7 @@ export interface ConsolidateConfig {
   dryRun?: boolean
   threshold?: number // Similarity threshold (0-1)
   limit?: number // Max candidates to process
+  emit?: (event: any) => void // Event emitter (opt-in, for daemon mode)
 }
 
 export interface ConsolidateCandidate {
@@ -83,7 +84,10 @@ async function classifyConsolidation(
   )
 
   try {
-    const result = await backend.completeJSON<ConsolidationClassification>(prompt)
+    // Type assertion: we verified completeJSON exists
+    const result = await (
+      backend as { completeJSON<T>(prompt: string): Promise<T> }
+    ).completeJSON<ConsolidationClassification>(prompt)
     log.debug('Consolidation classified', {
       backend: backend.name,
       type: result.type,
@@ -127,7 +131,7 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
   const SCROLL_LIMIT = 50
 
   do {
-    const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
+    const result = await storage.scroll(getCollectionName(), {
       limit: SCROLL_LIMIT,
       offset,
       withPayload: true,
@@ -143,7 +147,7 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
       if (!textVector || payload.consolidated) continue
 
       // Search for similar points
-      const similar = await storage.search(QDRANT_COLLECTION_NAME, {
+      const similar = await storage.search(getCollectionName(), {
         vectorName: 'text',
         vector: textVector,
         limit: 5, // Top 5 similar
@@ -202,7 +206,8 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
  * 4. Mark other chunk as consolidated (soft delete)
  */
 async function performConsolidation(
-  candidates: ConsolidateCandidate[]
+  candidates: ConsolidateCandidate[],
+  emit?: (event: any) => void
 ): Promise<{ consolidated: number; deleted: number }> {
   const endTimer = startTimer('performConsolidation')
   const storage = getStorageBackend()
@@ -217,7 +222,10 @@ async function performConsolidation(
   for (const candidate of candidates) {
     try {
       // Fetch both points
-      const points = await storage.retrieve(QDRANT_COLLECTION_NAME, [candidate.id, candidate.pair_id])
+      const points = await storage.retrieve(getCollectionName(), [
+        candidate.id,
+        candidate.pair_id,
+      ])
 
       if (points.length !== 2) {
         log.warn('Could not fetch both points for consolidation', {
@@ -228,8 +236,8 @@ async function performConsolidation(
       }
 
       const [point1, point2] = points
-      const payload1 = point1.payload as ChunkPayload
-      const payload2 = point2.payload as ChunkPayload
+      const payload1 = point1!.payload as ChunkPayload
+      const payload2 = point2!.payload as ChunkPayload
 
       // Classify the relationship using LLM
       const classification = await classifyConsolidation(payload1, payload2)
@@ -256,7 +264,9 @@ async function performConsolidation(
       // Merge occurrences (timestamps array)
       const primaryOccurrences = primaryPayload.occurrences || [primaryPayload.created_at]
       const secondaryOccurrences = secondaryPayload.occurrences || [secondaryPayload.created_at]
-      const mergedOccurrences = [...new Set([...primaryOccurrences, ...secondaryOccurrences])].sort()
+      const mergedOccurrences = [
+        ...new Set([...primaryOccurrences, ...secondaryOccurrences]),
+      ].sort()
 
       // Update primary with consolidation metadata
       const updatedPayload: ChunkPayload = {
@@ -264,19 +274,19 @@ async function performConsolidation(
         qntm_keys: mergedKeys,
         consolidation_level: Math.max(primaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3, // At least level 1 after consolidation
         occurrences: mergedOccurrences, // Array of ISO timestamps
-        parents: [...(primaryPayload.parents || []), secondary.id as string], // Absorbs consolidated_from
+        parents: [...(primaryPayload.parents || []), secondary!.id as string], // Absorbs consolidated_from
         consolidation_type: classification.type,
         consolidation_direction: classification.direction,
         consolidation_reasoning: classification.reasoning,
       }
 
       // Update primary point
-      await storage.setPayload(QDRANT_COLLECTION_NAME, [primary.id as string], updatedPayload)
+      await storage.setPayload(getCollectionName(), [primary!.id as string], updatedPayload)
 
       // Mark secondary as superseded (soft delete with provenance)
-      await storage.setPayload(QDRANT_COLLECTION_NAME, [secondary.id as string], {
+      await storage.setPayload(getCollectionName(), [secondary!.id as string], {
         consolidation_level: Math.max(secondaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3,
-        superseded_by: primary.id as string,
+        superseded_by: primary!.id as string,
         deletion_eligible: true,
         deletion_marked_at: new Date().toISOString(),
       })
@@ -284,9 +294,19 @@ async function performConsolidation(
       consolidated++
       deleted++
 
+      // Emit consolidate.pair.merged event
+      emit?.({
+        type: 'consolidate.pair.merged',
+        data: {
+          primary: primary!.id as string,
+          secondary: secondary!.id as string,
+          type: classification.type,
+        },
+      })
+
       log.debug('Consolidated pair', {
-        primary: primary.id,
-        secondary: secondary.id,
+        primary: primary!.id,
+        secondary: secondary!.id,
         type: classification.type,
         mergedKeys: mergedKeys.length,
       })
@@ -310,41 +330,76 @@ export async function consolidate(config: ConsolidateConfig): Promise<Consolidat
   const atlasConfig = getConfig()
   const defaultThreshold = atlasConfig.consolidation?.similarityThreshold ?? 0.95
 
-  const { dryRun = false, threshold = defaultThreshold, limit = Infinity } = config
+  const { dryRun = false, threshold = defaultThreshold, limit = Infinity, emit } = config
   const endTimer = startTimer('consolidate')
+  const startTime = Date.now()
 
   log.info('Starting consolidation', { dryRun, threshold, limit })
 
-  // Require collection to exist - fail if not (don't auto-create)
-  const { requireCollection } = await import('../../shared/utils')
-  await requireCollection(QDRANT_COLLECTION_NAME)
+  // Emit consolidate.triggered event
+  emit?.({
+    type: 'consolidate.triggered',
+    data: {
+      reason: 'manual', // Could be 'threshold' if triggered by watchdog
+      l0Count: 0, // Would need to query this from Qdrant if needed
+    },
+  })
 
-  // Find candidates
-  const candidates = await findCandidates(threshold, limit)
+  try {
+    // Require collection to exist - fail if not (don't auto-create)
+    const { requireCollection } = await import('../../shared/utils')
+    await requireCollection(getCollectionName())
 
-  if (dryRun) {
+    // Find candidates
+    const candidates = await findCandidates(threshold, limit)
+
+    if (dryRun) {
+      endTimer()
+      return {
+        candidatesFound: candidates.length,
+        consolidated: 0,
+        deleted: 0,
+        candidates,
+      }
+    }
+
+    // Perform consolidation (pass emit function)
+    const { consolidated, deleted } = await performConsolidation(candidates, emit)
+
+    log.info('Consolidation complete', {
+      candidatesFound: candidates.length,
+      consolidated,
+      deleted,
+    })
+
+    // Emit consolidate.completed event
+    emit?.({
+      type: 'consolidate.completed',
+      data: {
+        merged: consolidated,
+        deleted,
+        took: Date.now() - startTime,
+      },
+    })
+
     endTimer()
     return {
       candidatesFound: candidates.length,
-      consolidated: 0,
-      deleted: 0,
-      candidates,
+      consolidated,
+      deleted,
     }
-  }
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error))
 
-  // Perform consolidation
-  const { consolidated, deleted } = await performConsolidation(candidates)
+    // Emit consolidate.error event
+    emit?.({
+      type: 'consolidate.error',
+      data: {
+        error: err.message,
+        phase: 'find', // Could be 'find', 'classify', or 'merge'
+      },
+    })
 
-  log.info('Consolidation complete', {
-    candidatesFound: candidates.length,
-    consolidated,
-    deleted,
-  })
-
-  endTimer()
-  return {
-    candidatesFound: candidates.length,
-    consolidated,
-    deleted,
+    throw error
   }
 }

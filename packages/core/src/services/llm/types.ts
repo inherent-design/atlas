@@ -9,7 +9,12 @@
  * - OllamaLLMBackend (ministral, llama, etc.): text-completion, json-completion
  */
 
-import type { BackendDescriptor, LLMCapability, LatencyClass, PricingInfo } from '../../shared/capabilities'
+import type {
+  BackendDescriptor,
+  LLMCapability,
+  LatencyClass,
+  PricingInfo,
+} from '../../shared/capabilities'
 
 // ============================================
 // Result Types
@@ -376,7 +381,13 @@ export const CLAUDE_MODELS = {
     pricing: { input: 0.25, output: 1.25 },
     latency: 'fastest' as const,
     knowledgeCutoff: '2023-08',
-    capabilities: new Set<LLMCapability>(['text-completion', 'json-completion', 'vision', 'tool-use', 'streaming']),
+    capabilities: new Set<LLMCapability>([
+      'text-completion',
+      'json-completion',
+      'vision',
+      'tool-use',
+      'streaming',
+    ]),
   },
 } as const
 
@@ -464,12 +475,7 @@ export function mapOllamaCapabilities(ollamaCaps: OllamaCapability[]): Set<LLMCa
 /**
  * Models known to support extended thinking via `think` parameter
  */
-export const OLLAMA_THINKING_MODELS = [
-  'qwen3',
-  'deepseek-r1',
-  'deepseek-v3',
-  'gpt-oss',
-] as const
+export const OLLAMA_THINKING_MODELS = ['qwen3', 'deepseek-r1', 'deepseek-v3', 'gpt-oss'] as const
 
 /**
  * Check if an Ollama model supports thinking
@@ -486,7 +492,7 @@ export function ollamaSupportsThinking(modelName: string): boolean {
  * NOT exhaustive - Ollama models are discovered dynamically via /api/tags.
  */
 export const OLLAMA_EMBEDDING_DIMENSIONS: Record<string, number> = {
-  'embeddinggemma': 768,
+  embeddinggemma: 768,
   'qwen3-embedding': 1024,
   'all-minilm': 384,
   'nomic-embed-text': 768,

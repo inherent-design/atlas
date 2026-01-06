@@ -9,12 +9,12 @@
  * Specificity: exact match > more segments > glob patterns
  *
  * Usage:
- *   const log = createLogger('qntm/providers')
+ *   const log = createLogger('qntm:providers')
  *   log.debug('message', { key: 'value' })
  *
  * Examples:
- *   LOG_MODULES="qntm/providers:error,qntm/*:debug,watchdog:debug"
- *     -> qntm/providers at error, other qntm/* at debug, watchdog at debug
+ *   LOG_MODULES="qntm:providers:error,qntm:*:debug,watchdog:debug"
+ *     -> qntm:providers at error, other qntm:* at debug, watchdog at debug
  *   LOG_MODULES="*:trace"
  *     -> trace for all modules
  *   LOG_LEVEL=warn LOG_MODULES="ingest:debug"
@@ -30,13 +30,13 @@ const IS_TEST =
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 // Level ordering for comparison
-const LEVELS: Record<string, number> = {
+const LEVELS = {
   trace: 10,
   debug: 20,
   info: 30,
   warn: 40,
   error: 50,
-}
+} as const
 
 type LogLevel = keyof typeof LEVELS
 
@@ -97,7 +97,9 @@ function parseLogModules(config: string | undefined): LogRule[] {
       } else {
         pattern = rule.slice(0, colonIdx)
         const levelStr = rule.slice(colonIdx + 1).toLowerCase()
-        level = (LEVELS[levelStr] !== undefined ? levelStr : 'debug') as LogLevel
+        level = (
+          LEVELS[levelStr as keyof typeof LEVELS] !== undefined ? levelStr : 'debug'
+        ) as LogLevel
       }
 
       return {

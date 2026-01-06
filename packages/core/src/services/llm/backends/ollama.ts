@@ -22,8 +22,10 @@ import { mapOllamaCapabilities, ollamaSupportsThinking } from '../types'
 import type { LLMCapability, LatencyClass } from '../../../shared/capabilities'
 import { createLogger } from '../../../shared/logger'
 import { OLLAMA_URL } from '../../../shared/config'
+import { OllamaAdapter } from '../adapters/ollama'
+import type { UnifiedRequest, UnifiedResponse } from '../message'
 
-const log = createLogger('llm/ollama')
+const log = createLogger('llm:ollama')
 
 /**
  * Ollama backend with dynamic capability discovery.
@@ -35,6 +37,9 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
   readonly maxOutputTokens: number
   readonly latency: LatencyClass
   readonly capabilities: ReadonlySet<LLMCapability>
+
+  /** Message adapter for unified format conversion */
+  readonly adapter = new OllamaAdapter()
 
   private host: string
   private discovered: boolean = false
@@ -386,6 +391,57 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
     } catch (error) {
       log.error('Failed to pull model', { model: this.modelId, error })
       return false
+    }
+  }
+
+  /**
+   * Generate a completion using unified message format
+   * Uses the message adapter for format conversion
+   */
+  async completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse> {
+    // Ensure capabilities are discovered
+    if (!this.discovered) {
+      await this.discover()
+    }
+
+    log.debug('Ollama unified message request', {
+      model: request.model ?? this.modelId,
+      messageCount: request.messages.length,
+    })
+
+    try {
+      // Convert to native Ollama format
+      const nativeRequest = this.adapter.toNativeRequest({
+        ...request,
+        model: request.model ?? this.modelId,
+      })
+
+      // Call Ollama chat API
+      const response = await fetch(`${this.host}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nativeRequest),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`)
+      }
+
+      const data = (await response.json()) as import('../adapters/ollama').OllamaChatResponse
+
+      // Convert response to unified format
+      const unifiedResponse = this.adapter.fromNativeResponse(data)
+
+      log.debug('Ollama unified message response', {
+        model: unifiedResponse.model,
+        stopReason: unifiedResponse.stopReason,
+        usage: unifiedResponse.usage,
+      })
+
+      return unifiedResponse
+    } catch (error) {
+      log.error('Ollama unified message completion failed', error as Error)
+      throw new Error(`Ollama completion failed: ${(error as Error).message}`)
     }
   }
 }

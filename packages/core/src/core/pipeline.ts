@@ -31,8 +31,10 @@ export async function* parallel<T, R>(
   source: AsyncIterable<T>,
   fn: (item: T) => Promise<R>,
   concurrency = 4
-): AsyncGenerator<R> {
-  yield* pMapIterable(source, fn, { concurrency })
+): AsyncGenerator<Awaited<R>> {
+  for await (const result of pMapIterable(source, fn, { concurrency })) {
+    yield result as Awaited<R>
+  }
 }
 
 /**
@@ -80,7 +82,7 @@ export async function* batch<T>(
     if (timeoutHandle) {
       clearTimeout(timeoutHandle)
     }
-    timeoutPromise = new Promise(resolve => {
+    timeoutPromise = new Promise<'timeout'>((resolve) => {
       timeoutHandle = setTimeout(() => resolve('timeout'), timeoutMs)
     })
   }
@@ -94,8 +96,13 @@ export async function* batch<T>(
 
       // Race between next item and timeout
       const next = iterator.next()
-      const result = timeoutPromise
-        ? await Promise.race([next, timeoutPromise.then(() => ({ done: false, timeout: true }))])
+      const result: IteratorResult<T> | { done: false; timeout: true } = timeoutPromise
+        ? await Promise.race([
+            next,
+            (timeoutPromise as Promise<'timeout'>).then(
+              () => ({ done: false as const, timeout: true as const }) as const
+            ),
+          ])
         : await next
 
       // Timeout expired - flush buffer

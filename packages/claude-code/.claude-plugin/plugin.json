@@ -1,0 +1,9 @@
+{
+  "author": {
+    "name": "inherent.design",
+    "url": "https://atlas.inherent.design"
+  },
+  "description": "Persistent semantic memory for Claude Code sessions",
+  "name": "atlas",
+  "version": "0.0.0-alpha.1"
+}

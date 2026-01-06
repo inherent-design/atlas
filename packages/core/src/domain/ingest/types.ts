@@ -19,7 +19,13 @@ export interface ChunkWithContext {
     fileType: string
     chunkIndex: number
     totalChunks: number
-    contentType: 'text' | 'code' | 'mixed'
+    contentType: 'text' | 'code' | 'media'
+    // All chunks from this file (for contextualized embedding)
+    allChunks?: string[]
+    // Split metadata (for large documents exceeding context window)
+    splitIndex?: number // Which sub-document (0-based)
+    splitTotal?: number // Total sub-documents
+    chunkIndexGlobal?: number // Original position before splitting
   }
 }
 
