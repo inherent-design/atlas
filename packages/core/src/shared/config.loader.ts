@@ -94,7 +94,6 @@ function getEnvironmentDefaults(): Partial<AtlasConfig> {
       ...envDefaults.backends,
       'text-completion': 'anthropic:haiku',
       'json-completion': 'anthropic:haiku',
-      'qntm-generation': 'anthropic:haiku',
     }
   } else {
     log.debug('ANTHROPIC_API_KEY not found, using Ollama for LLM')
@@ -102,7 +101,6 @@ function getEnvironmentDefaults(): Partial<AtlasConfig> {
       ...envDefaults.backends,
       'text-completion': 'ollama:ministral-3:3b',
       'json-completion': 'ollama:ministral-3:3b',
-      'qntm-generation': 'ollama:ministral-3:3b',
     }
   }
 
@@ -124,22 +122,10 @@ function mergeConfig(defaults: AtlasConfig, user: Partial<AtlasConfig>): AtlasCo
       ...envDefaults.backends,
       ...user.backends,
     },
-    resources: {
-      ollama: {
-        ...defaults.resources?.ollama,
-        ...envDefaults.resources?.ollama,
-        ...user.resources?.ollama,
-      },
-    },
     logging: {
       ...defaults.logging,
       ...envDefaults.logging,
       ...user.logging,
-    },
-    qdrant: {
-      ...defaults.qdrant,
-      ...envDefaults.qdrant,
-      ...user.qdrant,
     },
   }
 
@@ -185,7 +171,6 @@ export async function loadConfig(configPath?: string): Promise<AtlasConfig> {
 
   log.info('Config loaded', {
     backends: Object.keys(globalConfig.backends || {}),
-    hasResources: !!globalConfig.resources,
     logLevel: globalConfig.logging?.level,
   })
 
@@ -235,19 +220,9 @@ export function applyRuntimeOverrides(overrides: Partial<AtlasConfig>): void {
       ...globalConfig.backends,
       ...overrides.backends,
     },
-    resources: {
-      ollama: {
-        ...globalConfig.resources?.ollama,
-        ...overrides.resources?.ollama,
-      },
-    },
     logging: {
       ...globalConfig.logging,
       ...overrides.logging,
-    },
-    qdrant: {
-      ...globalConfig.qdrant,
-      ...overrides.qdrant,
     },
   }
 

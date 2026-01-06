@@ -6,6 +6,33 @@
  */
 
 // ============================================
+// JSON Enforcement Wrapper
+// ============================================
+
+/**
+ * Wrap a prompt with JSON enforcement instructions.
+ * Use for any prompt that expects JSON output.
+ */
+export function wrapForJSON(prompt: string): string {
+  return `You are a JSON generator. You MUST respond with ONLY valid JSON - no explanations, no markdown, no conversation.
+
+CRITICAL RULES:
+1. Output ONLY the JSON object/array - nothing else
+2. Do NOT ask clarifying questions - use your best judgment
+3. Do NOT explain your reasoning outside the JSON
+4. Do NOT wrap JSON in markdown code blocks
+5. Start your response with { or [ and end with } or ]
+
+---
+
+${prompt}
+
+---
+
+RESPOND WITH ONLY VALID JSON:`
+}
+
+// ============================================
 // QNTM Key Generation Prompts (by abstraction level)
 // ============================================
 
@@ -28,12 +55,13 @@ Generate SPECIFIC, instance-level keys that anchor to concrete events or referen
 - Include temporal markers when relevant (dates, versions, sessions)
 - Reference specific files, functions, or entities by name
 - Capture the "what happened" not the "what it means"
+- Use snake_case identifiers WITHOUT quotes
 
 Examples:
-  conversation ~ instance ~ "2026-01-02_auth_discussion"
-  file ~ modified ~ "src/auth/login.ts"
-  decision ~ made ~ "use_jwt_over_sessions"
-  error ~ encountered ~ "qdrant_connection_timeout"`,
+  conversation ~ instance ~ 2026_01_02_auth_discussion
+  file ~ modified ~ src_auth_login_ts
+  decision ~ made ~ use_jwt_over_sessions
+  error ~ encountered ~ qdrant_connection_timeout`,
 
   1: `## Abstraction Level: L1 (Topic)
 Generate TOPIC-level keys that group related instances without specific details.
@@ -74,6 +102,7 @@ Examples:
 
 /**
  * Build QNTM generation prompt for a specific abstraction level.
+ * Wrapped with JSON enforcement for reliable structured output.
  */
 export function buildQNTMPrompt(
   chunk: string,
@@ -85,7 +114,7 @@ export function buildQNTMPrompt(
     totalChunks?: number
   }
 ): string {
-  return `# QNTM Semantic Key Generation
+  const corePrompt = `# QNTM Semantic Key Generation
 
 Generate stable semantic addresses (QNTM keys) using the QNTM relationship language.
 Each key is a ternary relationship: subject ~ predicate ~ object
@@ -138,11 +167,14 @@ ${chunk}
 
 ## Quality Checks
 ✓ Each key has exactly 3 parts separated by " ~ "
-✓ Identifiers use snake_case (no @, no spaces)
+✓ Identifiers use snake_case (no @, no spaces, NO QUOTES)
 ✓ Keys match L${level} abstraction (${['instance', 'topic', 'concept', 'principle'][level]}-level)
 ✓ Reused existing keys when concepts overlap
 ✗ Don't create near-duplicates of existing keys
-✗ Don't use vague predicates like "about" or "has"`
+✗ Don't use vague predicates like "about" or "has"
+✗ Don't use quoted strings in keys (use snake_case: 2026_01_06 not "2026-01-06")`
+
+  return wrapForJSON(corePrompt)
 }
 
 // ============================================
@@ -215,6 +247,7 @@ Return a JSON object with structured memories:
 
 /**
  * Build working memory compaction prompt with conversation.
+ * Wrapped with JSON enforcement for reliable structured output.
  */
 export function buildCompactionPrompt(
   conversation: Array<{ role: string; content: string }>
@@ -223,14 +256,13 @@ export function buildCompactionPrompt(
     .map((turn) => `[${turn.role.toUpperCase()}]\n${turn.content}`)
     .join('\n\n---\n\n')
 
-  return `${WORKING_MEMORY_COMPACTION_PROMPT}
+  const corePrompt = `${WORKING_MEMORY_COMPACTION_PROMPT}
 
 ## Conversation to Compact
 
-${formattedConversation}
+${formattedConversation}`
 
-## Output
-Return ONLY valid JSON matching the format above.`
+  return wrapForJSON(corePrompt)
 }
 
 // ============================================
@@ -239,7 +271,7 @@ Return ONLY valid JSON matching the format above.`
 
 /**
  * Prompt for classifying relationship between two chunks during consolidation.
- * Used in consolidate/index.ts
+ * Wrapped with JSON enforcement for reliable structured output.
  */
 export function buildConsolidationPrompt(
   text1: string,
@@ -251,7 +283,7 @@ export function buildConsolidationPrompt(
   level1: number,
   level2: number
 ): string {
-  return `# Chunk Consolidation Classification
+  const corePrompt = `# Chunk Consolidation Classification
 
 You are analyzing two similar text chunks to determine their relationship and how to consolidate them.
 
@@ -289,7 +321,6 @@ ${text2}
 2. Consider timestamps to understand temporal relationship
 3. Classify the relationship type
 4. Determine which to keep or if they should be merged
-5. Return ONLY valid JSON
 
 ## Output Format
 {
@@ -299,6 +330,8 @@ ${text2}
   "keep": "first" | "second" | "merge",
   "merged_summary": "If keep=merge, provide a summary that combines both (optional)"
 }`
+
+  return wrapForJSON(corePrompt)
 }
 
 // ============================================
@@ -307,10 +340,10 @@ ${text2}
 
 /**
  * Prompt for generating QNTM keys from a search query.
- * Used to bridge vocabulary gap between query and stored content.
+ * Wrapped with JSON enforcement for reliable structured output.
  */
 export function buildQueryExpansionPrompt(query: string, existingKeys: string[]): string {
-  return `# Query Semantic Expansion
+  const corePrompt = `# Query Semantic Expansion
 
 Generate QNTM keys that would match content relevant to this query.
 Think about what semantic concepts the user is trying to find.
@@ -342,4 +375,6 @@ Keys: ["security ~ pattern ~ authentication", "user ~ management ~ login", "sess
 
 Query: "What did we decide about the database?"
 Keys: ["decision ~ topic ~ database", "architecture ~ choice ~ storage", "discussion ~ subject ~ persistence"]`
+
+  return wrapForJSON(corePrompt)
 }

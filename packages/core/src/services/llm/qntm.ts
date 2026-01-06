@@ -86,13 +86,13 @@ export async function generateQNTMKeysWithProvider(
     level: input.level ?? 0,
   })
 
-  // Get JSON-capable LLM backend from registry
+  // Get JSON-capable LLM backend
   const backend = getLLMBackendFor('json-completion')
   if (!backend) {
     throw new Error('No JSON-capable LLM backend available for QNTM generation')
   }
 
-  // Type-safe check for JSON completion capability
+  // Verify backend has JSON completion method
   if (!('completeJSON' in backend)) {
     throw new Error('Backend does not implement JSON completion')
   }
@@ -128,7 +128,7 @@ export async function generateQueryQNTMKeys(
     existingKeyCount: existingKeys.length,
   })
 
-  // Get JSON-capable LLM backend from registry
+  // Get JSON-capable LLM backend
   const backend = getLLMBackendFor('json-completion')
   if (!backend) {
     throw new Error('No JSON-capable LLM backend available for query expansion')

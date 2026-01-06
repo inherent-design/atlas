@@ -42,6 +42,10 @@ import {
   resetConsolidationWatchdog,
   getConsolidationWatchdog,
 } from './watchdog'
+import {
+  CONSOLIDATION_BASE_THRESHOLD,
+  CONSOLIDATION_SIMILARITY_THRESHOLD,
+} from '../../shared/config'
 
 describe('IngestPauseController', () => {
   beforeEach(() => {
@@ -253,7 +257,7 @@ describe('ConsolidationWatchdog', () => {
       watchdog = new ConsolidationWatchdog()
       const state = watchdog.getState()
 
-      expect(state.baseThreshold).toBe(100) // Default from config schema
+      expect(state.baseThreshold).toBe(CONSOLIDATION_BASE_THRESHOLD)
       expect(state.isRunning).toBe(false)
       expect(state.isConsolidating).toBe(false)
       expect(state.currentCount).toBe(0)
@@ -507,7 +511,7 @@ describe('ConsolidationWatchdog', () => {
       await watchdog.forceConsolidation()
 
       expect(mockConsolidate).toHaveBeenCalledWith({
-        threshold: 0.95, // Default from config schema
+        threshold: CONSOLIDATION_SIMILARITY_THRESHOLD,
         limit: 50,
       })
     })

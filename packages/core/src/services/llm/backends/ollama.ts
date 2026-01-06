@@ -44,6 +44,8 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
   private host: string
   private discovered: boolean = false
   private discoveryPromise: Promise<void> | null = null
+  private modelEnsured: boolean = false
+  private modelEnsurePromise: Promise<boolean> | null = null
 
   constructor(
     modelName: string,
@@ -189,6 +191,12 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
    * Generate a text completion
    */
   async complete(prompt: string, options?: CompletionOptions): Promise<CompletionResult> {
+    // Ensure model is available (auto-pull if needed, only runs once)
+    const available = await this.lazyEnsureModel()
+    if (!available) {
+      throw new Error(`Ollama model '${this.modelId}' not available and could not be pulled`)
+    }
+
     // Ensure capabilities are discovered
     if (!this.discovered) {
       await this.discover()
@@ -259,6 +267,12 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
    * Generate a JSON completion
    */
   async completeJSON<T>(prompt: string, options?: CompletionOptions): Promise<T> {
+    // Ensure model is available (auto-pull if needed, only runs once)
+    const available = await this.lazyEnsureModel()
+    if (!available) {
+      throw new Error(`Ollama model '${this.modelId}' not available and could not be pulled`)
+    }
+
     // Ensure capabilities are discovered
     if (!this.discovered) {
       await this.discover()
@@ -395,10 +409,39 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
   }
 
   /**
+   * Lazy ensure model is available (only runs once per backend instance)
+   * Uses promise lock to prevent concurrent ensure attempts
+   */
+  private async lazyEnsureModel(): Promise<boolean> {
+    // Already ensured
+    if (this.modelEnsured) return true
+
+    // Another call is already ensuring
+    if (this.modelEnsurePromise) return this.modelEnsurePromise
+
+    // First call - run ensure and cache promise
+    this.modelEnsurePromise = (async () => {
+      const success = await this.ensureAvailable()
+      if (success) {
+        this.modelEnsured = true
+      }
+      return success
+    })()
+
+    return this.modelEnsurePromise
+  }
+
+  /**
    * Generate a completion using unified message format
    * Uses the message adapter for format conversion
    */
   async completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse> {
+    // Ensure model is available (auto-pull if needed, only runs once)
+    const available = await this.lazyEnsureModel()
+    if (!available) {
+      throw new Error(`Ollama model '${this.modelId}' not available and could not be pulled`)
+    }
+
     // Ensure capabilities are discovered
     if (!this.discovered) {
       await this.discover()

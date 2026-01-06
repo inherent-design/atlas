@@ -162,13 +162,29 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
   }
 
   /**
-   * Generate a JSON completion
+   * Generate a JSON completion.
+   * Expects prompt to be wrapped with wrapForJSON() from prompts.ts.
    */
   async completeJSON<T>(prompt: string, options?: CompletionOptions): Promise<T> {
     const result = await this.complete(prompt, options)
 
+    // Try to extract JSON if there's any preamble (fallback for non-compliant responses)
+    let textToParse = result.text.trim()
+
+    // If response doesn't start with JSON, try to extract it
+    if (!textToParse.startsWith('{') && !textToParse.startsWith('[')) {
+      const jsonMatch = textToParse.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+      if (jsonMatch) {
+        log.warn('Extracted JSON from response with preamble', {
+          originalLength: textToParse.length,
+          extractedLength: jsonMatch[0].length,
+        })
+        textToParse = jsonMatch[0]
+      }
+    }
+
     try {
-      return JSON.parse(result.text) as T
+      return JSON.parse(textToParse) as T
     } catch (error) {
       log.error('Failed to parse JSON response', {
         text: result.text.substring(0, 500),

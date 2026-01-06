@@ -28,7 +28,7 @@ export class PollingScheduler {
   constructor(options: PollingSchedulerOptions) {
     this.name = options.name
     this.tick = options.tick
-    this.log = options.logger || createLogger(`scheduler/${options.name}`)
+    this.log = options.logger || createLogger(`scheduler:${options.name}`)
   }
 
   /**

@@ -76,7 +76,7 @@ describe('Config Loader', () => {
 
       expect(config.backends?.['text-completion']).toBe('anthropic:haiku')
       expect(config.backends?.['json-completion']).toBe('anthropic:haiku')
-      expect(config.backends?.['qntm-generation']).toBe('anthropic:haiku')
+      // Note: qntm-generation removed - uses json-completion capability instead
     })
 
     it('should use Ollama fallback when neither API key present', async () => {
@@ -108,8 +108,6 @@ describe('Config Loader', () => {
       const config = await loadConfig()
 
       // Should have defaults from config.schema.ts
-      expect(config.resources?.ollama?.memoryTarget).toBe(0.3)
-      expect(config.resources?.ollama?.gpuLayers).toBe('auto')
       expect(config.logging?.level).toBe('info')
     })
 
@@ -141,13 +139,15 @@ describe('Config Loader', () => {
 
       const config = await loadConfig()
 
-      // Check all required capabilities
+      // Check all required capabilities (from capabilities.ts)
+      // Embedding
       expect(config.backends?.['text-embedding']).toBeDefined()
       expect(config.backends?.['code-embedding']).toBeDefined()
       expect(config.backends?.['contextualized-embedding']).toBeDefined()
+      // LLM (json-completion used for QNTM generation, consolidation)
       expect(config.backends?.['text-completion']).toBeDefined()
       expect(config.backends?.['json-completion']).toBeDefined()
-      expect(config.backends?.['qntm-generation']).toBeDefined()
+      // Reranker
       expect(config.backends?.['reranking']).toBeDefined()
     })
 
@@ -166,20 +166,6 @@ describe('Config Loader', () => {
       const config = await loadConfig()
 
       expect(config.logging?.level).toBe('info')
-    })
-  })
-
-  describe('Resource Configuration', () => {
-    it('should default to 30% memory target for Ollama', async () => {
-      const config = await loadConfig()
-
-      expect(config.resources?.ollama?.memoryTarget).toBe(0.3)
-    })
-
-    it('should default to auto GPU layer detection', async () => {
-      const config = await loadConfig()
-
-      expect(config.resources?.ollama?.gpuLayers).toBe('auto')
     })
   })
 
@@ -209,20 +195,6 @@ describe('Config Loader', () => {
       const config = await loadConfig()
 
       expect(config.backends?.['text-completion']).toContain('anthropic:')
-    })
-  })
-
-  describe('Qdrant Configuration', () => {
-    it('should use default collection name if not specified', async () => {
-      const config = await loadConfig()
-
-      expect(config.qdrant?.collection).toBe('atlas')
-    })
-
-    it('should use default Qdrant URL if not specified', async () => {
-      const config = await loadConfig()
-
-      expect(config.qdrant?.url).toBe('http://localhost:6333')
     })
   })
 })

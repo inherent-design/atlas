@@ -28,29 +28,11 @@ export default defineConfig({
     reranking: 'voyage:rerank-2.5',
   },
 
-  resources: {
-    ollama: {
-      // Use 30% of available RAM for Ollama models
-      memoryTarget: 0.3,
-
-      // Auto-detect GPU layers based on VRAM
-      gpuLayers: 'auto',
-
-      // Prefer quality over speed (q8 > q5 > q4)
-      preferredQuantization: 'q8',
-    },
-  },
-
   logging: {
     // Global log level
     level: 'info',
 
     // Module-specific overrides
     // modules: 'ingest:debug,qntm/*:trace',
-  },
-
-  qdrant: {
-    url: 'http://localhost:6333',
-    collection: 'atlas',
   },
 })

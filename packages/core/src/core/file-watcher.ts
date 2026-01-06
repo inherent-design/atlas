@@ -63,20 +63,17 @@ class FileWatcher implements ManagedScheduler {
       }
     }
 
-    // Build glob patterns
-    const watchGlobs = this.config.paths.flatMap((dir) =>
-      this.config.patterns.map((pattern) => `${dir}/${pattern}`)
-    )
-
+    // Watch directories recursively, filter by extension in handler
     log.info('Starting file watcher', {
       paths: this.config.paths,
       patterns: this.config.patterns,
     })
 
-    this.watcher = watch(watchGlobs, {
+    this.watcher = watch(this.config.paths, {
       ignored: this.config.ignorePatterns,
       persistent: true,
       ignoreInitial: false, // Process existing files on start
+      depth: 99, // Deep recursion
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100,
@@ -122,6 +119,13 @@ class FileWatcher implements ManagedScheduler {
   }
 
   private handleFileEvent(event: 'add' | 'change' | 'unlink', filePath: string): void {
+    // Filter by allowed extensions
+    const ext = extname(filePath).toLowerCase()
+    const allowedExtensions = this.config.patterns.map((p) => p.replace('*', ''))
+    if (!allowedExtensions.includes(ext)) {
+      return // Skip non-matching files
+    }
+
     log.debug('File event', { event, path: filePath })
 
     if (event === 'unlink') {

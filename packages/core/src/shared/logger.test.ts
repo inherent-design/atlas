@@ -49,10 +49,10 @@ describe('logger', () => {
     })
 
     test('handles glob patterns', () => {
-      setModuleRules('qntm/*:trace')
+      setModuleRules('qntm:*:trace')
       const config = getLogConfig()
       expect(config.rules[0]).toEqual({
-        pattern: 'qntm/*',
+        pattern: 'qntm:*',
         level: 'trace',
         specificity: 20, // 2 segments * 10, no bonus (has glob)
       })
@@ -67,20 +67,20 @@ describe('logger', () => {
 
   describe('specificity ordering', () => {
     test('exact match beats glob', () => {
-      setModuleRules('qntm/*:trace,qntm/providers:error')
+      setModuleRules('qntm:*:trace,qntm:providers:error')
       const config = getLogConfig()
 
-      // qntm/providers (25) should come before qntm/* (20)
-      expect(config.rules[0]?.pattern).toBe('qntm/providers')
-      expect(config.rules[1]?.pattern).toBe('qntm/*')
+      // qntm:providers (25) should come before qntm:* (20)
+      expect(config.rules[0]?.pattern).toBe('qntm:providers')
+      expect(config.rules[1]?.pattern).toBe('qntm:*')
     })
 
     test('more segments beat fewer', () => {
-      setModuleRules('qntm:debug,qntm/providers:error')
+      setModuleRules('qntm:debug,qntm:providers:error')
       const config = getLogConfig()
 
-      // qntm/providers (25) should come before qntm (15)
-      expect(config.rules[0]?.pattern).toBe('qntm/providers')
+      // qntm:providers (25) should come before qntm (15)
+      expect(config.rules[0]?.pattern).toBe('qntm:providers')
       expect(config.rules[1]?.pattern).toBe('qntm')
     })
 
@@ -94,11 +94,11 @@ describe('logger', () => {
     })
 
     test('complex ordering scenario', () => {
-      setModuleRules('*:info,qntm/*:debug,qntm/providers:error,llm:warn')
+      setModuleRules('*:info,qntm:*:debug,qntm:providers:error,llm:warn')
       const config = getLogConfig()
 
-      // Expected order: qntm/providers (25), qntm/* (20), llm (15), * (0)
-      expect(config.rules.map((r) => r.pattern)).toEqual(['qntm/providers', 'qntm/*', 'llm', '*'])
+      // Expected order: qntm:providers (25), qntm:* (20), llm (15), * (0)
+      expect(config.rules.map((r) => r.pattern)).toEqual(['qntm:providers', 'qntm:*', 'llm', '*'])
     })
   })
 
@@ -123,11 +123,11 @@ describe('logger', () => {
     })
 
     test('glob pattern matches submodules', () => {
-      setModuleRules('qntm/*:trace')
+      setModuleRules('qntm:*:trace')
 
       const config = getLogConfig()
-      expect(config.rules[0]?.pattern).toBe('qntm/*')
-      // The glob should match qntm/providers, qntm/batch, etc.
+      expect(config.rules[0]?.pattern).toBe('qntm:*')
+      // The glob should match qntm:providers, qntm:batch, etc.
     })
   })
 

@@ -183,7 +183,7 @@ export class WorkingMemoryManager {
     }))
     const prompt = buildCompactionPrompt(conversation)
 
-    // Get LLM backend
+    // Get JSON-capable LLM backend
     const backend = getLLMBackendFor('json-completion')
     if (!backend || !('completeJSON' in backend)) {
       throw new Error('No JSON-capable LLM backend available for compaction')

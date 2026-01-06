@@ -146,8 +146,10 @@ describe('search', () => {
 
     expect(filter).toBeDefined()
     expect(filter!.must).toBeDefined()
-    expect(filter!.must![0].key).toBe('created_at')
-    expect(filter!.must![0].range.gte).toBe('2025-12-01T00:00:00Z')
+    // Find the temporal filter (not positional - default filters may exist)
+    const temporalFilter = filter!.must!.find((f: any) => f.key === 'created_at')
+    expect(temporalFilter).toBeDefined()
+    expect(temporalFilter.range.gte).toBe('2025-12-01T00:00:00Z')
   })
 
   test('filters by QNTM key', async () => {
@@ -178,7 +180,11 @@ describe('search', () => {
     expect(searchCall).toBeDefined()
     const filter = searchCall![1].filter
 
-    expect(filter!.must).toHaveLength(2) // Both filters applied
+    // Should have temporal + qntm filters (plus default is_null filter)
+    const temporalFilter = filter!.must!.find((f: any) => f.key === 'created_at')
+    const qntmFilter = filter!.must!.find((f: any) => f.key === 'qntm_keys')
+    expect(temporalFilter).toBeDefined()
+    expect(qntmFilter).toBeDefined()
   })
 
   test('calls backend search with correct parameters', async () => {

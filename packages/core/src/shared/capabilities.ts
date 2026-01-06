@@ -35,12 +35,13 @@ export type EmbeddingCapability =
 
 /**
  * LLM service capabilities
+ *
+ * Note: Task-specific uses (QNTM generation, consolidation) use 'json-completion'.
+ * No separate capability needed - they're just JSON completion with specific prompts.
  */
 export type LLMCapability =
   | 'text-completion' // Basic prompt → text
-  | 'json-completion' // Structured output (JSON mode)
-  | 'qntm-generation' // QNTM semantic key generation
-  | 'consolidation' // Chunk consolidation/summarization
+  | 'json-completion' // Structured output (JSON mode) - used for QNTM, consolidation
   | 'extended-thinking' // Chain-of-thought with budget
   | 'vision' // Image input processing
   | 'tool-use' // Function/tool calling
@@ -178,8 +179,6 @@ export function isLLMCapability(cap: Capability): cap is LLMCapability {
   return [
     'text-completion',
     'json-completion',
-    'qntm-generation',
-    'consolidation',
     'extended-thinking',
     'vision',
     'tool-use',
@@ -204,3 +203,4 @@ export function getServiceType(cap: Capability): ServiceType {
   if (isRerankerCapability(cap)) return 'reranker'
   throw new Error(`Unknown capability: ${cap}`)
 }
+

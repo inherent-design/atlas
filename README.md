@@ -116,7 +116,6 @@ bun run --filter @inherent.design/atlas-core typecheck
 ## Documentation
 
 - [Architecture](docs/architecture.md) - Technical architecture and data flow
-- [Skill](skill/SKILL.md) - Claude Code skill integration
 
 ## License
 

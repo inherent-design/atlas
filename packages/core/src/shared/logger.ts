@@ -62,7 +62,7 @@ interface LogRule {
  * Higher = more specific, gets matched first
  */
 function calculateSpecificity(pattern: string): number {
-  const segments = pattern.split('/').length
+  const segments = pattern.split(':').length
   const hasGlob = pattern.includes('*')
   const isWildcardOnly = pattern === '*'
 

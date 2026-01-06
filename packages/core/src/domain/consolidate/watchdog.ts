@@ -6,11 +6,17 @@
  *
  * Flow:
  * 1. Poll every 30s to check documents ingested since last consolidation
- * 2. At threshold (100 docs): set pause flag → wait for in-flight → consolidate → resume
+ * 2. At threshold (500 chunks): set pause flag → wait for in-flight → consolidate → resume
  * 3. Qdrant's vacuum optimizer handles soft-deleted chunks automatically
  */
 
-import { QDRANT_COLLECTION_NAME, BATCH_HNSW_THRESHOLD } from '../../shared/config'
+import {
+  QDRANT_COLLECTION_NAME,
+  BATCH_HNSW_THRESHOLD,
+  CONSOLIDATION_BASE_THRESHOLD,
+  CONSOLIDATION_SCALE_FACTOR,
+  CONSOLIDATION_SIMILARITY_THRESHOLD,
+} from '../../shared/config'
 import { getConfig } from '../../shared/config.loader'
 import { consolidate } from '.'
 import { createLogger } from '../../shared/logger'
@@ -20,8 +26,8 @@ import { getStorageBackend, withHNSWDisabled } from '../../services/storage'
 const log = createLogger('consolidation-watchdog')
 
 export interface ConsolidationWatchdogConfig {
-  baseThreshold?: number // Base threshold (default 100)
-  scaleFactor?: number // Scale factor for dynamic threshold (default 0.05)
+  baseThreshold?: number // Base threshold (default: CONSOLIDATION_BASE_THRESHOLD)
+  scaleFactor?: number // Scale factor for dynamic threshold (default: CONSOLIDATION_SCALE_FACTOR)
   pollIntervalMs?: number
   similarityThreshold?: number
   useHNSWToggle?: boolean // Enable HNSW disable/enable during consolidation
@@ -164,10 +170,14 @@ export class ConsolidationWatchdog {
     const atlasConfig = getConfig()
     const consolidationConfig = atlasConfig.consolidation
 
-    this.baseThreshold = config.baseThreshold ?? consolidationConfig?.baseThreshold ?? 100
-    this.scaleFactor = config.scaleFactor ?? consolidationConfig?.scaleFactor ?? 0.05
+    this.baseThreshold =
+      config.baseThreshold ?? consolidationConfig?.baseThreshold ?? CONSOLIDATION_BASE_THRESHOLD
+    this.scaleFactor =
+      config.scaleFactor ?? consolidationConfig?.scaleFactor ?? CONSOLIDATION_SCALE_FACTOR
     this.similarityThreshold =
-      config.similarityThreshold ?? consolidationConfig?.similarityThreshold ?? 0.95
+      config.similarityThreshold ??
+      consolidationConfig?.similarityThreshold ??
+      CONSOLIDATION_SIMILARITY_THRESHOLD
     this.useHNSWToggle = config.useHNSWToggle ?? true
 
     this.scheduler = new PollingScheduler({

@@ -18,6 +18,7 @@ import { getConsolidationWatchdog } from '../domain/consolidate/watchdog'
 import { getSystemPressureMonitor } from '../core/system-pressure-monitor'
 import { getFileWatcher } from '../core/file-watcher'
 import { getConfig } from '../shared/config.loader'
+import { ensureCollection } from '../shared/utils'
 
 const log = createLogger('daemon')
 
@@ -60,7 +61,7 @@ export class AtlasDaemon {
     const autoStart = atlasConfig.daemon?.autoStart ?? {
       consolidationWatchdog: true,
       systemPressureMonitor: true,
-      fileWatcher: false,
+      fileWatcher: true,
     }
 
     // Always register system pressure monitor (required by adaptive parallel)
@@ -90,6 +91,10 @@ export class AtlasDaemon {
     if (this.isDaemonRunning()) {
       throw new Error('Daemon is already running')
     }
+
+    // Ensure collection exists before any operations
+    await ensureCollection()
+    log.debug('Collection ensured')
 
     // Write PID file
     this.writePidFile()
