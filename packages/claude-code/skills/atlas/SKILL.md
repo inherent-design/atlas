@@ -1,146 +1,298 @@
 ---
 name: atlas
-description: Ingest project documentation and code into persistent semantic memory (Qdrant + Voyage embeddings). Use when user wants to remember context across sessions, ingest docs, or search previous work. Requires Qdrant running locally and VOYAGE_API_KEY set.
-allowed-tools: Bash(bun:*)
+description: Persistent semantic memory for AI agents. Ingest, search, consolidate context across sessions. Manages Qdrant + Ollama infrastructure and background daemon.
+allowed-tools: Bash(docker:*), Bash(docker-compose:*), Bash(bun:*), Bash(curl:*), Bash(cd:*)
 ---
 
 # Atlas - Persistent Semantic Memory
 
-Atlas provides automatic context ingestion and retrieval using Voyage embeddings + Qdrant vector database. Solves the context overflow problem by storing knowledge persistently across sessions.
+Atlas solves context overflow by storing knowledge persistently across sessions using Voyage embeddings + Qdrant vector storage.
 
-## Quick Start
+---
 
-### Prerequisites
+## Infrastructure Setup
 
-1. **Qdrant running locally**:
+### Start Services
 
 ```bash
-docker run -d -p 6333:6333 qdrant/qdrant
+cd ~/production/atlas
+docker compose up -d
 ```
 
-2. **VOYAGE_API_KEY set** (get from https://voyageai.com):
+Starts:
+- **Qdrant** (port 6333) - Vector database with HNSW index
+- **Ollama** (port 11434) - Local LLM for QNTM generation (optional)
+
+### Verify Services
 
 ```bash
-export VOYAGE_API_KEY="your-key-here"
-```
-
-3. **Verify setup**:
-
-```bash
+# Qdrant health
 curl http://localhost:6333/health
+
+# Qdrant collection info
+curl http://localhost:6333/collections/atlas
+
+# Ollama models
+curl http://localhost:11434/api/tags
 ```
 
-## Ingesting Context
-
-Store files in Atlas memory for persistent retrieval:
-
-### Ingest Single File
+### Stop Services
 
 ```bash
 cd ~/production/atlas
+docker compose down
+```
+
+### Pull Ollama Model (if needed)
+
+```bash
+docker exec -it atlas-ollama ollama pull ministral:3b
+```
+
+---
+
+## Environment
+
+```bash
+# Required for Voyage embeddings
+export VOYAGE_API_KEY="your-key"
+
+# Optional: enables Anthropic LLM instead of Ollama
+export ANTHROPIC_API_KEY="your-key"
+```
+
+Without API keys, Atlas falls back to Ollama for all operations.
+
+---
+
+## CLI Commands
+
+All commands run from atlas root:
+
+```bash
+cd ~/production/atlas
+```
+
+### Ingest
+
+Store files in persistent memory:
+
+```bash
+# Single file
 bun run --filter @inherent.design/atlas atlas ingest /path/to/file.md
+
+# Directory (recursive)
+bun run --filter @inherent.design/atlas atlas ingest ./docs -r
+
+# Multiple paths
+bun run --filter @inherent.design/atlas atlas ingest README.md src/ docs/ -r
+
+# Verbose output
+bun run --filter @inherent.design/atlas atlas ingest ./src -r --verbose
 ```
 
-### Ingest Directory (Recursive)
+**Supported formats:** `.md`, `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.yaml`, `.rs`, `.go`, `.py`, `.sh`, `.css`, `.html`, `.qntm`
+
+**Ignored:** `node_modules`, `.git`, `dist`, `build`, `coverage`
+
+### Search
+
+Semantic search across stored context:
+
+```bash
+# Basic search
+bun run --filter @inherent.design/atlas atlas search "authentication patterns"
+
+# With limit
+bun run --filter @inherent.design/atlas atlas search "error handling" --limit 10
+
+# With reranking (higher quality, slower)
+bun run --filter @inherent.design/atlas atlas search "memory consolidation" --rerank
+
+# Temporal filter
+bun run --filter @inherent.design/atlas atlas search "api design" --since "2025-12-01"
+```
+
+### Timeline
+
+Chronological view of stored context:
+
+```bash
+# Recent entries
+bun run --filter @inherent.design/atlas atlas timeline
+
+# Since date
+bun run --filter @inherent.design/atlas atlas timeline --since "2025-12-15"
+
+# Limit results
+bun run --filter @inherent.design/atlas atlas timeline --limit 50
+```
+
+### Consolidate
+
+Merge similar chunks to reduce redundancy:
+
+```bash
+# Dry run (preview only)
+bun run --filter @inherent.design/atlas atlas consolidate --dry-run
+
+# Execute consolidation
+bun run --filter @inherent.design/atlas atlas consolidate
+
+# With verbose output
+bun run --filter @inherent.design/atlas atlas consolidate --verbose
+```
+
+### Doctor
+
+Diagnose system health:
+
+```bash
+bun run --filter @inherent.design/atlas atlas doctor
+```
+
+Checks:
+- Environment variables (API keys)
+- Service connectivity (Qdrant, Ollama, Voyage, Anthropic)
+- Ollama model availability
+- Configuration validation
+- Tracking database stats
+
+### Qdrant Management
+
+```bash
+# Drop collection (destructive!)
+bun run --filter @inherent.design/atlas atlas qdrant drop --yes
+
+# Disable HNSW (for batch ingestion - faster writes)
+bun run --filter @inherent.design/atlas atlas qdrant hnsw off
+
+# Enable HNSW (after batch ingestion - enables search)
+bun run --filter @inherent.design/atlas atlas qdrant hnsw on
+```
+
+---
+
+## Daemon
+
+Background service for file watching and auto-ingestion.
+
+### Start Daemon
+
+```bash
+cd ~/production/atlas/packages/core
+bun run daemon
+```
+
+Or via CLI:
 
 ```bash
 cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas ingest /path/to/docs/ --recursive
+bun run --filter @inherent.design/atlas atlas daemon start
 ```
 
-### Ingest Multiple Paths
+The daemon:
+- Watches `~/.atlas/` for new files (recursive)
+- Auto-ingests files matching embeddable extensions
+- Runs consolidation watchdog
+- Monitors system pressure (CPU/memory)
+
+### Stop Daemon
 
 ```bash
-cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas ingest README.md src/index.ts docs/ -r
+bun run --filter @inherent.design/atlas atlas daemon stop
 ```
 
-**What gets ingested**:
-
-- Supported: `.md`, `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.yaml`, `.qntm`, `.rs`, `.go`, `.py`, `.sh`, `.css`, `.html`
-- Ignored: `node_modules`, `.git`, `dist`, `build`, `coverage`, `.atlas`
-
-**Processing**:
-
-- Chunks text (768 tokens, 13% overlap) for semantic coherence
-- Embeds with Voyage-3-large (1024-dim)
-- Stores in Qdrant with dual-indexing (semantic QNTM keys + temporal timestamps)
-- Preserves original text for future consolidation
-
-## Searching Context
-
-Retrieve relevant context semantically:
-
-### Basic Search
+### Check Status
 
 ```bash
-cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas search "typescript patterns"
+bun run --filter @inherent.design/atlas atlas daemon status
 ```
 
-### Limited Results
+---
+
+## Development
 
 ```bash
-cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas search "memory consolidation" --limit 10
+cd ~/production/atlas/packages/core
+
+# Run tests (296 tests)
+bun run test
+
+# Type check
+bunx tsc --noEmit
+
+# Watch mode
+bun run test:watch
 ```
 
-### Temporal Filtering (Since Date)
-
-```bash
-cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas search "sleep patterns" --since "2025-12-25"
-```
-
-### Chronological Timeline
-
-```bash
-cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas timeline --since "2025-12-01"
-```
+---
 
 ## When to Use This Skill
 
-**Use Atlas when**:
+**Trigger phrases:**
+- "Remember this across sessions"
+- "Store this in memory"
+- "Search previous work"
+- "What did we decide about..."
+- "Find all mentions of..."
+- "Ingest the documentation"
+- "Start the atlas daemon"
+- "Check atlas health"
 
-- User asks to "remember this across sessions"
-- Project context is too large for single session
-- User wants to search previous work/decisions
+**Use cases:**
+- Project context too large for single session
+- Building on previous research/decisions
 - Documentation needs to be queryable
-- Building on previous research or code
+- Persistent knowledge base for codebase
+- Auto-ingestion of evolving docs
 
-**Examples**:
+---
 
-- "Remember the API architecture we discussed"
-- "What did we decide about the database schema?"
-- "Find all mentions of authentication patterns"
-- "Ingest all the .atlas research files"
+## Architecture Summary
 
-## Architecture
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Embeddings | Voyage-3-large (1024d) | Semantic vectors |
+| Vector DB | Qdrant (HNSW, int8) | Storage + search |
+| LLM | Anthropic/Ollama | QNTM key generation |
+| Reranker | Voyage rerank-2.5 | Result quality boost |
+| Daemon | Unix socket server | Background processing |
 
-Built on .atlas research (Steps 1-4 + Sleep Patterns):
-
-**Stack**:
-
-- Voyage-3-large embeddings (1024-dim, 9.74% better than OpenAI)
-- Qdrant HNSW index (M=16, int8 quantization, 4x compression)
-- RecursiveCharacterTextSplitter (semantic boundaries)
-- Dual-indexing (QNTM semantic keys + RFC 3339 timestamps)
-
-**Production Config** (from Step 3 research):
-
+**Performance:**
 - Recall@10: >0.98
 - Latency: 10-50ms (p95)
-- Memory: 1.4GB RAM + 5GB disk per 1M vectors
+- Compression: 4x via int8 quantization
 
-## Technical Details
+---
 
-For implementation details, see:
+## Quick Recovery
 
-- [docs/architecture.md](../docs/architecture.md) - Complete technical architecture
+If things break:
 
-Packages:
+```bash
+# 1. Restart services
+cd ~/production/atlas
+docker compose restart
 
-- `@inherent.design/atlas-core` - Core library (embeddings, storage, search)
-- `@inherent.design/atlas` - Command-line interface
-- `@inherent.design/atlas-mcp` - MCP server for Claude Code integration
+# 2. Verify health
+curl http://localhost:6333/health
+curl http://localhost:11434/api/tags
+
+# 3. Run diagnostics
+bun run --filter @inherent.design/atlas atlas doctor
+
+# 4. Nuclear option: drop and re-ingest
+bun run --filter @inherent.design/atlas atlas qdrant drop --yes
+bun run --filter @inherent.design/atlas atlas ingest ~/.atlas -r
+```
+
+---
+
+## Packages
+
+| Package | npm | Description |
+|---------|-----|-------------|
+| `@inherent.design/atlas-core` | Core | Embeddings, storage, search |
+| `@inherent.design/atlas` | CLI | Command-line interface |
+| `@inherent.design/atlas-mcp` | MCP | Claude Code integration |
