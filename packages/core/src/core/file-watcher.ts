@@ -71,8 +71,17 @@ class FileWatcher implements ManagedScheduler {
       patterns: this.config.patterns,
     })
 
+    // Build ignore matchers: combine patterns with explicit socket/pid check
+    const ignoreMatchers: Array<string | ((path: string) => boolean)> = [
+      ...this.config.ignorePatterns.filter((p) => !p.includes('*')), // directory names
+      (path: string) => {
+        // Explicitly ignore socket, pid, and metadata files
+        return path.endsWith('.sock') || path.endsWith('.pid') || path.endsWith('.DS_Store')
+      },
+    ]
+
     this.watcher = watch(this.config.paths, {
-      ignored: this.config.ignorePatterns,
+      ignored: ignoreMatchers,
       persistent: true,
       ignoreInitial: false, // Process existing files on start
       depth: 99, // Deep recursion

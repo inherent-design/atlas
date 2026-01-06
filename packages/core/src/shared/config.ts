@@ -188,6 +188,9 @@ export const IGNORE_PATTERNS = [
   'prev',
   'target',
   '.bun',
+  '**/*.sock',
+  '**/*.pid',
+  '**/.DS_Store',
 ]
 
 // Ollama config

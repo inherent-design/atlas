@@ -92,6 +92,9 @@ export class AtlasDaemon {
       throw new Error('Daemon is already running')
     }
 
+    // Clean up stale socket file
+    this.cleanupStaleSocket()
+
     // Ensure collection exists before any operations
     await ensureCollection()
     log.debug('Collection ensured')
@@ -201,10 +204,33 @@ export class AtlasDaemon {
   }
 
   /**
+   * Clean up stale socket file
+   */
+  private cleanupStaleSocket(): void {
+    const socketPath = getSocketPath()
+    if (existsSync(socketPath)) {
+      try {
+        unlinkSync(socketPath)
+        log.debug('Removed stale socket', { path: socketPath })
+      } catch (error) {
+        log.warn('Failed to remove stale socket', { path: socketPath, error })
+      }
+    }
+  }
+
+  /**
    * Set up signal handlers
    */
   private setupSignalHandlers(): void {
+    let isShuttingDown = false
+
     const handleSignal = (signal: string) => {
+      if (isShuttingDown) {
+        log.warn('Already shutting down, ignoring signal', { signal })
+        return
+      }
+      isShuttingDown = true
+
       log.info('Received signal, stopping daemon', { signal })
       this.router.emit({
         type: 'daemon.stopping',
@@ -212,13 +238,56 @@ export class AtlasDaemon {
           reason: 'signal',
         },
       })
-      this.stop().then(() => {
-        process.exit(0)
-      })
+
+      this.stop()
+        .then(() => {
+          log.info('Daemon stopped gracefully')
+          process.exit(0)
+        })
+        .catch((error) => {
+          log.error('Error during shutdown', error as Error)
+          process.exit(1)
+        })
     }
 
+    const handleException = (error: Error, type: string) => {
+      if (isShuttingDown) {
+        return
+      }
+      isShuttingDown = true
+
+      log.error(`Unhandled ${type}, shutting down`, error)
+      this.router.emit({
+        type: 'daemon.stopping',
+        data: {
+          reason: 'error',
+        },
+      })
+
+      this.stop()
+        .then(() => process.exit(1))
+        .catch(() => process.exit(1))
+    }
+
+    // Graceful shutdown signals
     process.on('SIGINT', () => handleSignal('SIGINT'))
     process.on('SIGTERM', () => handleSignal('SIGTERM'))
+    process.on('SIGHUP', () => handleSignal('SIGHUP'))
+
+    // Crash handlers
+    process.on('uncaughtException', (error) => handleException(error, 'exception'))
+    process.on('unhandledRejection', (reason) => {
+      const error = reason instanceof Error ? reason : new Error(String(reason))
+      handleException(error, 'rejection')
+    })
+
+    // Normal exit cleanup
+    process.on('beforeExit', () => {
+      if (!isShuttingDown) {
+        log.debug('Process exiting normally')
+        this.removePidFile()
+      }
+    })
   }
 
   /**
