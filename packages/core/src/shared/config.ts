@@ -185,7 +185,6 @@ export const IGNORE_PATTERNS = [
   'build',
   '.next',
   'coverage',
-  '.atlas',
   'prev',
   'target',
   '.bun',

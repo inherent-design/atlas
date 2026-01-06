@@ -11,6 +11,7 @@ import { homedir } from 'os'
 import { existsSync, mkdirSync } from 'fs'
 import { createLogger } from '../shared/logger'
 import { getConfig } from '../shared/config.loader'
+import { IGNORE_PATTERNS } from '../shared/config'
 import { getFileTracker } from '../services/tracking'
 import { getAllEmbeddableExtensions } from '../services/embedding/types'
 import type { ManagedScheduler } from './scheduler-manager'
@@ -40,10 +41,11 @@ class FileWatcher implements ManagedScheduler {
     const defaultPatterns = getAllEmbeddableExtensions().map((ext) => `*${ext}`)
 
     // Expand ~ to homedir
+    // Default ignore patterns include node_modules, .git, dist, etc.
     this.config = {
       paths: (watcherConfig.paths ?? ['~/.atlas']).map((p) => p.replace(/^~/, homedir())),
       patterns: watcherConfig.patterns ?? defaultPatterns,
-      ignorePatterns: watcherConfig.ignorePatterns ?? [],
+      ignorePatterns: watcherConfig.ignorePatterns ?? IGNORE_PATTERNS,
     }
 
     log.debug('FileWatcher initialized', this.config)
