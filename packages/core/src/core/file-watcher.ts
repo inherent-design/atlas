@@ -205,19 +205,47 @@ class FileWatcher implements ManagedScheduler {
         return
       }
 
-      log.info('Ingesting files', { count: filesToIngest.length })
+      // Process in smaller batches (10 files at a time) so tracking records incrementally
+      const BATCH_SIZE = 10
+      let totalFilesProcessed = 0
+      let totalChunksStored = 0
+      let totalErrors: { file: string; error: string }[] = []
 
-      const result = await ingest({
-        paths: filesToIngest,
-        recursive: false,
-        rootDir: computeRootDir(filesToIngest),
-        verbose: false,
-      })
+      for (let i = 0; i < filesToIngest.length; i += BATCH_SIZE) {
+        const batch = filesToIngest.slice(i, i + BATCH_SIZE)
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1
+        const totalBatches = Math.ceil(filesToIngest.length / BATCH_SIZE)
 
-      log.info('Ingestion complete', {
-        files: result.filesProcessed,
-        chunks: result.chunksStored,
-        errors: result.errors.length,
+        log.info('Ingesting file batch', {
+          batch: batchNum,
+          totalBatches,
+          filesInBatch: batch.length,
+          totalFiles: filesToIngest.length,
+        })
+
+        const result = await ingest({
+          paths: batch,
+          recursive: false,
+          rootDir: computeRootDir(batch),
+          verbose: false,
+        })
+
+        totalFilesProcessed += result.filesProcessed
+        totalChunksStored += result.chunksStored
+        totalErrors = totalErrors.concat(result.errors)
+
+        log.info('Batch complete', {
+          batch: batchNum,
+          files: result.filesProcessed,
+          chunks: result.chunksStored,
+          errors: result.errors.length,
+        })
+      }
+
+      log.info('All batches complete', {
+        files: totalFilesProcessed,
+        chunks: totalChunksStored,
+        errors: totalErrors.length,
       })
     } catch (error) {
       log.error('Failed to process queue', error as Error)
