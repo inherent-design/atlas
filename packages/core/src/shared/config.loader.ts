@@ -24,13 +24,23 @@ let globalConfig: AtlasConfig | null = null
 
 /**
  * Try to load user config from atlas.config.ts
+ *
+ * Search order:
+ * 1. Explicit configPath (if provided via -c flag)
+ * 2. Current working directory
+ * 3. User's home directory (~/.atlas/config.ts) - system-wide config
  */
 async function tryLoadUserConfig(configPath?: string): Promise<Partial<AtlasConfig>> {
-  // Resolve config path
+  const homedir = require('os').homedir()
+
+  // Resolve config path - check multiple locations
   const paths = [
     configPath,
     join(process.cwd(), 'atlas.config.ts'),
     join(process.cwd(), 'atlas.config.js'),
+    // System-wide config in ~/.atlas/
+    join(homedir, '.atlas', 'config.ts'),
+    join(homedir, '.atlas', 'config.js'),
   ].filter(Boolean) as string[]
 
   for (const path of paths) {
