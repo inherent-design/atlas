@@ -618,7 +618,12 @@ async function main() {
     .option('--tcp <port>', 'Also listen on TCP port', parseInt)
     .action(async (options) => {
       try {
-        const { startDaemon } = await import('@inherent.design/atlas-core')
+        // Re-initialize backends after config is loaded
+        const { initializeEmbeddingBackends, initializeLLMBackends, startDaemon } =
+          await import('@inherent.design/atlas-core')
+        initializeEmbeddingBackends()
+        initializeLLMBackends()
+
         await startDaemon({
           detach: options.detach,
           enableFileWatcher: options.watch,

@@ -79,16 +79,16 @@ Store files in persistent memory:
 
 ```bash
 # Single file
-bun run --filter @inherent.design/atlas atlas ingest /path/to/file.md
+bun run --filter @inherent.design/atlas-cli atlas ingest /path/to/file.md
 
 # Directory (recursive)
-bun run --filter @inherent.design/atlas atlas ingest ./docs -r
+bun run --filter @inherent.design/atlas-cli atlas ingest ./docs -r
 
 # Multiple paths
-bun run --filter @inherent.design/atlas atlas ingest README.md src/ docs/ -r
+bun run --filter @inherent.design/atlas-cli atlas ingest README.md src/ docs/ -r
 
 # Verbose output
-bun run --filter @inherent.design/atlas atlas ingest ./src -r --verbose
+bun run --filter @inherent.design/atlas-cli atlas ingest ./src -r --verbose
 ```
 
 **Supported formats:** `.md`, `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.yaml`, `.rs`, `.go`, `.py`, `.sh`, `.css`, `.html`, `.qntm`
@@ -101,16 +101,16 @@ Semantic search across stored context:
 
 ```bash
 # Basic search
-bun run --filter @inherent.design/atlas atlas search "authentication patterns"
+bun run --filter @inherent.design/atlas-cli atlas search "authentication patterns"
 
 # With limit
-bun run --filter @inherent.design/atlas atlas search "error handling" --limit 10
+bun run --filter @inherent.design/atlas-cli atlas search "error handling" --limit 10
 
 # With reranking (higher quality, slower)
-bun run --filter @inherent.design/atlas atlas search "memory consolidation" --rerank
+bun run --filter @inherent.design/atlas-cli atlas search "memory consolidation" --rerank
 
 # Temporal filter
-bun run --filter @inherent.design/atlas atlas search "api design" --since "2025-12-01"
+bun run --filter @inherent.design/atlas-cli atlas search "api design" --since "2025-12-01"
 ```
 
 ### Timeline
@@ -119,13 +119,13 @@ Chronological view of stored context:
 
 ```bash
 # Recent entries
-bun run --filter @inherent.design/atlas atlas timeline
+bun run --filter @inherent.design/atlas-cli atlas timeline
 
 # Since date
-bun run --filter @inherent.design/atlas atlas timeline --since "2025-12-15"
+bun run --filter @inherent.design/atlas-cli atlas timeline --since "2025-12-15"
 
 # Limit results
-bun run --filter @inherent.design/atlas atlas timeline --limit 50
+bun run --filter @inherent.design/atlas-cli atlas timeline --limit 50
 ```
 
 ### Consolidate
@@ -134,13 +134,13 @@ Merge similar chunks to reduce redundancy:
 
 ```bash
 # Dry run (preview only)
-bun run --filter @inherent.design/atlas atlas consolidate --dry-run
+bun run --filter @inherent.design/atlas-cli atlas consolidate --dry-run
 
 # Execute consolidation
-bun run --filter @inherent.design/atlas atlas consolidate
+bun run --filter @inherent.design/atlas-cli atlas consolidate
 
 # With verbose output
-bun run --filter @inherent.design/atlas atlas consolidate --verbose
+bun run --filter @inherent.design/atlas-cli atlas consolidate --verbose
 ```
 
 ### Doctor
@@ -148,7 +148,7 @@ bun run --filter @inherent.design/atlas atlas consolidate --verbose
 Diagnose system health:
 
 ```bash
-bun run --filter @inherent.design/atlas atlas doctor
+bun run --filter @inherent.design/atlas-cli atlas doctor
 ```
 
 Checks:
@@ -162,13 +162,13 @@ Checks:
 
 ```bash
 # Drop collection (destructive!)
-bun run --filter @inherent.design/atlas atlas qdrant drop --yes
+bun run --filter @inherent.design/atlas-cli atlas qdrant drop --yes
 
 # Disable HNSW (for batch ingestion - faster writes)
-bun run --filter @inherent.design/atlas atlas qdrant hnsw off
+bun run --filter @inherent.design/atlas-cli atlas qdrant hnsw off
 
 # Enable HNSW (after batch ingestion - enables search)
-bun run --filter @inherent.design/atlas atlas qdrant hnsw on
+bun run --filter @inherent.design/atlas-cli atlas qdrant hnsw on
 ```
 
 ---
@@ -188,7 +188,7 @@ Or via CLI:
 
 ```bash
 cd ~/production/atlas
-bun run --filter @inherent.design/atlas atlas daemon start
+bun run --filter @inherent.design/atlas-cli atlas daemon start
 ```
 
 The daemon:
@@ -200,13 +200,13 @@ The daemon:
 ### Stop Daemon
 
 ```bash
-bun run --filter @inherent.design/atlas atlas daemon stop
+bun run --filter @inherent.design/atlas-cli atlas daemon stop
 ```
 
 ### Check Status
 
 ```bash
-bun run --filter @inherent.design/atlas atlas daemon status
+bun run --filter @inherent.design/atlas-cli atlas daemon status
 ```
 
 ---
@@ -280,19 +280,19 @@ curl http://localhost:6333/health
 curl http://localhost:11434/api/tags
 
 # 3. Run diagnostics
-bun run --filter @inherent.design/atlas atlas doctor
+bun run --filter @inherent.design/atlas-cli atlas doctor
 
 # 4. Nuclear option: drop and re-ingest
-bun run --filter @inherent.design/atlas atlas qdrant drop --yes
-bun run --filter @inherent.design/atlas atlas ingest ~/.atlas -r
+bun run --filter @inherent.design/atlas-cli atlas qdrant drop --yes
+bun run --filter @inherent.design/atlas-cli atlas ingest ~/.atlas -r
 ```
 
 ---
 
 ## Packages
 
-| Package | npm | Description |
-|---------|-----|-------------|
-| `@inherent.design/atlas-core` | Core | Embeddings, storage, search |
-| `@inherent.design/atlas` | CLI | Command-line interface |
-| `@inherent.design/atlas-mcp` | MCP | Claude Code integration |
+| Package | Description |
+|---------|-------------|
+| `@inherent.design/atlas-core` | Core library (embeddings, storage, search) |
+| `@inherent.design/atlas-cli` | Command-line interface |
+| `@inherent.design/atlas-mcp` | MCP server for Claude Code |
