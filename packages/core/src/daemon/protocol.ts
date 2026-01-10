@@ -234,14 +234,150 @@ export interface GetAgentContextResult {
   total: number
 }
 
+/**
+ * atlas.ingest.start - Start async ingestion task
+ */
+export interface IngestStartParams {
+  paths: string[]
+  recursive?: boolean
+  watch?: boolean // Auto-reingest on file changes
+}
+
+export interface IngestStartResult {
+  taskId: string
+  message: string
+  watching: boolean
+}
+
+/**
+ * atlas.ingest.status - Get ingestion task status
+ */
+export interface IngestStatusParams {
+  taskId?: string // If omitted, return all tasks
+}
+
+export interface IngestionTask {
+  id: string
+  paths: string[]
+  status: 'running' | 'completed' | 'failed' | 'stopped'
+  watching: boolean
+  filesProcessed: number
+  chunksStored: number
+  errors: Array<{ file: string; error: string }>
+  startedAt: string
+  completedAt?: string
+}
+
+export interface IngestStatusResult {
+  tasks: IngestionTask[]
+}
+
+/**
+ * atlas.ingest.stop - Stop ingestion task
+ */
+export interface IngestStopParams {
+  taskId: string
+}
+
+export interface IngestStopResult {
+  stopped: boolean
+  final: IngestionTask
+}
+
+/**
+ * atlas.consolidate.start - Start async consolidation
+ */
+export interface ConsolidateStartParams {
+  threshold?: number
+  dryRun?: boolean
+}
+
+export interface ConsolidateStartResult {
+  taskId: string
+  locked: boolean // false if already running
+  message: string
+}
+
+/**
+ * atlas.consolidate.status - Get consolidation status
+ */
+export interface ConsolidateStatusParams {
+  // No params
+}
+
+export interface ConsolidateStatusResult {
+  running: boolean
+  taskId?: string
+  progress?: {
+    candidatesFound: number
+    consolidated: number
+    deleted: number
+    currentLevel: number
+  }
+  startedAt?: string
+}
+
+/**
+ * atlas.consolidate.stop - Stop consolidation
+ */
+export interface ConsolidateStopParams {
+  taskId: string
+}
+
+export interface ConsolidateStopResult {
+  stopped: boolean
+  final?: ConsolidateResult
+}
+
+/**
+ * atlas.qntm.generate - Generate QNTM keys for text
+ */
+export interface QntmGenerateParams {
+  text: string
+  maxKeys?: number
+}
+
+export interface QntmGenerateResult {
+  keys: string[]
+  reasoning?: string
+}
+
+/**
+ * atlas.timeline - Query timeline with filters
+ */
+export interface TimelineParams {
+  since?: string // ISO date
+  limit?: number
+  qntmKey?: string
+}
+
+export interface TimelineResult {
+  chunks: Array<{
+    id: string
+    text: string
+    filePath: string
+    createdAt: string
+    qntmKeys: string[]
+  }>
+  total: number
+}
+
 // ============================================
 // Method Registry
 // ============================================
 
 export type AtlasMethod =
   | 'atlas.ingest'
+  | 'atlas.ingest.start'
+  | 'atlas.ingest.status'
+  | 'atlas.ingest.stop'
   | 'atlas.search'
   | 'atlas.consolidate'
+  | 'atlas.consolidate.start'
+  | 'atlas.consolidate.status'
+  | 'atlas.consolidate.stop'
+  | 'atlas.qntm.generate'
+  | 'atlas.timeline'
   | 'atlas.subscribe'
   | 'atlas.unsubscribe'
   | 'atlas.health'
@@ -252,47 +388,79 @@ export type AtlasMethod =
 
 export type MethodParams<M extends AtlasMethod> = M extends 'atlas.ingest'
   ? IngestParams
-  : M extends 'atlas.search'
-    ? SearchParams
-    : M extends 'atlas.consolidate'
-      ? ConsolidateParams
-      : M extends 'atlas.subscribe'
-        ? SubscribeParams
-        : M extends 'atlas.unsubscribe'
-          ? UnsubscribeParams
-          : M extends 'atlas.health'
-            ? HealthParams
-            : M extends 'atlas.status'
-              ? StatusParams
-              : M extends 'atlas.session_event'
-                ? SessionEventParams
-                : M extends 'atlas.execute_work'
-                  ? ExecuteWorkParams
-                  : M extends 'atlas.get_agent_context'
-                    ? GetAgentContextParams
-                    : never
+  : M extends 'atlas.ingest.start'
+    ? IngestStartParams
+    : M extends 'atlas.ingest.status'
+      ? IngestStatusParams
+      : M extends 'atlas.ingest.stop'
+        ? IngestStopParams
+        : M extends 'atlas.search'
+          ? SearchParams
+          : M extends 'atlas.consolidate'
+            ? ConsolidateParams
+            : M extends 'atlas.consolidate.start'
+              ? ConsolidateStartParams
+              : M extends 'atlas.consolidate.status'
+                ? ConsolidateStatusParams
+                : M extends 'atlas.consolidate.stop'
+                  ? ConsolidateStopParams
+                  : M extends 'atlas.qntm.generate'
+                    ? QntmGenerateParams
+                    : M extends 'atlas.timeline'
+                      ? TimelineParams
+                      : M extends 'atlas.subscribe'
+                        ? SubscribeParams
+                        : M extends 'atlas.unsubscribe'
+                          ? UnsubscribeParams
+                          : M extends 'atlas.health'
+                            ? HealthParams
+                            : M extends 'atlas.status'
+                              ? StatusParams
+                              : M extends 'atlas.session_event'
+                                ? SessionEventParams
+                                : M extends 'atlas.execute_work'
+                                  ? ExecuteWorkParams
+                                  : M extends 'atlas.get_agent_context'
+                                    ? GetAgentContextParams
+                                    : never
 
 export type MethodResult<M extends AtlasMethod> = M extends 'atlas.ingest'
   ? IngestResult
-  : M extends 'atlas.search'
-    ? SearchResult[]
-    : M extends 'atlas.consolidate'
-      ? ConsolidateResult
-      : M extends 'atlas.subscribe'
-        ? SubscribeResult
-        : M extends 'atlas.unsubscribe'
-          ? UnsubscribeResult
-          : M extends 'atlas.health'
-            ? HealthResult
-            : M extends 'atlas.status'
-              ? StatusResult
-              : M extends 'atlas.session_event'
-                ? SessionEventResult
-                : M extends 'atlas.execute_work'
-                  ? ExecuteWorkResult
-                  : M extends 'atlas.get_agent_context'
-                    ? GetAgentContextResult
-                    : never
+  : M extends 'atlas.ingest.start'
+    ? IngestStartResult
+    : M extends 'atlas.ingest.status'
+      ? IngestStatusResult
+      : M extends 'atlas.ingest.stop'
+        ? IngestStopResult
+        : M extends 'atlas.search'
+          ? SearchResult[]
+          : M extends 'atlas.consolidate'
+            ? ConsolidateResult
+            : M extends 'atlas.consolidate.start'
+              ? ConsolidateStartResult
+              : M extends 'atlas.consolidate.status'
+                ? ConsolidateStatusResult
+                : M extends 'atlas.consolidate.stop'
+                  ? ConsolidateStopResult
+                  : M extends 'atlas.qntm.generate'
+                    ? QntmGenerateResult
+                    : M extends 'atlas.timeline'
+                      ? TimelineResult
+                      : M extends 'atlas.subscribe'
+                        ? SubscribeResult
+                        : M extends 'atlas.unsubscribe'
+                          ? UnsubscribeResult
+                          : M extends 'atlas.health'
+                            ? HealthResult
+                            : M extends 'atlas.status'
+                              ? StatusResult
+                              : M extends 'atlas.session_event'
+                                ? SessionEventResult
+                                : M extends 'atlas.execute_work'
+                                  ? ExecuteWorkResult
+                                  : M extends 'atlas.get_agent_context'
+                                    ? GetAgentContextResult
+                                    : never
 
 // ============================================
 // Utilities

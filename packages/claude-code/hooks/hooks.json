@@ -32,6 +32,17 @@
           }
         ]
       }
+    ],
+    "PreTaskSpawn": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/task-spawn.ts",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

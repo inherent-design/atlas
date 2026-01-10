@@ -14,6 +14,8 @@ import {
   search,
   loadConfig,
 } from '@inherent.design/atlas-core'
+import { existsSync, readdirSync, readFileSync } from 'fs'
+import { join } from 'path'
 
 interface HookInput {
   prompt: string
@@ -89,10 +91,74 @@ async function main() {
       process.exit(0) // No context to inject
     }
 
-    // Format results as context
-    const context = results
+    // Pack results within token budget (2000 tokens ~= 8000 chars)
+    const TOKEN_BUDGET = 2000
+    const CHARS_PER_TOKEN = 4
+    const MAX_CHARS = TOKEN_BUDGET * CHARS_PER_TOKEN
+
+    const packedResults: SearchResult[] = []
+    let totalChars = 0
+
+    for (const result of results) {
+      const resultChars = result.text.length + result.filePath.length + 50 // +50 for formatting
+      if (totalChars + resultChars > MAX_CHARS) {
+        break // Budget exhausted
+      }
+      packedResults.push(result)
+      totalChars += resultChars
+    }
+
+    // Format packed results as context
+    const context = packedResults
       .map((r, i) => `[Atlas Memory ${i + 1}] (${r.filePath}):\n${r.text}`)
       .join('\n\n---\n\n')
+
+    // Auto-detection: Check if cwd has bootstrap and start auto-watch if needed
+    try {
+      const bootstrapDir = join(process.env.HOME!, '.atlas', 'bootstrap')
+      if (existsSync(bootstrapDir)) {
+        const files = readdirSync(bootstrapDir).filter((f) => f.endsWith('.md'))
+        for (const file of files) {
+          const content = readFileSync(join(bootstrapDir, file), 'utf-8')
+          if (content.includes(input.cwd)) {
+            // Found bootstrap for current project
+            // Check if already watching via daemon
+            if (isDaemonRunning()) {
+              try {
+                const connection = new AtlasConnection()
+                await connection.connect()
+
+                const status = (await connection.request(
+                  'atlas.ingest.status' as any,
+                  {}
+                )) as any
+
+                // Check if any task is watching this cwd
+                const watching = status.tasks.some(
+                  (t: any) => t.watching && t.paths.includes(input.cwd)
+                )
+
+                if (!watching) {
+                  // Start auto-watch
+                  await connection.request('atlas.ingest.start' as any, {
+                    paths: [input.cwd],
+                    recursive: true,
+                    watch: true,
+                  })
+                }
+
+                connection.disconnect()
+              } catch {
+                // Silently fail
+              }
+            }
+            break
+          }
+        }
+      }
+    } catch {
+      // Silently fail - don't block search injection
+    }
 
     // Output structured response
     const output = {

@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@inherent.design/atlas-core": "^0.0.0-alpha.3"
+    "@inherent.design/atlas-core": "^0.0.0-alpha.4"
   },
   "description": "Claude Code plugin for Atlas semantic memory",
   "devDependencies": {
@@ -27,5 +27,5 @@
     "typecheck": "bunx tsc --noEmit"
   },
   "type": "module",
-  "version": "0.0.0-alpha.2"
+  "version": "0.0.0-alpha.3"
 }

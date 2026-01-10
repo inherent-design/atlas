@@ -5,5 +5,5 @@
   },
   "description": "Persistent semantic memory for Claude Code sessions",
   "name": "atlas",
-  "version": "0.0.0-alpha.1"
+  "version": "0.0.0-alpha.2"
 }

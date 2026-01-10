@@ -16,10 +16,26 @@ import {
   JsonRpcErrorCode,
   type IngestParams,
   type IngestResult,
+  type IngestStartParams,
+  type IngestStartResult,
+  type IngestStatusParams,
+  type IngestStatusResult,
+  type IngestStopParams,
+  type IngestStopResult,
   type SearchParams,
   type SearchResult,
   type ConsolidateParams,
   type ConsolidateResult,
+  type ConsolidateStartParams,
+  type ConsolidateStartResult,
+  type ConsolidateStatusParams,
+  type ConsolidateStatusResult,
+  type ConsolidateStopParams,
+  type ConsolidateStopResult,
+  type QntmGenerateParams,
+  type QntmGenerateResult,
+  type TimelineParams,
+  type TimelineResult,
   type SubscribeParams,
   type SubscribeResult,
   type UnsubscribeParams,
@@ -38,6 +54,8 @@ import {
 import { createLogger } from '../shared/logger'
 import type { AtlasDaemonServer } from './server'
 import type { AtlasEvent } from './events'
+import { daemonState } from './state'
+import { v4 as uuid } from 'uuid'
 
 const log = createLogger('daemon:router')
 
@@ -72,8 +90,16 @@ export class EventRouter {
    */
   private registerDefaultHandlers(): void {
     this.registerHandler('atlas.ingest', this.handleIngest.bind(this))
+    this.registerHandler('atlas.ingest.start', this.handleIngestStart.bind(this))
+    this.registerHandler('atlas.ingest.status', this.handleIngestStatus.bind(this))
+    this.registerHandler('atlas.ingest.stop', this.handleIngestStop.bind(this))
     this.registerHandler('atlas.search', this.handleSearch.bind(this))
     this.registerHandler('atlas.consolidate', this.handleConsolidate.bind(this))
+    this.registerHandler('atlas.consolidate.start', this.handleConsolidateStart.bind(this))
+    this.registerHandler('atlas.consolidate.status', this.handleConsolidateStatus.bind(this))
+    this.registerHandler('atlas.consolidate.stop', this.handleConsolidateStop.bind(this))
+    this.registerHandler('atlas.qntm.generate', this.handleQntmGenerate.bind(this))
+    this.registerHandler('atlas.timeline', this.handleTimeline.bind(this))
     this.registerHandler('atlas.subscribe', this.handleSubscribe.bind(this))
     this.registerHandler('atlas.unsubscribe', this.handleUnsubscribe.bind(this))
     this.registerHandler('atlas.health', this.handleHealth.bind(this))
@@ -557,6 +583,307 @@ export class EventRouter {
     return {
       context,
       total: context.length,
+    }
+  }
+
+  // ============================================
+  // New RPC Method Handlers (Phase 1)
+  // ============================================
+
+  /**
+   * Handle atlas.ingest.start - Start async ingestion task
+   */
+  private async handleIngestStart(
+    params: IngestStartParams,
+    _clientId: string
+  ): Promise<IngestStartResult> {
+    const { paths, recursive = false, watch = false } = params
+
+    // Create task
+    const taskId = daemonState.createIngestionTask(paths, watch)
+
+    // Start ingestion in background
+    this.runIngestionTask(taskId, paths, recursive, watch).catch((error) => {
+      daemonState.updateIngestionTask(taskId, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+      })
+      log.error('Ingestion task failed', { taskId, error })
+    })
+
+    return {
+      taskId,
+      message: `Ingestion started for ${paths.length} path(s)`,
+      watching: watch,
+    }
+  }
+
+  /**
+   * Background ingestion runner
+   */
+  private async runIngestionTask(
+    taskId: string,
+    paths: string[],
+    recursive: boolean,
+    watch: boolean
+  ): Promise<void> {
+    const { ingest } = await import('../domain/ingest')
+
+    const result = await ingest({
+      paths,
+      recursive,
+      emit: (event) => {
+        // Update task progress from events
+        if (event.type === 'ingest.file.complete') {
+          const task = daemonState.getIngestionTask(taskId)
+          if (task) {
+            daemonState.updateIngestionTask(taskId, {
+              filesProcessed: task.filesProcessed + 1,
+              chunksStored: task.chunksStored + (event.data.chunks || 0),
+            })
+          }
+        }
+        this.emit(event)
+      },
+    })
+
+    daemonState.updateIngestionTask(taskId, {
+      status: 'completed',
+      filesProcessed: result.filesProcessed,
+      chunksStored: result.chunksStored,
+      errors: result.errors,
+      completedAt: new Date().toISOString(),
+    })
+
+    // If watch=true, register with auto-watch
+    if (watch) {
+      for (const path of paths) {
+        daemonState.registerAutoWatch(path, taskId)
+      }
+      // TODO: Integrate with existing file watcher
+    }
+  }
+
+  /**
+   * Handle atlas.ingest.status - Get ingestion task status
+   */
+  private async handleIngestStatus(
+    params: IngestStatusParams,
+    _clientId: string
+  ): Promise<IngestStatusResult> {
+    const { taskId } = params
+
+    if (taskId) {
+      const task = daemonState.getIngestionTask(taskId)
+      return { tasks: task ? [task] : [] }
+    }
+
+    return { tasks: daemonState.getAllIngestionTasks() }
+  }
+
+  /**
+   * Handle atlas.ingest.stop - Stop ingestion task
+   */
+  private async handleIngestStop(
+    params: IngestStopParams,
+    _clientId: string
+  ): Promise<IngestStopResult> {
+    const { taskId } = params
+    const task = daemonState.getIngestionTask(taskId)
+
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`)
+    }
+
+    // TODO: Implement task cancellation (requires ingest to support abort signal)
+    daemonState.updateIngestionTask(taskId, {
+      status: 'stopped',
+      completedAt: new Date().toISOString(),
+    })
+
+    return { stopped: true, final: task }
+  }
+
+  /**
+   * Handle atlas.consolidate.start - Start async consolidation
+   */
+  private async handleConsolidateStart(
+    params: ConsolidateStartParams,
+    _clientId: string
+  ): Promise<ConsolidateStartResult> {
+    const { threshold, dryRun = false } = params
+    const taskId = uuid()
+
+    // Try to acquire lock
+    const acquired = daemonState.acquireConsolidationLock(taskId)
+
+    if (!acquired) {
+      const lock = daemonState.getConsolidationLock()
+      return {
+        taskId: lock.taskId!,
+        locked: false,
+        message: 'Consolidation already running',
+      }
+    }
+
+    // Start consolidation in background
+    this.runConsolidationTask(taskId, threshold, dryRun).catch((error) => {
+      daemonState.releaseConsolidationLock()
+      log.error('Consolidation task failed', { taskId, error })
+    })
+
+    return {
+      taskId,
+      locked: true,
+      message: 'Consolidation started',
+    }
+  }
+
+  /**
+   * Background consolidation runner
+   */
+  private async runConsolidationTask(
+    taskId: string,
+    threshold?: number,
+    dryRun?: boolean
+  ): Promise<void> {
+    try {
+      const { consolidate } = await import('../domain/consolidate')
+      await consolidate({
+        threshold,
+        dryRun,
+        emit: (event) => {
+          // TODO: Track progress events in state
+          this.emit(event)
+        },
+      })
+    } finally {
+      daemonState.releaseConsolidationLock()
+    }
+  }
+
+  /**
+   * Handle atlas.consolidate.status - Get consolidation status
+   */
+  private async handleConsolidateStatus(
+    _params: ConsolidateStatusParams,
+    _clientId: string
+  ): Promise<ConsolidateStatusResult> {
+    const lock = daemonState.getConsolidationLock()
+
+    return {
+      running: lock.locked,
+      taskId: lock.taskId,
+      startedAt: lock.startedAt?.toISOString(),
+      // TODO: Add progress tracking
+    }
+  }
+
+  /**
+   * Handle atlas.consolidate.stop - Stop consolidation
+   */
+  private async handleConsolidateStop(
+    params: ConsolidateStopParams,
+    _clientId: string
+  ): Promise<ConsolidateStopResult> {
+    const { taskId } = params
+    const lock = daemonState.getConsolidationLock()
+
+    if (!lock.locked || lock.taskId !== taskId) {
+      throw new Error(`Task ${taskId} not running`)
+    }
+
+    // TODO: Implement graceful stop (requires consolidate to support abort signal)
+    daemonState.releaseConsolidationLock()
+
+    return { stopped: true }
+  }
+
+  /**
+   * Handle atlas.qntm.generate - Generate QNTM keys for text
+   */
+  private async handleQntmGenerate(
+    params: QntmGenerateParams,
+    _clientId: string
+  ): Promise<QntmGenerateResult> {
+    const { text, maxKeys = 5 } = params
+    const { generateQNTMKeys } = await import('../services/llm')
+
+    const result = await generateQNTMKeys({
+      chunk: text,
+      existingKeys: [],
+      context: {
+        fileName: '<manual>',
+      },
+    })
+
+    return {
+      keys: result.keys.slice(0, maxKeys),
+      reasoning: result.reasoning,
+    }
+  }
+
+  /**
+   * Handle atlas.timeline - Query timeline with filters
+   */
+  private async handleTimeline(
+    params: TimelineParams,
+    _clientId: string
+  ): Promise<TimelineResult> {
+    const { since, limit = 50, qntmKey } = params
+    const { getStorageBackend } = await import('../services/storage')
+    const { QDRANT_COLLECTION_NAME } = await import('../shared/config')
+    const storage = getStorageBackend()
+
+    if (!storage) {
+      throw new Error('Storage backend not available')
+    }
+
+    // Build filter
+    const filter: any = {
+      must: [],
+    }
+
+    if (since) {
+      filter.must.push({
+        key: 'created_at',
+        range: {
+          gte: since,
+        },
+      })
+    }
+
+    if (qntmKey) {
+      filter.must.push({
+        key: 'qntm_keys',
+        match: {
+          any: [qntmKey],
+        },
+      })
+    }
+
+    // Scroll with filter
+    const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
+      filter: filter.must.length > 0 ? filter : undefined,
+      limit,
+      withPayload: true,
+      withVector: false,
+    })
+
+    const chunks = result.points.map((point) => ({
+      id: point.id as string,
+      text: (point.payload?.original_text as string) || '',
+      filePath: (point.payload?.file_path as string) || '',
+      createdAt: (point.payload?.created_at as string) || '',
+      qntmKeys: (point.payload?.qntm_keys as string[]) || [],
+    }))
+
+    // Sort by created_at descending (most recent first)
+    chunks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    return {
+      chunks,
+      total: chunks.length,
     }
   }
 }

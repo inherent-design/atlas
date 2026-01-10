@@ -17,6 +17,8 @@ interface HookInput {
   trigger?: 'manual' | 'auto'
   reason?: string
   cwd: string
+  summary?: string // Claude-provided summary (if available)
+  compacted_summary?: string // Alternative field name
 }
 
 async function main() {
@@ -34,6 +36,30 @@ async function main() {
   if (!isDaemonRunning()) {
     // Daemon not running, exit silently (don't block Claude Code)
     process.exit(0)
+  }
+
+  // Check for summary field and embed if available
+  const summary = input.summary || input.compacted_summary
+  if (summary) {
+    try {
+      const connection = new AtlasConnection()
+      await connection.connect()
+
+      // TODO: Implement atlas.ingest.embed_document RPC method
+      // For now, just check if summary exists - embedding will be added later
+      // await connection.request('atlas.ingest.embed_document' as any, {
+      //   document: {
+      //     type: 'conversation_summary',
+      //     session_id: input.session_id,
+      //     summary,
+      //     created_at: new Date().toISOString(),
+      //   },
+      // })
+
+      connection.disconnect()
+    } catch {
+      // Silently fail
+    }
   }
 
   // Map hook event to daemon event type

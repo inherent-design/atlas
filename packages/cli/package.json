@@ -3,7 +3,7 @@
     "atlas": "./src/index.ts"
   },
   "dependencies": {
-    "@inherent.design/atlas-core": "^0.0.0-alpha.3",
+    "@inherent.design/atlas-core": "^0.0.0-alpha.4",
     "commander": "^14.0.2"
   },
   "description": "CLI for Atlas semantic memory - ingest, search, and manage context",
@@ -32,5 +32,5 @@
     "test:watch": "vitest"
   },
   "type": "module",
-  "version": "0.0.0-alpha.2"
+  "version": "0.0.0-alpha.3"
 }
