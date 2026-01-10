@@ -4,7 +4,7 @@
  * Generates semantic triplet keys in format: subject ~ predicate ~ object
  */
 
-import type { PromptDefinition } from '../types'
+import type { PromptDefinition } from '../../types'
 
 export const qntmGenerationPrompt: PromptDefinition = {
   id: 'qntm-generation',
@@ -44,7 +44,9 @@ content ~ domain ~ [machine_learning, systems_design]
 ## Existing Keys (REUSE when semantically close)
 {{existingKeys}}
 
-{{contextFileName}}## Chunk Text
+{{contextFileName}}{{contextChunkIndex}}
+{{contextTotalChunks}}
+## Chunk Text
 \`\`\`
 {{chunk}}
 \`\`\`

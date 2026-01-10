@@ -329,7 +329,6 @@ export class ConsolidationWatchdog {
       const consolidationTask = async () => {
         return consolidate({
           threshold: this.similarityThreshold,
-          limit: 50, // Process up to 50 pairs per pass
         })
       }
 

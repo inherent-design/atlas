@@ -11,7 +11,7 @@
  * - PromptRegistry: Selects best variant for a given backend
  */
 
-import type { LLMCapability } from '../../shared/capabilities'
+import type { LLMCapability } from '../shared/capabilities'
 
 // ============================================
 // Target Specification
@@ -235,8 +235,11 @@ export function extractVariables(template: string): string[] {
 }
 
 /**
- * Render a template with variables.
+ * Render a template with variables and special sections.
  * Replaces {{name}} with the corresponding value.
+ * Supports {{SECTION_NAME}} for dynamic section loading (loaded via sections module).
+ *
+ * Note: This is synchronous. For async section loading, use the builders module.
  *
  * @param template - The template string
  * @param variables - Key-value pairs to substitute
@@ -382,22 +385,59 @@ export type KnownPromptId =
   | 'qntm-generation' // Generate QNTM semantic keys
   | 'consolidation-classify' // Classify chunk relationships
   | 'content-classify' // Classify content type (text/code/media)
-  // Agent prompts
+  | 'compaction' // Working memory compaction
+  | 'query-expansion' // QNTM query expansion
+  // 3-role agent prompts
   | 'agent-sensor' // Sensor: perception + pattern recognition
   | 'agent-reasoner' // Reasoner: hypothesis generation + testing
   | 'agent-integrator' // Integrator: task execution + synthesis
+  // 6-role agent prompts
+  | 'agent-observer' // Observer: pure perception
+  | 'agent-connector' // Connector: pattern recognition
+  | 'agent-explainer' // Explainer: hypothesis generation
+  | 'agent-challenger' // Challenger: falsification testing
+  | 'agent-integrator-6role' // Integrator (6-role explicit)
+  | 'agent-meta' // Meta: orchestration
   | string // Extensible
 
 /**
- * Agent role type (consolidated from INTERSTITIA 5-role model)
+ * QNTM abstraction levels for consolidation pipeline.
+ * - L0 (Instance): Specific events, exact references, temporal anchors
+ * - L1 (Topic): Deduplicated content, topic-level concepts
+ * - L2 (Concept): Summarized knowledge, decontextualized facts
+ * - L3 (Principle): Abstract patterns, transferable insights
  */
-export type AgentRole = 'sensor' | 'reasoner' | 'integrator'
+export type QNTMAbstractionLevel = 0 | 1 | 2 | 3
+
+/**
+ * Agent role type (supports both 3-role and 6-role models)
+ */
+export type AgentRole =
+  // 3-role INTERSTITIA model
+  | 'sensor' // Observer + Connector (perception + pattern clustering)
+  | 'reasoner' // Explainer + Challenger (hypothesis + falsification)
+  | 'integrator' // Task execution + synthesis
+  // 6-role specialized model
+  | 'observer' // Pure perception
+  | 'connector' // Pattern recognition
+  | 'explainer' // Hypothesis generation
+  | 'challenger' // Falsification testing
+  | 'integrator-6role' // Task execution (explicit 6-role)
+  | 'meta' // Orchestration
 
 /**
  * Map from agent role to prompt ID
  */
 export const agentPromptMap: Record<AgentRole, KnownPromptId> = {
+  // 3-role
   sensor: 'agent-sensor',
   reasoner: 'agent-reasoner',
   integrator: 'agent-integrator',
+  // 6-role
+  observer: 'agent-observer',
+  connector: 'agent-connector',
+  explainer: 'agent-explainer',
+  challenger: 'agent-challenger',
+  'integrator-6role': 'agent-integrator-6role',
+  meta: 'agent-meta',
 }

@@ -30,6 +30,10 @@ import {
   type StatusResult,
   type SessionEventParams,
   type SessionEventResult,
+  type ExecuteWorkParams,
+  type ExecuteWorkResult,
+  type GetAgentContextParams,
+  type GetAgentContextResult,
 } from './protocol'
 import { createLogger } from '../shared/logger'
 import type { AtlasDaemonServer } from './server'
@@ -75,6 +79,8 @@ export class EventRouter {
     this.registerHandler('atlas.health', this.handleHealth.bind(this))
     this.registerHandler('atlas.status', this.handleStatus.bind(this))
     this.registerHandler('atlas.session_event', this.handleSessionEvent.bind(this))
+    this.registerHandler('atlas.execute_work', this.handleExecuteWork.bind(this))
+    this.registerHandler('atlas.get_agent_context', this.handleGetAgentContext.bind(this))
   }
 
   /**
@@ -219,7 +225,6 @@ export class EventRouter {
     const result = await consolidate({
       dryRun: params.dryRun,
       threshold: params.threshold,
-      limit: params.limit,
       // Pass event emitter to domain function
       emit: (event) => this.emit(event),
     })
@@ -228,6 +233,9 @@ export class EventRouter {
       candidatesFound: result.candidatesFound,
       consolidated: result.consolidated,
       deleted: result.deleted,
+      rounds: result.rounds,
+      maxLevel: result.maxLevel,
+      levelStats: result.levelStats,
     }
   }
 
@@ -478,6 +486,77 @@ export class EventRouter {
       })
 
       throw error
+    }
+  }
+
+  /**
+   * Handle atlas.execute_work - Execute multi-agent work graph
+   */
+  private async handleExecuteWork(
+    params: ExecuteWorkParams,
+    _clientId: string
+  ): Promise<ExecuteWorkResult> {
+    const { executeWork, buildWorkContext } = await import('../domain/agents/coordinator')
+
+    log.info('Executing work graph', { project: params.project })
+
+    // Build context with emit function so agents can broadcast events
+    const context = buildWorkContext(
+      [],
+      params.project ?? 'default',
+      params.variables ?? {},
+      (event) => this.emit(event)
+    )
+
+    const result = await executeWork(params.work as any, context)
+
+    return {
+      agents: result.agents.map((a) => ({
+        role: a.role,
+        task: a.task,
+        output: a.output,
+        artifacts: a.artifacts,
+        status: a.status,
+        took: a.took,
+      })),
+      took: result.took,
+      status: result.status,
+      error: result.error,
+    }
+  }
+
+  /**
+   * Handle atlas.get_agent_context - Get RAG context for agent spawn
+   */
+  private async handleGetAgentContext(
+    params: GetAgentContextParams,
+    _clientId: string
+  ): Promise<GetAgentContextResult> {
+    const { search } = await import('../domain/search')
+
+    log.debug('Getting agent context', {
+      qntmKeys: params.qntmKeys,
+      limit: params.limit,
+    })
+
+    const context: string[] = []
+
+    for (const key of params.qntmKeys) {
+      const results = await search({
+        query: key,
+        qntmKey: key,
+        limit: params.limit ?? 5,
+        consolidationLevel: params.consolidationLevel,
+      })
+
+      context.push(
+        ...results.map((r) => `[${r.file_path}]\n${r.text}\n(score: ${r.score.toFixed(3)})`)
+      )
+    }
+
+    return {
+      context,
+      total: context.length,
     }
   }
 }

@@ -220,6 +220,91 @@ export type SessionErrorEvent = {
 }
 
 // ============================================
+// Agent Events (Multi-Agent Orchestration)
+// ============================================
+
+export type AgentStartedEvent = {
+  type: 'agent.started'
+  data: {
+    role: string
+    task: string
+    project: string
+    maxTurns: number
+  }
+}
+
+export type AgentTurnEvent = {
+  type: 'agent.turn'
+  data: {
+    role: string
+    turn: number
+    maxTurns: number
+    toolsUsed?: string[]
+  }
+}
+
+export type AgentToolCalledEvent = {
+  type: 'agent.tool_called'
+  data: {
+    role: string
+    turn: number
+    toolName: string
+    toolId: string
+  }
+}
+
+export type AgentCompletedEvent = {
+  type: 'agent.completed'
+  data: {
+    role: string
+    status: 'success' | 'error' | 'max_turns'
+    turns: number
+    artifacts: string[]
+    took: number
+  }
+}
+
+export type AgentErrorEvent = {
+  type: 'agent.error'
+  data: {
+    role: string
+    turn?: number
+    error: string
+    phase: 'init' | 'turn' | 'tool' | 'artifact'
+  }
+}
+
+export type WorkStartedEvent = {
+  type: 'work.started'
+  data: {
+    nodeType: string
+    nodeId?: string
+    project: string
+  }
+}
+
+export type WorkCompletedEvent = {
+  type: 'work.completed'
+  data: {
+    nodeType: string
+    nodeId?: string
+    agentsExecuted: number
+    status: 'success' | 'error' | 'partial'
+    took: number
+  }
+}
+
+export type WorkErrorEvent = {
+  type: 'work.error'
+  data: {
+    nodeType: string
+    nodeId?: string
+    error: string
+    phase: string
+  }
+}
+
+// ============================================
 // Admin Events
 // ============================================
 
@@ -288,6 +373,15 @@ export type AtlasEvent =
   | SessionEndedEvent
   | SessionIngestedEvent
   | SessionErrorEvent
+  // Agent (Multi-agent orchestration)
+  | AgentStartedEvent
+  | AgentTurnEvent
+  | AgentToolCalledEvent
+  | AgentCompletedEvent
+  | AgentErrorEvent
+  | WorkStartedEvent
+  | WorkCompletedEvent
+  | WorkErrorEvent
   // Admin
   | HealthCheckedEvent
   | DepsMissingEvent

@@ -42,12 +42,14 @@ export type ConsolidationDirection = z.infer<typeof ConsolidationDirectionSchema
  * 1 = Deduplicated (merged with near-duplicates)
  * 2 = Topic summary (aggregated multiple level-1 chunks)
  * 3 = Domain knowledge (abstract patterns across topics)
+ * 4 = Meta-knowledge (cross-domain synthesis)
  */
 export const ConsolidationLevelSchema = z.union([
   z.literal(0),
   z.literal(1),
   z.literal(2),
   z.literal(3),
+  z.literal(4),
 ])
 export type ConsolidationLevel = z.infer<typeof ConsolidationLevelSchema>
 
@@ -110,8 +112,14 @@ export const SearchOptionsSchema = z.object({
   rerankTopK: z.number().int().min(1).max(1000).optional(),
   /** Enable QNTM query expansion (vocabulary bridging) */
   expandQuery: z.boolean().optional(),
-  /** Filter by consolidation level (0=raw, 1=deduped, 2=topic, 3=principle) */
-  consolidationLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  /** Filter by consolidation level (0=raw, 1=deduped, 2=topic, 3=domain, 4=meta) */
+  consolidationLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+  /** Filter by content type (code, document, conversation, signal, learning, axiom, evidence) */
+  contentType: z.enum(['code', 'document', 'conversation', 'signal', 'learning', 'axiom', 'evidence']).optional(),
+  /** Filter by agent role (observer, connector, explainer, challenger, integrator, meta) */
+  agentRole: z.enum(['observer', 'connector', 'explainer', 'challenger', 'integrator', 'meta']).optional(),
+  /** Filter by temperature tier (hot, warm, cold) */
+  temperature: z.enum(['hot', 'warm', 'cold']).optional(),
 })
 export type SearchOptions = z.infer<typeof SearchOptionsSchema> & {
   /** Event emitter function (opt-in, for daemon mode) */
@@ -208,7 +216,7 @@ export const ChunkPayloadSchema = z
     vectors_present: z.array(VectorNameSchema).optional(),
 
     // === Vertical consolidation (abstraction levels) ===
-    /** Consolidation level (0=raw, 1=deduped, 2=topic, 3=domain) */
+    /** Consolidation level (0=raw, 1=deduped, 2=topic, 3=domain, 4=meta) */
     consolidation_level: ConsolidationLevelSchema,
     /** Abstraction score (0.0-1.0, higher = more abstract) */
     abstraction_score: z.number().min(0).max(1).optional(),

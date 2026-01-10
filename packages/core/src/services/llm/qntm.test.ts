@@ -7,33 +7,39 @@
 
 import type { QNTMGenerationInput } from '.'
 import { buildQNTMPrompt } from './qntm'
+import { registerPrompts } from '../../prompts/variants'
 
 describe('qntm-providers', () => {
+  beforeAll(() => {
+    // Register prompts once for all tests (needed for buildQNTMPrompt)
+    registerPrompts()
+  })
+
   describe('buildQNTMPrompt', () => {
-    test('includes chunk text in prompt', () => {
+    test('includes chunk text in prompt', async () => {
       const input: QNTMGenerationInput = {
         chunk: 'Test chunk content',
         existingKeys: [],
       }
 
-      const prompt = buildQNTMPrompt(input)
+      const prompt = await buildQNTMPrompt(input)
 
       expect(prompt).toContain('Test chunk content')
     })
 
-    test('includes existing keys in prompt', () => {
+    test('includes existing keys in prompt', async () => {
       const input: QNTMGenerationInput = {
         chunk: 'Test chunk',
         existingKeys: ['@memory ~ type ~ episodic', '@database ~ strategy ~ indexing'],
       }
 
-      const prompt = buildQNTMPrompt(input)
+      const prompt = await buildQNTMPrompt(input)
 
       expect(prompt).toContain('@memory ~ type ~ episodic')
       expect(prompt).toContain('@database ~ strategy ~ indexing')
     })
 
-    test('includes context when provided', () => {
+    test('includes context when provided', async () => {
       const input: QNTMGenerationInput = {
         chunk: 'Test chunk',
         existingKeys: [],
@@ -44,19 +50,20 @@ describe('qntm-providers', () => {
         },
       }
 
-      const prompt = buildQNTMPrompt(input)
+      const prompt = await buildQNTMPrompt(input)
 
       expect(prompt).toContain('test.md')
-      expect(prompt).toContain('chunk 2/5')
+      expect(prompt).toContain('Chunk: 2')
+      expect(prompt).toContain('Total: 5')
     })
 
-    test('shows (none yet) when no existing keys', () => {
+    test('shows (none yet) when no existing keys', async () => {
       const input: QNTMGenerationInput = {
         chunk: 'Test chunk',
         existingKeys: [],
       }
 
-      const prompt = buildQNTMPrompt(input)
+      const prompt = await buildQNTMPrompt(input)
 
       expect(prompt).toContain('(none yet)')
     })

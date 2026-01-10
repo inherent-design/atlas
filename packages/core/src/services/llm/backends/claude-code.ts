@@ -12,8 +12,11 @@ import type {
   LLMBackend,
   CanComplete,
   CanCompleteJSON,
+  CanUseTool,
   CompletionResult,
   CompletionOptions,
+  ToolDefinition,
+  ToolUseResult,
 } from '../types'
 import type { LLMCapability } from '../../../shared/capabilities'
 import type { LatencyClass } from '../../../shared/capabilities'
@@ -27,7 +30,7 @@ const log = createLogger('llm:claude-code')
  * Claude Code backend using `claude -p` CLI.
  * Default Anthropic pathway for users without API key.
  */
-export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJSON {
+export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJSON, CanUseTool {
   readonly name: string
   readonly modelId: string
   readonly contextWindow = 200_000
@@ -260,6 +263,122 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
     } catch (error) {
       log.error('Claude Code unified message completion failed', error as Error)
       throw new Error(`Claude Code completion failed: ${error}`)
+    }
+  }
+
+  /**
+   * Generate completion with tool definitions
+   * Uses claude CLI with --tools parameter
+   */
+  async completeWithTools(
+    prompt: string,
+    tools: ToolDefinition[],
+    options?: CompletionOptions
+  ): Promise<ToolUseResult> {
+    const model = this.modelId
+    const endTimer = startTimer(`claude -p --model ${model} (with tools)`)
+
+    log.trace('Claude Code tool completion request', {
+      model,
+      promptLength: prompt.length,
+      toolCount: tools.length,
+    })
+
+    try {
+      // Format tools for Claude CLI
+      // Claude CLI expects JSON-formatted tool definitions
+      const toolsJson = JSON.stringify(
+        tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.inputSchema,
+        }))
+      )
+
+      const args = [
+        'claude',
+        '-p',
+        '--model',
+        model,
+        '--output-format',
+        'json',
+        '--tools',
+        toolsJson,
+        '--strict-mcp-config',
+        '--max-turns',
+        '1',
+      ]
+
+      log.trace('Claude CLI process spawned (with tools)', { args: args.slice(0, -2) })
+
+      const process = Bun.spawn(args, {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+
+      process.stdin.write(prompt)
+      process.stdin.end()
+
+      const output = await new Response(process.stdout).text()
+      const stderr = await new Response(process.stderr).text()
+
+      log.trace('Claude CLI raw output (with tools)', {
+        outputLength: output.length,
+        stderrLength: stderr.length,
+      })
+
+      // Parse response
+      const wrapper = JSON.parse(output.trim())
+      const result = wrapper.result || output
+
+      // Check if response contains tool calls
+      // Claude CLI returns tool calls in the response
+      let toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
+      let text = ''
+
+      try {
+        const parsed = typeof result === 'string' ? JSON.parse(result) : result
+
+        // Claude Code format: { type: 'tool_use', id, name, input }
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item.type === 'tool_use') {
+              toolCalls.push({
+                id: item.id || `tool_${Date.now()}`,
+                name: item.name,
+                input: item.input || {},
+              })
+            } else if (item.type === 'text') {
+              text += item.text || ''
+            }
+          }
+        } else if (parsed.type === 'tool_use') {
+          toolCalls.push({
+            id: parsed.id || `tool_${Date.now()}`,
+            name: parsed.name,
+            input: parsed.input || {},
+          })
+        } else {
+          // Plain text response
+          text = typeof result === 'string' ? result : JSON.stringify(result)
+        }
+      } catch {
+        // If parsing fails, treat as plain text
+        text = result
+      }
+
+      endTimer()
+
+      return {
+        text,
+        toolCalls,
+        model,
+        stopReason: toolCalls.length > 0 ? 'tool_use' : 'end_turn',
+      }
+    } catch (error) {
+      log.error('Claude Code tool completion failed', error as Error)
+      throw new Error(`Claude Code tool completion failed: ${error}`)
     }
   }
 }

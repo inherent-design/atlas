@@ -55,3 +55,6 @@ export * from './services/tracking'
 
 // Doctor service
 export * from './services/doctor'
+
+// Prompts service (includes registerPrompts for lazy initialization)
+export { registerPrompts } from './prompts'

@@ -16,7 +16,7 @@
 
 import { createLogger } from '../../shared/logger'
 import { getLLMBackendFor } from '../../services/llm'
-import { buildCompactionPrompt } from '../../services/llm/prompts'
+import { buildTaskPrompt } from '../../prompts/builders'
 import { ingest } from '../ingest'
 import type { IngestResult } from '../../shared/types'
 
@@ -177,11 +177,13 @@ export class WorkingMemoryManager {
     })
 
     // Build compaction prompt
-    const conversation = this.buffer.map((turn) => ({
-      role: turn.role,
-      content: turn.content,
-    }))
-    const prompt = buildCompactionPrompt(conversation)
+    const formattedConversation = this.buffer
+      .map(turn => `[${turn.role.toUpperCase()}]\n${turn.content}`)
+      .join('\n\n---\n\n')
+
+    const prompt = await buildTaskPrompt('compaction', {
+      conversation: formattedConversation
+    })
 
     // Get JSON-capable LLM backend
     const backend = getLLMBackendFor('json-completion')

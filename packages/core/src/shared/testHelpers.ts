@@ -279,7 +279,7 @@ export function createMockQdrantPoint(overrides?: {
   vector?: number[] | { text?: number[]; code?: number[] }
   payload?: Partial<ChunkPayload>
 }) {
-  const defaultVector = new Array(1024).fill(0.1)
+  const defaultVector = new Array(16).fill(0.1)
 
   // Support both flat vectors (legacy) and named vectors (current)
   const vector = overrides?.vector

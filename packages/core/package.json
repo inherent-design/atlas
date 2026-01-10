@@ -47,8 +47,8 @@
   },
   "scripts": {
     "format": "prettier --write .",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "BUN_JSC_forceRAMSize=8589934592 vitest run",
+    "test:coverage": "BUN_JSC_forceRAMSize=8589934592 vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

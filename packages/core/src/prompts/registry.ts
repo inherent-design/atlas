@@ -12,7 +12,7 @@ import type {
   RenderOptions,
 } from './types'
 import { scoreVariant, compareVariantMatches, renderTemplate, validateVariables } from './types'
-import { createLogger } from '../../shared/logger'
+import { createLogger } from '../shared/logger'
 
 const log = createLogger('prompts:registry')
 

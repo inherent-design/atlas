@@ -62,14 +62,14 @@ describe('Fixtures', () => {
       const v1 = generateEmbedding('test-seed')
       const v2 = generateEmbedding('test-seed')
 
-      expect(v1).toHaveLength(1024)
+      expect(v1).toHaveLength(16)
       expect(v1).toEqual(v2) // Same seed = same vector
     })
 
     test('should provide predefined embeddings', () => {
-      expect(EMBEDDINGS.default).toHaveLength(1024)
-      expect(EMBEDDINGS.memory).toHaveLength(1024)
-      expect(EMBEDDINGS.code).toHaveLength(1024)
+      expect(EMBEDDINGS.default).toHaveLength(16)
+      expect(EMBEDDINGS.memory).toHaveLength(16)
+      expect(EMBEDDINGS.code).toHaveLength(16)
     })
 
     test('should calculate cosine similarity', () => {
@@ -112,7 +112,7 @@ describe('Fixtures', () => {
       expect(points).toHaveLength(5)
       expect(points[0]!.id).toContain('test')
       expect(points[0]!.vector.text).toBeDefined()
-      expect(points[0]!.vector.text).toHaveLength(1024)
+      expect(points[0]!.vector.text).toHaveLength(16)
     })
   })
 })
@@ -124,7 +124,7 @@ describe('Mocks', () => {
       const result = await backend.embedText('test input')
 
       expect(result.embeddings).toHaveLength(1)
-      expect(result.embeddings[0]).toHaveLength(1024)
+      expect(result.embeddings[0]).toHaveLength(16)
       expect(result.model).toBe('mock-embedding-1024')
     })
 
@@ -138,7 +138,7 @@ describe('Mocks', () => {
 
     test('should support fixed embeddings', async () => {
       const backend = createMockEmbeddingBackend()
-      const fixed = new Array(1024).fill(0.5)
+      const fixed = new Array(16).fill(0.5)
       backend.setFixedEmbedding('specific', fixed)
 
       const result = await backend.embedText('specific')
@@ -158,7 +158,7 @@ describe('Mocks', () => {
       const backend = createMockStorageBackend()
 
       await backend.createCollection('test', {
-        dimensions: 1024,
+        dimensions: 16,
         distance: 'cosine',
       })
 

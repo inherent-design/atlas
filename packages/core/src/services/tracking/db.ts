@@ -19,10 +19,17 @@ export function getAtlasDataDir(): string {
 }
 
 /**
+ * Get the daemon runtime directory path
+ */
+export function getDaemonDir(): string {
+  return join(getAtlasDataDir(), 'daemon')
+}
+
+/**
  * Get the default database path
  */
 export function getDefaultDbPath(): string {
-  return join(getAtlasDataDir(), 'atlas.db')
+  return join(getDaemonDir(), 'atlas.db')
 }
 
 /**
@@ -33,6 +40,13 @@ function ensureDataDir(): void {
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true })
     log.info('Created Atlas data directory', { path: dataDir })
+  }
+
+  // Ensure daemon directory exists
+  const daemonDir = getDaemonDir()
+  if (!existsSync(daemonDir)) {
+    mkdirSync(daemonDir, { recursive: true })
+    log.info('Created daemon directory', { path: daemonDir })
   }
 }
 

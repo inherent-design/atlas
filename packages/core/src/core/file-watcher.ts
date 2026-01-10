@@ -71,12 +71,34 @@ class FileWatcher implements ManagedScheduler {
       patterns: this.config.patterns,
     })
 
-    // Build ignore matchers: combine patterns with explicit socket/pid check
+    // Build ignore matchers: combine patterns with explicit checks
     const ignoreMatchers: Array<string | ((path: string) => boolean)> = [
       ...this.config.ignorePatterns.filter((p) => !p.includes('*')), // directory names
       (path: string) => {
-        // Explicitly ignore socket, pid, and metadata files
-        return path.endsWith('.sock') || path.endsWith('.pid') || path.endsWith('.DS_Store')
+        // Allow .env templates through (these are safe, no secrets)
+        if (path.endsWith('.env.example') || path.endsWith('.env.template')) {
+          return false // Don't ignore
+        }
+
+        // Explicitly ignore daemon directory and runtime files
+        if (
+          path.includes('/daemon/') ||
+          path.endsWith('.sock') ||
+          path.endsWith('.pid') ||
+          path.endsWith('.DS_Store') ||
+          path.endsWith('.db') ||
+          path.endsWith('.db-shm') ||
+          path.endsWith('.db-wal')
+        ) {
+          return true // Ignore
+        }
+
+        // Ignore .env files (but templates were allowed above)
+        if (path.includes('.env') && !path.endsWith('.env.example') && !path.endsWith('.env.template')) {
+          return true // Ignore
+        }
+
+        return false // Don't ignore by default
       },
     ]
 

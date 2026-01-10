@@ -500,7 +500,6 @@ describe('ConsolidationWatchdog', () => {
 
       expect(mockConsolidate).toHaveBeenCalledWith({
         threshold: 0.88,
-        limit: 50,
       })
     })
 
@@ -512,7 +511,6 @@ describe('ConsolidationWatchdog', () => {
 
       expect(mockConsolidate).toHaveBeenCalledWith({
         threshold: CONSOLIDATION_SIMILARITY_THRESHOLD,
-        limit: 50,
       })
     })
   })

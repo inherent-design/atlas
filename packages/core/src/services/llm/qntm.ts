@@ -15,11 +15,8 @@ import pRetry from 'p-retry'
 import type { QNTMGenerationInput, QNTMGenerationResult } from '.'
 import { getLLMBackendFor, type LLMConfig } from '.'
 import { createLogger } from '../../shared/logger'
-import {
-  buildQNTMPrompt as buildQNTMPromptFromRegistry,
-  buildQueryExpansionPrompt,
-  type QNTMAbstractionLevel,
-} from './prompts'
+import { buildTaskPrompt } from '../../prompts/builders'
+import type { QNTMAbstractionLevel } from '../../prompts/types'
 
 const log = createLogger('qntm:providers')
 
@@ -40,7 +37,7 @@ const RETRY_OPTIONS = {
 
 // Re-export types for backwards compatibility
 export type { LLMConfig as ProviderConfig, LLMProvider as QNTMProvider } from '.'
-export type { QNTMAbstractionLevel } from './prompts'
+export type { QNTMAbstractionLevel } from '../../prompts/types'
 
 /**
  * Extended QNTM generation input with abstraction level.
@@ -58,11 +55,33 @@ export interface QNTMGenerationInputWithLevel extends QNTMGenerationInput {
  * @param input - Chunk text, existing keys, context, and abstraction level
  * @returns Prompt string for LLM
  */
-export function buildQNTMPrompt(input: QNTMGenerationInputWithLevel): string {
+export async function buildQNTMPrompt(input: QNTMGenerationInputWithLevel): Promise<string> {
   const { chunk, existingKeys, context, level = 0 } = input
 
-  // Use the new prompt registry with abstraction level support
-  return buildQNTMPromptFromRegistry(chunk, existingKeys, level, context)
+  // Format existing keys
+  const formattedKeys = existingKeys.slice(-50).map(k => `- ${k}`).join('\n') || '(none yet)'
+
+  // Format context if provided
+  let contextFileName = ''
+  let contextChunkIndex = ''
+  let contextTotalChunks = ''
+
+  if (context?.fileName) {
+    contextFileName = `## Context\nFile: ${context.fileName}\n`
+    if (context.chunkIndex !== undefined && context.totalChunks !== undefined) {
+      contextChunkIndex = `Chunk: ${context.chunkIndex}`
+      contextTotalChunks = `Total: ${context.totalChunks}`
+    }
+  }
+
+  // Use the new prompt registry
+  return await buildTaskPrompt('qntm-generation', {
+    chunk,
+    existingKeys: formattedKeys,
+    contextFileName,
+    contextChunkIndex,
+    contextTotalChunks,
+  })
 }
 
 /**
@@ -76,7 +95,7 @@ export async function generateQNTMKeysWithProvider(
   input: QNTMGenerationInputWithLevel,
   config: LLMConfig
 ): Promise<QNTMGenerationResult> {
-  const prompt = buildQNTMPrompt(input)
+  const prompt = await buildQNTMPrompt(input)
 
   log.debug('Generating QNTM keys', {
     provider: config.provider,
@@ -121,7 +140,13 @@ export async function generateQueryQNTMKeys(
   query: string,
   existingKeys: string[]
 ): Promise<QNTMGenerationResult> {
-  const prompt = buildQueryExpansionPrompt(query, existingKeys)
+  // Format existing keys
+  const formattedKeys = existingKeys.slice(-50).map(k => `- ${k}`).join('\n') || '(none)'
+
+  const prompt = await buildTaskPrompt('query-expansion', {
+    query,
+    existingKeys: formattedKeys,
+  })
 
   log.debug('Generating query QNTM keys', {
     queryLength: query.length,

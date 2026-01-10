@@ -13,10 +13,14 @@
 
 import { getStorageBackend } from '../../services/storage'
 import { getEmbeddingBackend } from '../../services/embedding'
-import { QDRANT_COLLECTION_NAME, VOYAGE_MODEL } from '../../shared/config'
+import {
+  QDRANT_COLLECTION_NAME,
+  VOYAGE_MODEL,
+  CONSOLIDATION_SIMILARITY_THRESHOLD,
+} from '../../shared/config'
 import { getConfig } from '../../shared/config.loader'
 import { getLLMBackendFor } from '../../services/llm'
-import { buildConsolidationPrompt } from '../../services/llm/prompts'
+import { buildTaskPrompt } from '../../prompts/builders'
 import { createLogger, startTimer } from '../../shared/logger'
 import type { ChunkPayload, ConsolidationType, ConsolidationDirection } from '../../shared/types'
 import type { NamedVectors } from '../../services/storage'
@@ -26,7 +30,6 @@ const log = createLogger('consolidate')
 export interface ConsolidateConfig {
   dryRun?: boolean
   threshold?: number // Similarity threshold (0-1)
-  limit?: number // Max candidates to process
   emit?: (event: any) => void // Event emitter (opt-in, for daemon mode)
 }
 
@@ -44,6 +47,9 @@ export interface ConsolidateResult {
   candidatesFound: number
   consolidated: number
   deleted: number
+  rounds: number
+  maxLevel: number
+  levelStats: Record<number, number> // level -> count consolidated to that level
   candidates?: ConsolidateCandidate[]
 }
 
@@ -72,16 +78,14 @@ async function classifyConsolidation(
     throw new Error('Backend does not implement JSON completion')
   }
 
-  const prompt = buildConsolidationPrompt(
-    payload1.original_text,
-    payload2.original_text,
-    payload1.qntm_keys,
-    payload2.qntm_keys,
-    payload1.created_at,
-    payload2.created_at,
-    payload1.consolidation_level,
-    payload2.consolidation_level
-  )
+  const prompt = await buildTaskPrompt('consolidation-classify', {
+    text1: payload1.original_text,
+    text2: payload2.original_text,
+    keys1: payload1.qntm_keys.join(', '),
+    keys2: payload2.qntm_keys.join(', '),
+    created1: payload1.created_at,
+    created2: payload2.created_at,
+  })
 
   try {
     // Type assertion: we verified completeJSON exists
@@ -109,26 +113,29 @@ async function classifyConsolidation(
 }
 
 /**
- * Find consolidation candidates via self-similarity search
+ * Find consolidation candidates at a specific consolidation level
  *
- * For each chunk, finds other chunks with similarity > threshold.
+ * Searches for similar chunks at the same level to consolidate into the next level.
  * Returns deduplicated pairs (A~B and B~A are same pair).
  */
-async function findCandidates(threshold: number, limit: number): Promise<ConsolidateCandidate[]> {
-  const endTimer = startTimer('findCandidates')
+async function findCandidatesAtLevel(
+  level: number,
+  threshold: number
+): Promise<ConsolidateCandidate[]> {
+  const endTimer = startTimer(`findCandidatesAtLevel:${level}`)
   const storage = getStorageBackend()
   if (!storage) {
     throw new Error('No storage backend available')
   }
 
-  log.info('Scanning for consolidation candidates', { threshold, limit })
+  log.info('Scanning for consolidation candidates', { level, threshold })
 
-  // Get all points from collection
   const candidates: ConsolidateCandidate[] = []
   const seenPairs = new Set<string>() // Track A~B pairs to avoid duplicates
 
+  // Scroll through ALL points at this level (no limit)
   let offset: string | number | null | undefined = undefined
-  const SCROLL_LIMIT = 50
+  const SCROLL_LIMIT = 100 // Increased from 50
 
   do {
     const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
@@ -136,36 +143,43 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
       offset,
       withPayload: true,
       withVector: true,
+      filter: {
+        must: [
+          { key: 'consolidation_level', match: { value: level } },
+        ],
+        must_not: [
+          { key: 'deletion_eligible', match: { value: true } }, // Not marked for deletion
+        ],
+      },
     })
 
-    // For each point, search for similar points
+    // For each point at this level, search for similar points AT SAME LEVEL
     for (const point of result.points) {
       const payload = point.payload as ChunkPayload
       const namedVectors = point.vector as NamedVectors
       const textVector = namedVectors.text
 
-      if (!textVector || payload.consolidated) continue
+      if (!textVector) continue
 
-      // Search for similar points
+      // Search for similar points at same level
       const similar = await storage.search(QDRANT_COLLECTION_NAME, {
         vectorName: 'text',
         vector: textVector,
-        limit: 5, // Top 5 similar
+        limit: 10, // Top 10 similar candidates
         scoreThreshold: threshold,
         withPayload: true,
         filter: {
+          must: [
+            { key: 'consolidation_level', match: { value: level } },
+          ],
           must_not: [
             { has_id: [point.id] }, // Exclude self
+            { key: 'deletion_eligible', match: { value: true } }, // Not marked for deletion
           ],
         },
       })
 
       for (const hit of similar) {
-        const hitPayload = hit.payload as ChunkPayload
-
-        // Skip already consolidated chunks
-        if (hitPayload.consolidated) continue
-
         // Create canonical pair ID (sorted to dedupe A~B and B~A)
         const pairKey = [point.id, hit.id].sort().join('~')
         if (seenPairs.has(pairKey)) continue
@@ -180,17 +194,13 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
           created_at: payload.created_at,
           pair_id: hit.id as string,
         })
-
-        if (candidates.length >= limit) break
       }
-
-      if (candidates.length >= limit) break
     }
 
     offset = result.nextOffset
-  } while (offset !== null && offset !== undefined && candidates.length < limit)
+  } while (offset !== null && offset !== undefined)
 
-  log.info('Found consolidation candidates', { count: candidates.length })
+  log.info('Found consolidation candidates', { level, count: candidates.length })
 
   endTimer()
   return candidates
@@ -202,11 +212,12 @@ async function findCandidates(threshold: number, limit: number): Promise<Consoli
  * For each candidate pair:
  * 1. Fetch both chunks
  * 2. Use LLM to classify relationship and determine which to keep
- * 3. Update kept chunk with provenance metadata
+ * 3. Update kept chunk with provenance metadata and promote to targetLevel
  * 4. Mark other chunk as consolidated (soft delete)
  */
 async function performConsolidation(
   candidates: ConsolidateCandidate[],
+  targetLevel: number,
   emit?: (event: any) => void
 ): Promise<{ consolidated: number; deleted: number }> {
   const endTimer = startTimer('performConsolidation')
@@ -268,11 +279,11 @@ async function performConsolidation(
         ...new Set([...primaryOccurrences, ...secondaryOccurrences]),
       ].sort()
 
-      // Update primary with consolidation metadata
+      // Update primary with consolidation metadata and promote to target level
       const updatedPayload: ChunkPayload = {
         ...primaryPayload,
         qntm_keys: mergedKeys,
-        consolidation_level: Math.max(primaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3, // At least level 1 after consolidation
+        consolidation_level: targetLevel as 0 | 1 | 2 | 3 | 4,
         occurrences: mergedOccurrences, // Array of ISO timestamps
         parents: [...(primaryPayload.parents || []), secondary!.id as string], // Absorbs consolidated_from
         consolidation_type: classification.type,
@@ -328,13 +339,14 @@ async function performConsolidation(
  */
 export async function consolidate(config: ConsolidateConfig): Promise<ConsolidateResult> {
   const atlasConfig = getConfig()
-  const defaultThreshold = atlasConfig.consolidation?.similarityThreshold ?? 0.95
+  const defaultThreshold =
+    atlasConfig.consolidation?.similarityThreshold ?? CONSOLIDATION_SIMILARITY_THRESHOLD
 
-  const { dryRun = false, threshold = defaultThreshold, limit = Infinity, emit } = config
+  const { dryRun = false, threshold = defaultThreshold, emit } = config
   const endTimer = startTimer('consolidate')
   const startTime = Date.now()
 
-  log.info('Starting consolidation', { dryRun, threshold, limit })
+  log.info('Starting consolidation', { dryRun, threshold })
 
   // Emit consolidate.triggered event
   emit?.({
@@ -350,43 +362,120 @@ export async function consolidate(config: ConsolidateConfig): Promise<Consolidat
     const { requireCollection } = await import('../../shared/utils')
     await requireCollection(QDRANT_COLLECTION_NAME)
 
-    // Find candidates
-    const candidates = await findCandidates(threshold, limit)
+    let totalCandidatesFound = 0
+    let totalConsolidated = 0
+    let totalDeleted = 0
+    let rounds = 0
+    let maxLevel = 0
+    const levelStats: Record<number, number> = {}
+    const allCandidates: ConsolidateCandidate[] = []
+
+    const MAX_LEVEL = 4
+
+    // Process each level until stable, then move to next
+    for (let currentLevel = 0; currentLevel < MAX_LEVEL; currentLevel++) {
+      const targetLevel = currentLevel + 1
+      let levelStable = false
+
+      // Keep processing this level until stable (no new consolidations)
+      while (!levelStable) {
+        rounds++
+        log.info('Starting consolidation round', {
+          round: rounds,
+          currentLevel,
+          targetLevel,
+        })
+
+        // Find candidates at current level
+        const candidates = await findCandidatesAtLevel(currentLevel, threshold)
+        totalCandidatesFound += candidates.length
+
+        if (dryRun) {
+          allCandidates.push(...candidates)
+        }
+
+        if (candidates.length === 0) {
+          log.info('Level is stable (no candidates)', { level: currentLevel })
+          levelStable = true
+          break
+        }
+
+        if (!dryRun) {
+          // Perform consolidation to next level
+          const { consolidated, deleted } = await performConsolidation(
+            candidates,
+            targetLevel,
+            emit
+          )
+
+          totalConsolidated += consolidated
+          totalDeleted += deleted
+
+          if (consolidated > 0) {
+            levelStats[targetLevel] = (levelStats[targetLevel] || 0) + consolidated
+            maxLevel = Math.max(maxLevel, targetLevel)
+          }
+
+          log.info('Round complete', {
+            round: rounds,
+            level: currentLevel,
+            candidates: candidates.length,
+            consolidated,
+            deleted,
+          })
+
+          // If we didn't consolidate anything, level is stable
+          if (consolidated === 0) {
+            levelStable = true
+          }
+          // Otherwise, continue scanning this level for more candidates
+        } else {
+          // In dry run, only scan each level once
+          levelStable = true
+        }
+      }
+    }
 
     if (dryRun) {
       endTimer()
       return {
-        candidatesFound: candidates.length,
+        candidatesFound: totalCandidatesFound,
         consolidated: 0,
         deleted: 0,
-        candidates,
+        rounds,
+        maxLevel: 0,
+        levelStats: {},
+        candidates: allCandidates,
       }
     }
 
-    // Perform consolidation (pass emit function)
-    const { consolidated, deleted } = await performConsolidation(candidates, emit)
-
     log.info('Consolidation complete', {
-      candidatesFound: candidates.length,
-      consolidated,
-      deleted,
+      rounds,
+      candidatesFound: totalCandidatesFound,
+      consolidated: totalConsolidated,
+      deleted: totalDeleted,
+      maxLevel,
+      levelStats,
     })
 
     // Emit consolidate.completed event
     emit?.({
       type: 'consolidate.completed',
       data: {
-        merged: consolidated,
-        deleted,
+        merged: totalConsolidated,
+        deleted: totalDeleted,
         took: Date.now() - startTime,
       },
     })
 
     endTimer()
     return {
-      candidatesFound: candidates.length,
-      consolidated,
-      deleted,
+      candidatesFound: totalCandidatesFound,
+      consolidated: totalConsolidated,
+      deleted: totalDeleted,
+      rounds,
+      maxLevel,
+      levelStats,
     }
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error))
@@ -396,7 +485,7 @@ export async function consolidate(config: ConsolidateConfig): Promise<Consolidat
       type: 'consolidate.error',
       data: {
         error: err.message,
-        phase: 'find', // Could be 'find', 'classify', or 'merge'
+        phase: 'consolidate',
       },
     })
 

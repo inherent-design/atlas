@@ -739,3 +739,8 @@ FodyWeavers.xsd
 
 # Atlas
 data/
+
+# Heap profiling artifacts (investigation leftovers)
+*.heapprofile
+*.heapsnapshot
+analyze-*.cjs

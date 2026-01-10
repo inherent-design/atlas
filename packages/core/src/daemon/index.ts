@@ -19,6 +19,7 @@ import { getSystemPressureMonitor } from '../core/system-pressure-monitor'
 import { getFileWatcher } from '../core/file-watcher'
 import { getConfig } from '../shared/config.loader'
 import { ensureCollection } from '../shared/utils'
+import { registerPrompts } from '../prompts'
 
 const log = createLogger('daemon')
 
@@ -321,6 +322,10 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<AtlasDaemo
   if (daemonInstance) {
     throw new Error('Daemon already started')
   }
+
+  // Register prompts before starting daemon (required for consolidation, etc.)
+  registerPrompts()
+  log.debug('Prompts registered for daemon')
 
   daemonInstance = new AtlasDaemon(config)
   await daemonInstance.start()

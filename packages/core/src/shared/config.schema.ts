@@ -449,6 +449,8 @@ export const providerCapabilities: Record<Provider, Capability[]> = {
     'code-completion',
     'extended-thinking',
     'streaming',
+    'vision',
+    'tool-use',
     'text-embedding',
     'code-embedding',
     'contextualized-embedding',

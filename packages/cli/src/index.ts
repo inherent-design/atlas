@@ -6,14 +6,14 @@
  */
 
 import {
-  loadConfig,
-  getConfig,
-  applyRuntimeOverrides,
-  parseBackendSpecifier,
   CONSOLIDATION_SIMILARITY_THRESHOLD,
   DEFAULT_SEARCH_LIMIT,
   OLLAMA_URL,
+  applyRuntimeOverrides,
   createLogger,
+  getConfig,
+  loadConfig,
+  parseBackendSpecifier,
   setLogLevel,
   setModuleRules,
 } from '@inherent.design/atlas-core'
@@ -25,6 +25,10 @@ const log = createLogger('app')
 async function main() {
   // Load config first (services call getConfig() at module load)
   await loadConfig()
+
+  // Register prompts (MUST be called before using prompt system)
+  const { registerPrompts } = await import('@inherent.design/atlas-core')
+  registerPrompts()
 
   // Dynamic imports AFTER config is loaded
   const { ingest } = await import('@inherent.design/atlas-core')
@@ -204,6 +208,16 @@ async function main() {
     .option('--since <date>', 'Filter by creation date (ISO 8601)')
     .option('--qntm <key>', 'Filter by QNTM semantic key')
     .option('--rerank', 'Rerank results using Voyage cross-encoder')
+    .option('--consolidation-level <level>', 'Filter by consolidation level (0-4)', parseInt)
+    .option(
+      '--content-type <type>',
+      'Filter by content type (code, document, conversation, signal, learning, axiom, evidence)'
+    )
+    .option(
+      '--agent-role <role>',
+      'Filter by agent role (observer, connector, explainer, challenger, integrator, meta)'
+    )
+    .option('--temperature <tier>', 'Filter by temperature tier (hot, warm, cold)')
     .option('--embedding <backend>', 'Override embedding backend (e.g., voyage:voyage-3-large)')
     .option('--reranker <backend>', 'Override reranker backend (e.g., voyage:rerank-2.5)')
     .action(async (query: string, options, command) => {
@@ -254,6 +268,10 @@ async function main() {
           since: options.since,
           qntmKey: options.qntm,
           rerank: options.rerank,
+          consolidationLevel: options.consolidationLevel,
+          contentType: options.contentType,
+          agentRole: options.agentRole,
+          temperature: options.temperature,
         })
         log.debug('Search complete', { resultCount: results.length })
         console.log(formatResults(results))
@@ -325,7 +343,6 @@ async function main() {
       parseFloat,
       CONSOLIDATION_SIMILARITY_THRESHOLD
     )
-    .option('-l, --limit <n>', 'Max candidates to process (default: unlimited)', parseInt)
     .option('--llm <backend>', 'Override LLM backend (e.g., claude-code:haiku)')
     .action(async (options, command) => {
       const globalOpts = command.parent?.opts() || {}
@@ -376,7 +393,6 @@ async function main() {
         const result = await consolidate({
           dryRun: options.dryRun,
           threshold: options.threshold,
-          limit: options.limit,
         })
 
         if (options.dryRun) {
@@ -393,8 +409,11 @@ async function main() {
           }
         } else {
           log.info(
-            `Consolidation complete: ${result.consolidated} chunks merged, ${result.deleted} removed`
+            `Consolidation complete: ${result.consolidated} chunks merged (${result.deleted} removed) in ${result.rounds} rounds, max level: ${result.maxLevel}`
           )
+          if (Object.keys(result.levelStats).length > 0) {
+            console.log('Level stats:', result.levelStats)
+          }
         }
       } catch (error) {
         log.error('Consolidation failed', error as Error)
@@ -413,9 +432,9 @@ async function main() {
         .action(async (options, command) => {
           const globalOpts = command.parent?.parent?.opts() || {}
 
-          // Apply runtime config overrides (immutable pattern)
+          // Set Qdrant URL from CLI option (env var override)
           if (globalOpts.qdrantUrl) {
-            applyRuntimeOverrides({ qdrant: { url: globalOpts.qdrantUrl } })
+            process.env.QDRANT_URL = globalOpts.qdrantUrl
           }
 
           if (!options.yes) {
@@ -465,9 +484,9 @@ async function main() {
         .action(async (state: string, options, command) => {
           const globalOpts = command.parent?.parent?.opts() || {}
 
-          // Apply runtime config overrides (immutable pattern)
+          // Set Qdrant URL from CLI option (env var override)
           if (globalOpts.qdrantUrl) {
-            applyRuntimeOverrides({ qdrant: { url: globalOpts.qdrantUrl } })
+            process.env.QDRANT_URL = globalOpts.qdrantUrl
           }
           if (globalOpts.voyageKey) {
             process.env.VOYAGE_API_KEY = globalOpts.voyageKey
@@ -504,9 +523,9 @@ async function main() {
         .action(async (options, command) => {
           const globalOpts = command.parent?.parent?.opts() || {}
 
-          // Apply runtime config overrides (immutable pattern)
+          // Set Qdrant URL from CLI option (env var override)
           if (globalOpts.qdrantUrl) {
-            applyRuntimeOverrides({ qdrant: { url: globalOpts.qdrantUrl } })
+            process.env.QDRANT_URL = globalOpts.qdrantUrl
           }
 
           try {

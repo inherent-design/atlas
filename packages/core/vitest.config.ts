@@ -16,9 +16,13 @@ export default defineConfig({
     // Process-level isolation: each test file runs in separate child process
     // This prevents mock.module() leaks between files (the core issue with bun:test)
     pool: 'forks',
+    // Vitest 4+ moved poolOptions to top level
 
-    // DOM environment for future React SSR testing
-    environment: 'happy-dom',
+    // Node environment (happy-dom may leak DOM state across tests)
+    environment: 'node',
+
+    // Global setup file
+    setupFiles: ['./vitest.setup.ts'],
 
     // Auto-restore mocks after each test
     restoreMocks: true,
@@ -35,6 +39,9 @@ export default defineConfig({
     // Timeouts
     testTimeout: 10000,
     hookTimeout: 10000,
+
+    // Debugging
+    logHeapUsage: false, // Set to true to debug memory issues
 
     // Coverage (when running with --coverage)
     coverage: {

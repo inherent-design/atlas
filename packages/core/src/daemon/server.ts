@@ -6,7 +6,7 @@
  */
 
 import { createServer, Server as NetServer, Socket } from 'net'
-import { unlinkSync, existsSync } from 'fs'
+import { unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { homedir, platform } from 'os'
 import { createLogger } from '../shared/logger'
@@ -15,6 +15,13 @@ import { parseMessage, serializeMessage, createErrorResponse, JsonRpcErrorCode }
 import type { EventRouter } from './router'
 
 const log = createLogger('daemon:server')
+
+/**
+ * Get daemon runtime directory path
+ */
+export function getDaemonDir(): string {
+  return join(homedir(), '.atlas', 'daemon')
+}
 
 /**
  * Get socket path for platform
@@ -27,7 +34,7 @@ export function getSocketPath(): string {
     return '\\\\.\\pipe\\atlas'
   } else {
     // Unix domain socket
-    return join(homedir(), '.atlas', 'atlas.sock')
+    return join(getDaemonDir(), 'atlas.sock')
   }
 }
 
@@ -35,7 +42,7 @@ export function getSocketPath(): string {
  * Get PID file path
  */
 export function getPidFilePath(): string {
-  return join(homedir(), '.atlas', 'atlas.pid')
+  return join(getDaemonDir(), 'atlas.pid')
 }
 
 /**
@@ -67,6 +74,13 @@ export class AtlasDaemonServer {
    * Start the server
    */
   async start(): Promise<void> {
+    // Ensure daemon directory exists
+    const daemonDir = getDaemonDir()
+    if (!existsSync(daemonDir)) {
+      mkdirSync(daemonDir, { recursive: true })
+      log.info('Created daemon directory', { path: daemonDir })
+    }
+
     // Clean up existing socket file (Unix only)
     if (platform() !== 'win32' && existsSync(this.socketPath)) {
       try {

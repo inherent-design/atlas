@@ -104,13 +104,15 @@ export interface SearchResult {
 export interface ConsolidateParams {
   dryRun?: boolean
   threshold?: number
-  limit?: number
 }
 
 export interface ConsolidateResult {
   candidatesFound: number
   consolidated: number
   deleted: number
+  rounds: number
+  maxLevel: number
+  levelStats: Record<number, number>
 }
 
 /**
@@ -183,6 +185,55 @@ export interface SessionEventResult {
   reason?: string
 }
 
+/**
+ * atlas.execute_work - Execute multi-agent work graph
+ */
+export interface ExecuteWorkParams {
+  /** Work graph to execute */
+  work: unknown // WorkNode type (will be validated at runtime)
+  /** Project name for artifact paths */
+  project?: string
+  /** Initial context variables */
+  variables?: Record<string, unknown>
+}
+
+export interface ExecuteWorkResult {
+  /** Agent results in execution order */
+  agents: Array<{
+    role: string
+    task: string
+    output: string
+    artifacts: string[]
+    status: string
+    took: number
+  }>
+  /** Total execution time */
+  took: number
+  /** Status */
+  status: 'success' | 'error' | 'partial'
+  /** Error if failed */
+  error?: string
+}
+
+/**
+ * atlas.get_agent_context - Get RAG context for spawning agent
+ */
+export interface GetAgentContextParams {
+  /** QNTM keys to search for */
+  qntmKeys: string[]
+  /** Limit results per key */
+  limit?: number
+  /** Consolidation level filter */
+  consolidationLevel?: 0 | 1 | 2 | 3
+}
+
+export interface GetAgentContextResult {
+  /** Context chunks from RAG */
+  context: string[]
+  /** Total chunks returned */
+  total: number
+}
+
 // ============================================
 // Method Registry
 // ============================================
@@ -196,6 +247,8 @@ export type AtlasMethod =
   | 'atlas.health'
   | 'atlas.status'
   | 'atlas.session_event'
+  | 'atlas.execute_work'
+  | 'atlas.get_agent_context'
 
 export type MethodParams<M extends AtlasMethod> = M extends 'atlas.ingest'
   ? IngestParams
@@ -213,7 +266,11 @@ export type MethodParams<M extends AtlasMethod> = M extends 'atlas.ingest'
               ? StatusParams
               : M extends 'atlas.session_event'
                 ? SessionEventParams
-                : never
+                : M extends 'atlas.execute_work'
+                  ? ExecuteWorkParams
+                  : M extends 'atlas.get_agent_context'
+                    ? GetAgentContextParams
+                    : never
 
 export type MethodResult<M extends AtlasMethod> = M extends 'atlas.ingest'
   ? IngestResult
@@ -231,7 +288,11 @@ export type MethodResult<M extends AtlasMethod> = M extends 'atlas.ingest'
               ? StatusResult
               : M extends 'atlas.session_event'
                 ? SessionEventResult
-                : never
+                : M extends 'atlas.execute_work'
+                  ? ExecuteWorkResult
+                  : M extends 'atlas.get_agent_context'
+                    ? GetAgentContextResult
+                    : never
 
 // ============================================
 // Utilities

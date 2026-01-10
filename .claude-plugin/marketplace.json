@@ -1,0 +1,17 @@
+{
+    "description": "Atlas semantic memory plugins",
+    "name": "atlas-plugins",
+    "owner": {
+        "email": "mannie@inherent.design",
+        "name": "inherent.design"
+    },
+    "plugins": [
+        {
+            "description": "Atlas semantic memory for Claude Code",
+            "name": "atlas",
+            "source": "./packages/claude-code",
+            "version": "0.0.0-alpha.2"
+        }
+    ],
+    "version": "1.0.0"
+}

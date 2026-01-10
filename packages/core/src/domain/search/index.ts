@@ -201,6 +201,33 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
       })
     }
 
+    // Add content type filter
+    if (options.contentType) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'content_type',
+        match: { value: options.contentType },
+      })
+    }
+
+    // Add agent role filter
+    if (options.agentRole) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'agent_role',
+        match: { value: options.agentRole },
+      })
+    }
+
+    // Add temperature filter
+    if (options.temperature) {
+      filter.must = filter.must || []
+      filter.must.push({
+        key: 'temperature',
+        match: { value: options.temperature },
+      })
+    }
+
     // Add QNTM key expansion boost (optional)
     if (expandedKeys.length > 0) {
       filter.should = filter.should || []

@@ -4,27 +4,26 @@
  * Tests for config loading, merging, validation, and environment detection.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { loadConfig, getConfig, _resetConfig } from './config.loader'
-import type { AtlasConfig } from './config.schema'
-
 describe('Config Loader', () => {
   // Save original env vars
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
-    // Reset config singleton before each test
-    _resetConfig()
+    // Reset module cache to force fresh imports
+    vi.resetModules()
+
+    // Override HOME to prevent loading system-wide config from ~/.atlas/
+    process.env.HOME = '/tmp/atlas-test-home-nonexistent'
   })
 
   afterEach(() => {
     // Restore original environment
     process.env = { ...originalEnv }
-    _resetConfig()
   })
 
   describe('Default Configuration', () => {
     it('should return default config when no user config found', async () => {
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig('/nonexistent/path/atlas.config.ts')
 
       expect(config).toBeDefined()
@@ -33,6 +32,7 @@ describe('Config Loader', () => {
     })
 
     it('should cache config after first load', async () => {
+      const { loadConfig } = await import('./config.loader')
       const config1 = await loadConfig()
       const config2 = await loadConfig()
 
@@ -40,6 +40,7 @@ describe('Config Loader', () => {
     })
 
     it('should return cached config with getConfig()', async () => {
+      const { loadConfig, getConfig } = await import('./config.loader')
       await loadConfig()
       const config = getConfig()
 
@@ -48,6 +49,7 @@ describe('Config Loader', () => {
     })
 
     it('should reset config cache when _resetConfig() called', async () => {
+      const { loadConfig, _resetConfig } = await import('./config.loader')
       const config1 = await loadConfig()
       _resetConfig()
       const config2 = await loadConfig()
@@ -61,6 +63,7 @@ describe('Config Loader', () => {
     it('should enable Voyage backends when VOYAGE_API_KEY present', async () => {
       process.env.VOYAGE_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-embedding']).toBe('voyage:voyage-3-large')
@@ -72,6 +75,7 @@ describe('Config Loader', () => {
     it('should enable Anthropic API backends when ANTHROPIC_API_KEY present', async () => {
       process.env.ANTHROPIC_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-completion']).toBe('anthropic:haiku')
@@ -83,6 +87,7 @@ describe('Config Loader', () => {
       delete process.env.VOYAGE_API_KEY
       delete process.env.ANTHROPIC_API_KEY
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-embedding']).toBe('ollama:nomic-embed-text')
@@ -93,6 +98,7 @@ describe('Config Loader', () => {
       process.env.VOYAGE_API_KEY = 'test-voyage-key'
       process.env.ANTHROPIC_API_KEY = 'test-anthropic-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-embedding']).toBe('voyage:voyage-3-large')
@@ -105,6 +111,7 @@ describe('Config Loader', () => {
       delete process.env.VOYAGE_API_KEY
       delete process.env.ANTHROPIC_API_KEY
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       // Should have defaults from config.schema.ts
@@ -114,6 +121,7 @@ describe('Config Loader', () => {
     it('should apply environment-detected providers at medium precedence', async () => {
       process.env.VOYAGE_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       // Environment detection should override defaults
@@ -126,6 +134,7 @@ describe('Config Loader', () => {
 
   describe('Config Validation', () => {
     it('should accept valid config without errors', async () => {
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       // Should not throw
@@ -137,6 +146,7 @@ describe('Config Loader', () => {
       process.env.VOYAGE_API_KEY = 'test-key'
       process.env.ANTHROPIC_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       // Check all required capabilities (from capabilities.ts)
@@ -152,6 +162,7 @@ describe('Config Loader', () => {
     })
 
     it('should validate backend specifier format', async () => {
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       // All backends should follow provider:model pattern
@@ -163,6 +174,7 @@ describe('Config Loader', () => {
 
   describe('Logging Configuration', () => {
     it('should default to info log level', async () => {
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.logging?.level).toBe('info')
@@ -173,6 +185,7 @@ describe('Config Loader', () => {
     it('should handle voyage backend specifiers', async () => {
       process.env.VOYAGE_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-embedding']).toContain('voyage:')
@@ -183,6 +196,7 @@ describe('Config Loader', () => {
       delete process.env.VOYAGE_API_KEY
       delete process.env.ANTHROPIC_API_KEY
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-embedding']).toContain('ollama:')
@@ -192,6 +206,7 @@ describe('Config Loader', () => {
     it('should handle anthropic backend specifiers', async () => {
       process.env.ANTHROPIC_API_KEY = 'test-key'
 
+      const { loadConfig } = await import('./config.loader')
       const config = await loadConfig()
 
       expect(config.backends?.['text-completion']).toContain('anthropic:')

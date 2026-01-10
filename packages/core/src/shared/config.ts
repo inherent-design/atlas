@@ -176,21 +176,104 @@ export const TEXT_FILE_EXTENSIONS = [...TEXT_EXTENSIONS, ...CODE_EXTENSIONS] as 
 
 /**
  * Directory and file patterns to ignore during recursive file operations.
- * Used by expandPaths() in utils.ts for file discovery.
+ * Used by expandPaths() in utils.ts for file discovery and file watcher.
+ *
+ * Based on architectural decisions (2026-01-08):
+ * - Ignore all build artifacts (generated code, not source of truth)
+ * - Ignore all dependencies (third-party code, massive token cost)
+ * - Ignore secrets (.env files without .example/.template suffix)
+ * - Ignore editor/IDE metadata and OS files (no semantic value)
+ *
+ * Rationale: Focus on source code and documentation that represents
+ * actual project knowledge. Build output and dependencies are noise.
  */
 export const IGNORE_PATTERNS = [
+  // === Dependencies (massive, third-party code) ===
   'node_modules',
-  '.git',
+  'jspm_packages',
+  'bower_components',
+  'vendor',
+  '.pnp',
+  '.pnp.js',
+
+  // === Build Artifacts (generated, not source) ===
   'dist',
   'build',
+  'out',
   '.next',
+  '.nuxt',
+  '.cache',
+  '.parcel-cache',
+  '.svelte-kit',
+  '.docusaurus',
   'coverage',
-  'prev',
+  '.nyc_output',
   'target',
+  'prev',
   '.bun',
+
+  // === Version Control ===
+  '.git',
+  '.svn',
+  '.hg',
+
+  // === Editor/IDE Files ===
+  '.vscode',
+  '.idea',
+  '.vs',
+  '*.sublime-workspace',
+  '*.swp',
+  '*.swo',
+  '*.swn',
+  '.netrwhist',
+
+  // === OS Metadata ===
+  '.DS_Store',
+  'Thumbs.db',
+  'desktop.ini',
+  '.Spotlight-V100',
+  '.Trashes',
+  '._*',
+
+  // === Logs and Runtime Files ===
+  'logs',
+  '*.log',
+  '*.pid',
+  '*.seed',
+  '*.pid.lock',
+
+  // === Test Artifacts ===
+  '.pytest_cache',
+  '.tox',
+  '__pycache__',
+  '*.pyc',
+
+  // === Temporary Files ===
+  '*.tmp',
+  '*.temp',
+  '*.bak',
+  '*~',
+
+  // === Secrets (but allow templates) ===
+  // Note: Files matching .env.example or .env.template are NOT ignored
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.test',
+  '.env.production',
+  'credentials.json',
+  'secrets.json',
+  '*.key',
+  '*.pem',
+  '*.p12',
+  '*.pfx',
+
+  // === Atlas Runtime (daemon files) ===
+  'daemon',
   '**/*.sock',
-  '**/*.pid',
-  '**/.DS_Store',
+  '**/*.db',
+  '**/*.db-shm',
+  '**/*.db-wal',
 ]
 
 // Ollama config
