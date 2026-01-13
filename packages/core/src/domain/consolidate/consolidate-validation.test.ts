@@ -33,8 +33,16 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/llm', () => ({
   completeJSON: mockLLM.completeJSON,
-  getLLMConfig: mockLLM.getLLMConfig,
   getLLMBackendFor: mockLLM.getLLMBackendFor,
+}))
+
+vi.mock('../../services/embedding', () => ({
+  getEmbeddingBackend: () => ({
+    name: 'voyage',
+    dimensions: 1024,
+    capabilities: new Set(['text-embedding']),
+  }),
+  getEmbeddingDimensions: () => 1024,
 }))
 
 vi.mock('../../shared/utils', async (importOriginal) => {
@@ -64,11 +72,11 @@ describe('domain/consolidate - Validation', () => {
 
   test('should throw when collection missing', async () => {
     ;(requireCollection as any).mockImplementation(() => {
-      throw new Error('Collection atlas does not exist')
+      throw new Error('Collection atlas_1024 does not exist')
     })
 
     await expect(consolidate({ threshold: 0.92 })).rejects.toThrow(
-      'Collection atlas does not exist'
+      'Collection atlas_1024 does not exist'
     )
   })
 
@@ -105,7 +113,7 @@ describe('domain/consolidate - Validation', () => {
 
     // Verify search was called with custom threshold
     expect(mockQdrant.search).toHaveBeenCalledWith(
-      'atlas',
+      'atlas_1024',
       expect.objectContaining({ scoreThreshold: 0.95 })
     )
   })

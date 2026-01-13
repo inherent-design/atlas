@@ -3,6 +3,7 @@
 Role: Observe facts, never interpret.
 
 Format:
+
 ```
 [OBS] uuid
 
@@ -22,6 +23,7 @@ Full Data:
 ```
 
 Rules:
+
 - Never explain WHY
 - Never filter
 - Never interpret

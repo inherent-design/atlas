@@ -4,11 +4,11 @@
  * Provides test environment setup and assertion helpers.
  */
 
-import type { SearchResult, IngestResult } from '../shared/types'
-import { createMockEmbeddingBackend } from '../__mocks__/MockEmbeddingBackend'
-import { createMockStorageBackend } from '../__mocks__/MockStorageBackend'
-import { createMockLLMBackend } from '../__mocks__/MockLLMBackend'
-import { createMockRerankerBackend } from '../__mocks__/MockRerankerBackend'
+import type { SearchResult, IngestResult } from '../shared/types.js'
+import { createMockEmbeddingBackend } from '../__mocks__/MockEmbeddingBackend.js'
+import { createMockStorageBackend } from '../__mocks__/MockStorageBackend.js'
+import { createMockLLMBackend } from '../__mocks__/MockLLMBackend.js'
+import { createMockRerankerBackend } from '../__mocks__/MockRerankerBackend.js'
 
 /**
  * Test context with mocked backends
@@ -54,9 +54,7 @@ export function createTestContext(): TestContext {
  * @param fn - Function to run with test context
  * @returns Result of function
  */
-export async function withMockedBackends<T>(
-  fn: (context: TestContext) => Promise<T>
-): Promise<T> {
+export async function withMockedBackends<T>(fn: (context: TestContext) => Promise<T>): Promise<T> {
   const context = createTestContext()
   try {
     return await fn(context)
@@ -253,7 +251,10 @@ export function sleep(ms: number): Promise<void> {
  * @param value - Value to check
  * @param message - Error message
  */
-export function assertDefined<T>(value: T | undefined | null, message?: string): asserts value is T {
+export function assertDefined<T>(
+  value: T | undefined | null,
+  message?: string
+): asserts value is T {
   if (value === undefined || value === null) {
     throw new Error(message || 'Expected value to be defined')
   }
@@ -290,7 +291,8 @@ export function assertApproxEqual(
 ): void {
   if (Math.abs(actual - expected) > epsilon) {
     throw new Error(
-      message || `Values not approximately equal: expected ${expected}, got ${actual} (epsilon: ${epsilon})`
+      message ||
+        `Values not approximately equal: expected ${expected}, got ${actual} (epsilon: ${epsilon})`
     )
   }
 }

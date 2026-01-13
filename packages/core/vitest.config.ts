@@ -1,17 +1,6 @@
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      // Mock Bun runtime for Vitest compatibility
-      bun: fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
-      // Mock bun-webgpu (GPU detection not needed in tests)
-      'bun-webgpu': fileURLToPath(new URL('./test-bun-shim.ts', import.meta.url)),
-      // Mock bun:sqlite using better-sqlite3 (for test compatibility)
-      'bun:sqlite': fileURLToPath(new URL('./test-bun-sqlite-shim.ts', import.meta.url)),
-    },
-  },
   test: {
     // Process-level isolation: each test file runs in separate child process
     // This prevents mock.module() leaks between files (the core issue with bun:test)

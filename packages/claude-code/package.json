@@ -1,18 +1,15 @@
 {
   "dependencies": {
-    "@inherent.design/atlas-core": "^0.0.0-alpha.4"
+    "@inherent.design/atlas-core": "workspace:*"
   },
   "description": "Claude Code plugin for Atlas semantic memory",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
   "engines": {
-    "bun": ">=1.2.15"
+    "node": ">=24.12.0"
   },
   "files": [
     ".claude-plugin",
     "hooks",
-    "scripts"
+    "dist/scripts"
   ],
   "module": "index.ts",
   "name": "@inherent.design/atlas-claude-code",
@@ -23,9 +20,16 @@
     "access": "public"
   },
   "scripts": {
-    "test": "bun test",
-    "typecheck": "bunx tsc --noEmit"
+    "build": "tsc && chmod +x dist/scripts/*.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm clean && pnpm build"
   },
   "type": "module",
-  "version": "0.0.0-alpha.3"
+  "version": "0.0.0-alpha.7",
+  "devDependencies": {
+    "@types/node": "^25.0.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
 }

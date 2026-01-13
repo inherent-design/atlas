@@ -14,12 +14,25 @@
  *   }
  */
 
-import { getQdrantClient } from './client'
-import { QDRANT_COLLECTION_NAME, HNSW_M_DEFAULT, HNSW_M_DISABLED } from '../../shared/config'
-import { createLogger } from '../../shared/logger'
+import { getQdrantClient } from './client.js'
+import { HNSW_M_DEFAULT, HNSW_M_DISABLED } from '../../shared/config.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import { createLogger } from '../../shared/logger.js'
 
 const log = createLogger('hnsw')
 
+/**
+ * Global HNSW state tracker.
+ *
+ * ASSUMPTION: Single-threaded batch operations (no concurrent calls to withHNSWDisabled).
+ * Atlas daemon is single-threaded per process, ensuring no concurrent batch operations.
+ *
+ * If future multi-threaded support is added, implement locking mechanism:
+ * - Use async-mutex or similar
+ * - Wrap enable/disable in acquire/release
+ *
+ * @internal
+ */
 let hnswDisabled = false
 
 /**
@@ -36,7 +49,7 @@ export async function disableHNSW(): Promise<void> {
 
   log.info('Disabling HNSW indexing for batch mode')
 
-  await qdrant.updateCollection(QDRANT_COLLECTION_NAME, {
+  await qdrant.updateCollection(getPrimaryCollectionName(), {
     hnsw_config: { m: HNSW_M_DISABLED },
   })
 
@@ -58,7 +71,7 @@ export async function enableHNSW(): Promise<void> {
 
   log.info('Re-enabling HNSW indexing, triggering rebuild')
 
-  await qdrant.updateCollection(QDRANT_COLLECTION_NAME, {
+  await qdrant.updateCollection(getPrimaryCollectionName(), {
     hnsw_config: { m: HNSW_M_DEFAULT },
   })
 

@@ -12,9 +12,9 @@ import type {
   ThinkingResult,
   ThinkingOptions,
   ToolUseResult,
-  ToolDefinition,
   ImageInput,
-} from '../services/llm/types'
+} from '../services/llm/types.js'
+import type { ToolDefinition, UnifiedRequest, UnifiedResponse } from '../services/llm/message.js'
 
 /**
  * Configuration for MockLLMBackend
@@ -205,6 +205,35 @@ export class MockLLMBackend implements LLMBackend {
     }
   }
 
+  /**
+   * Generate completion using unified message format
+   */
+  async completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse> {
+    const lastMessage = request.messages[request.messages.length - 1]
+    const prompt = lastMessage
+      ? lastMessage.content.map((c) => (c.type === 'text' ? c.text : '[non-text]')).join('\n')
+      : 'No messages'
+
+    this.recordCall('completeWithMessages', prompt, request)
+    await this.maybeDelay()
+    this.maybeThrow()
+
+    const response = this.getResponse(prompt) || 'Mock unified response'
+
+    return {
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: response }],
+      },
+      stopReason: 'end_turn',
+      usage: {
+        inputTokens: this.estimateTokens(prompt),
+        outputTokens: this.estimateTokens(response),
+      },
+      model: request.model || this.modelId,
+    }
+  }
+
   // === Helper Methods ===
 
   /**
@@ -278,7 +307,9 @@ export class MockLLMBackend implements LLMBackend {
   /**
    * Get calls for method
    */
-  getCallsFor(method: string): Array<{ method: string; prompt: string; options?: any; timestamp: number }> {
+  getCallsFor(
+    method: string
+  ): Array<{ method: string; prompt: string; options?: any; timestamp: number }> {
     return this.calls.filter((call) => call.method === method)
   }
 

@@ -1,19 +1,19 @@
 /**
  * Ingestion-related fixtures for testing
  *
- * Provides IngestOptions and IngestResult fixtures.
+ * Provides IngestParams and IngestResult fixtures.
  */
 
-import type { IngestOptions, IngestResult } from '../shared/types'
-import { TEST_FILES } from './files'
+import type { IngestParams, IngestResult } from '../shared/types.js'
+import { TEST_FILES } from './files.js'
 
 /**
- * Create IngestOptions with sensible defaults
+ * Create IngestParams with sensible defaults
  *
  * @param overrides - Partial options to merge with defaults
- * @returns Complete IngestOptions
+ * @returns Complete IngestParams
  */
-export function createIngestOptions(overrides?: Partial<IngestOptions>): IngestOptions {
+export function createIngestParams(overrides?: Partial<IngestParams>): IngestParams {
   return {
     paths: ['/test/docs'],
     recursive: true,
@@ -28,39 +28,39 @@ export function createIngestOptions(overrides?: Partial<IngestOptions>): IngestO
  */
 export const INGEST_OPTIONS = {
   /** Single file ingestion */
-  singleFile: createIngestOptions({
+  singleFile: createIngestParams({
     paths: [TEST_FILES.markdown],
     recursive: false,
   }),
 
   /** Directory ingestion (recursive) */
-  directory: createIngestOptions({
+  directory: createIngestParams({
     paths: ['/test/docs'],
     recursive: true,
     rootDir: '/test',
   }),
 
   /** Multiple files */
-  multipleFiles: createIngestOptions({
+  multipleFiles: createIngestParams({
     paths: [TEST_FILES.markdown, TEST_FILES.typescript, TEST_FILES.python],
     recursive: false,
   }),
 
   /** With verbose logging */
-  verbose: createIngestOptions({
+  verbose: createIngestParams({
     paths: ['/test/docs'],
     recursive: true,
     verbose: true,
   }),
 
   /** With pre-fetched QNTM keys (optimization) */
-  withKeys: createIngestOptions({
+  withKeys: createIngestParams({
     paths: ['/test/docs'],
     existingKeys: ['@memory ~ consolidation', '@architecture ~ design', '@test ~ data'],
   }),
 
   /** Disable HNSW for batch ingestion */
-  batchOptimized: createIngestOptions({
+  batchOptimized: createIngestParams({
     paths: ['/test/docs'],
     recursive: true,
     useHNSWToggle: false,
@@ -176,10 +176,7 @@ export function createMockFileTree(): Record<string, string[]> {
       '/test/docs/architecture.md',
       '/test/docs/memory-consolidation.md',
     ],
-    '/test/docs/guides': [
-      '/test/docs/guides/quickstart.md',
-      '/test/docs/guides/configuration.md',
-    ],
+    '/test/docs/guides': ['/test/docs/guides/quickstart.md', '/test/docs/guides/configuration.md'],
     '/test/src': [
       '/test/src/index.ts',
       '/test/src/embedding.ts',

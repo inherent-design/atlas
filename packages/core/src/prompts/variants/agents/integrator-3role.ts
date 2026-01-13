@@ -7,8 +7,8 @@
  * Terminal node: Cannot spawn sub-agents (flat hierarchy).
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const integratorPrompt: PromptDefinition = {
   id: 'agent-integrator',

@@ -1,19 +1,19 @@
 /**
  * Search-related fixtures for testing
  *
- * Provides SearchOptions and SearchResult fixtures.
+ * Provides SearchParams and SearchResult fixtures.
  */
 
-import type { SearchOptions, SearchResult } from '../shared/types'
-import { CHUNKS } from './chunks'
+import type { SearchParams, SearchResult } from '../shared/types.js'
+import { CHUNKS } from './chunks.js'
 
 /**
- * Create SearchOptions with sensible defaults
+ * Create SearchParams with sensible defaults
  *
  * @param overrides - Partial options to merge with defaults
- * @returns Complete SearchOptions
+ * @returns Complete SearchParams
  */
-export function createSearchOptions(overrides?: Partial<SearchOptions>): SearchOptions {
+export function createSearchParams(overrides?: Partial<SearchParams>): SearchParams {
   return {
     query: 'test query',
     limit: 10,
@@ -30,7 +30,7 @@ export function createSearchOptions(overrides?: Partial<SearchOptions>): SearchO
  * @returns SearchResult
  */
 export function createSearchResult(
-  payload: typeof CHUNKS[keyof typeof CHUNKS],
+  payload: (typeof CHUNKS)[keyof typeof CHUNKS],
   score: number,
   rerankScore?: number
 ): SearchResult {
@@ -50,27 +50,27 @@ export function createSearchResult(
  */
 export const SEARCH_OPTIONS = {
   /** Basic search */
-  basic: createSearchOptions({
+  basic: createSearchParams({
     query: 'memory consolidation',
     limit: 10,
   }),
 
   /** Search with temporal filter */
-  temporal: createSearchOptions({
+  temporal: createSearchParams({
     query: 'recent changes',
     limit: 5,
     since: '2025-12-28T00:00:00Z',
   }),
 
   /** Search with QNTM key filter */
-  filtered: createSearchOptions({
+  filtered: createSearchParams({
     query: 'architecture patterns',
     limit: 10,
     qntmKey: '@architecture ~ design',
   }),
 
   /** Search with reranking */
-  reranked: createSearchOptions({
+  reranked: createSearchParams({
     query: 'consolidation algorithm',
     limit: 5,
     rerank: true,
@@ -78,21 +78,21 @@ export const SEARCH_OPTIONS = {
   }),
 
   /** Search with query expansion */
-  expanded: createSearchOptions({
+  expanded: createSearchParams({
     query: 'sleep memory',
     limit: 10,
     expandQuery: true,
   }),
 
   /** Search for raw chunks only */
-  rawOnly: createSearchOptions({
+  rawOnly: createSearchParams({
     query: 'test content',
     limit: 10,
     consolidationLevel: 0,
   }),
 
   /** Search for topic summaries */
-  topicSummaries: createSearchOptions({
+  topicSummaries: createSearchParams({
     query: 'overview summary',
     limit: 5,
     consolidationLevel: 2,

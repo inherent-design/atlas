@@ -4,7 +4,7 @@
  * Register all prompt definitions here.
  */
 
-import { promptRegistry } from '../registry'
+import { promptRegistry } from '../registry.js'
 
 // Import all agent prompts
 import {
@@ -17,7 +17,7 @@ import {
   sensorPrompt,
   reasonerPrompt,
   integratorPrompt,
-} from './agents'
+} from './agents/index.js'
 
 // Import all task prompts
 import {
@@ -25,7 +25,7 @@ import {
   queryExpansionPrompt,
   consolidationClassificationPrompt,
   compactionPrompt,
-} from './tasks'
+} from './tasks/index.js'
 
 // Lazy registration flag
 let registered = false
@@ -64,5 +64,5 @@ export function registerPrompts(): void {
 // Now consumers must call registerPrompts() explicitly at startup
 
 // Re-export for direct access
-export * from './agents'
-export * from './tasks'
+export * from './agents/index.js'
+export * from './tasks/index.js'

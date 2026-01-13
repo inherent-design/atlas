@@ -10,8 +10,8 @@ import type {
   BatchEmbeddingResult,
   ContextualizedEmbeddingResult,
   MultimodalEmbeddingResult,
-} from '../services/embedding/types'
-import { generateEmbedding } from '../__fixtures__/embeddings'
+} from '../services/embedding/types.js'
+import { generateEmbedding } from '../__fixtures__/embeddings.js'
 
 /**
  * Configuration for MockEmbeddingBackend
@@ -34,7 +34,11 @@ export interface MockEmbeddingConfig {
  */
 export class MockEmbeddingBackend implements EmbeddingBackend {
   readonly name = 'mock-embedding'
-  readonly capabilities = new Set(['text-embedding', 'code-embedding', 'multimodal-embedding'] as const)
+  readonly capabilities = new Set([
+    'text-embedding',
+    'code-embedding',
+    'multimodal-embedding',
+  ] as const)
   readonly dimensions: number
   readonly maxTokens = 8000
   readonly model: string

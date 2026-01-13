@@ -11,7 +11,7 @@
  * - Thinking is optional raw string field
  */
 
-import type { UnifiedRequest, UnifiedResponse, UnifiedMessage, UnifiedContent } from '../message'
+import type { UnifiedRequest, UnifiedResponse, UnifiedMessage, UnifiedContent } from '../message.js'
 
 /**
  * Ollama API message format

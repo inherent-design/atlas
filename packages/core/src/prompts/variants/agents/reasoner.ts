@@ -8,8 +8,8 @@
  * Type 2 cognition: Hypothesize → Test → Refine
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const reasonerPrompt: PromptDefinition = {
   id: 'agent-reasoner',

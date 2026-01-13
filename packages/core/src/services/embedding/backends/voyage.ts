@@ -7,16 +7,16 @@
  */
 
 import { VoyageAIClient } from 'voyageai'
-import { VOYAGE_API_KEY } from '../../../shared/config'
-import { createLogger } from '../../../shared/logger'
-import { createSingleton } from '../../../shared/utils'
+import { VOYAGE_API_KEY } from '../../../shared/config.js'
+import { createLogger } from '../../../shared/logger.js'
+import { createSingleton } from '../../../shared/utils.js'
 import type {
   EmbeddingBackend,
   EmbeddingCapability,
   CanEmbedText,
   CanEmbedCode,
   BatchEmbeddingResult,
-} from '../types'
+} from '../types.js'
 
 const log = createLogger('embedding:voyage')
 

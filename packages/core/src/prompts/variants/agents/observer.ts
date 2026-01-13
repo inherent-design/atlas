@@ -5,8 +5,8 @@
  * Templates loaded from external .md files at runtime.
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const observerPrompt: PromptDefinition = {
   id: 'agent-observer',

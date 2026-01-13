@@ -10,7 +10,7 @@ import type {
   RerankResponse,
   RerankResult,
   RerankOptions,
-} from '../services/reranker/types'
+} from '../services/reranker/types.js'
 
 /**
  * Reranking strategy for mock

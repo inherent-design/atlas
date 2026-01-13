@@ -1,4 +1,8 @@
 services:
+  # ============================================
+  # Vector Search
+  # ============================================
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: atlas-qdrant
@@ -25,11 +29,15 @@ services:
           memory: 2g
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:6333/metrics']
+      test: ['CMD-SHELL', 'timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/6333" || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  # ============================================
+  # Local LLM
+  # ============================================
 
   ollama:
     image: ollama/ollama:latest
@@ -43,14 +51,128 @@ services:
       - OLLAMA_VULKAN=1
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:11434/api/tags']
+      test:
+        ['CMD-SHELL', 'timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/11434" || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
+  # ============================================
+  # Metadata DB + Time-Series (New)
+  # PostgreSQL 18 + TimescaleDB extension
+  # ============================================
+
+  postgres:
+    image: timescale/timescaledb:latest-pg18
+    container_name: atlas-postgres
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-atlas}
+      - POSTGRES_USER=${POSTGRES_USER:-atlas}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-atlas_dev}
+      - POSTGRES_INITDB_ARGS=-c shared_preload_libraries=timescaledb
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 4g
+        reservations:
+          cpus: '0.1'
+          memory: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-atlas} -d ${POSTGRES_DB:-atlas}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================
+  # Hot Data Cache (New)
+  # Valkey (Redis-compatible, BSD license)
+  # ============================================
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: atlas-valkey
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./data/valkey:/data
+    command: >
+      valkey-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 2g
+        reservations:
+          cpus: '0.1'
+          memory: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ============================================
+  # Full-Text Search (New)
+  # Meilisearch (7x faster indexing, typo-tolerant)
+  # ============================================
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: atlas-meilisearch
+    ports:
+      - '7700:7700'
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-atlas_dev_master_key}
+      - MEILI_ENV=production
+      - MEILI_HTTP_ADDR=0.0.0.0:7700
+      - MEILI_DB_PATH=/meili_data
+    volumes:
+      - ./data/meilisearch:/meili_data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 2g
+        reservations:
+          cpus: '0.1'
+          memory: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+# ============================================
+# Volume Definitions
+# ============================================
+# Note: DuckDB runs in-process (embedded library, no service needed)
+# Total containers: 5 services (Qdrant, Ollama, Postgres, Valkey, Meilisearch)
+# Resource allocation (16GB system): ~14GB allocated, 2GB buffer for OS/processes
+
 volumes:
   qdrant_data:
     driver: local
   ollama_data:
+    driver: local
+  postgres_data:
+    driver: local
+  valkey_data:
+    driver: local
+  meilisearch_data:
     driver: local

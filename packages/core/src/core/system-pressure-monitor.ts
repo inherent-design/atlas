@@ -5,11 +5,11 @@
  * Subscribers get notified when pressure level changes.
  */
 
-import { createLogger } from '../shared/logger'
-import { getConfig } from '../shared/config.loader'
-import { PollingScheduler } from './scheduler'
-import { assessSystemCapacity, type PressureLevel, type SystemCapacity } from './system'
-import type { ManagedScheduler } from './scheduler-manager'
+import { createLogger } from '../shared/logger.js'
+import { getConfig } from '../shared/config.loader.js'
+import { PollingScheduler } from './scheduler.js'
+import { assessSystemCapacity, type PressureLevel, type SystemCapacity } from './system.js'
+import type { ManagedScheduler } from './scheduler-manager.js'
 
 const log = createLogger('system-pressure-monitor')
 

@@ -14,11 +14,11 @@
  * - TTL-based: Optionally expire stale sessions
  */
 
-import { createLogger } from '../../shared/logger'
-import { getLLMBackendFor } from '../../services/llm'
-import { buildTaskPrompt } from '../../prompts/builders'
-import { ingest } from '../ingest'
-import type { IngestResult } from '../../shared/types'
+import { createLogger } from '../../shared/logger.js'
+import { getLLMBackendFor } from '../../services/llm/index.js'
+import { buildTaskPrompt } from '../../prompts/builders.js'
+import { ingest } from '../ingest/index.js'
+import type { IngestResult } from '../../shared/types.js'
 
 const log = createLogger('memory:working')
 
@@ -178,15 +178,15 @@ export class WorkingMemoryManager {
 
     // Build compaction prompt
     const formattedConversation = this.buffer
-      .map(turn => `[${turn.role.toUpperCase()}]\n${turn.content}`)
+      .map((turn) => `[${turn.role.toUpperCase()}]\n${turn.content}`)
       .join('\n\n---\n\n')
 
     const prompt = await buildTaskPrompt('compaction', {
-      conversation: formattedConversation
+      conversation: formattedConversation,
     })
 
-    // Get JSON-capable LLM backend
-    const backend = getLLMBackendFor('json-completion')
+    // Get JSON-capable LLM backend (with domain-specific override)
+    const backend = getLLMBackendFor('json-completion', 'compaction')
     if (!backend || !('completeJSON' in backend)) {
       throw new Error('No JSON-capable LLM backend available for compaction')
     }

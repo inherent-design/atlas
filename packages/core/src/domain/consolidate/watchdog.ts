@@ -11,17 +11,17 @@
  */
 
 import {
-  QDRANT_COLLECTION_NAME,
   BATCH_HNSW_THRESHOLD,
   CONSOLIDATION_BASE_THRESHOLD,
   CONSOLIDATION_SCALE_FACTOR,
   CONSOLIDATION_SIMILARITY_THRESHOLD,
-} from '../../shared/config'
-import { getConfig } from '../../shared/config.loader'
-import { consolidate } from '.'
-import { createLogger } from '../../shared/logger'
-import { PollingScheduler } from '../../core/scheduler'
-import { getStorageBackend, withHNSWDisabled } from '../../services/storage'
+} from '../../shared/config.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import { consolidate } from './index.js'
+import { createLogger } from '../../shared/logger.js'
+import { PollingScheduler } from '../../core/scheduler.js'
+import { getStorageBackend, withHNSWDisabled } from '../../services/storage/index.js'
 
 const log = createLogger('consolidation-watchdog')
 
@@ -203,7 +203,7 @@ export class ConsolidationWatchdog {
       if (!backend) {
         return this.baseThreshold
       }
-      const info = await backend.getCollectionInfo(QDRANT_COLLECTION_NAME)
+      const info = await backend.getCollectionInfo(getPrimaryCollectionName())
       const pointCount = info.points_count ?? 0
       const threshold = Math.floor(this.baseThreshold + this.scaleFactor * pointCount)
       log.debug('Dynamic threshold calculated', { pointCount, threshold })

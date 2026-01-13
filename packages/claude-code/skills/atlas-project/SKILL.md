@@ -8,6 +8,7 @@ allowed-tools: Bash(tree:*), Bash(ls:*), Bash(git:*), Read, Task(subagent_type:i
 # Atlas Project Bootstrap Creator
 
 Creates a persistent memory foundation for a project by:
+
 1. Analyzing conversation context + directory structure
 2. Generating project-specific bootstrap map at `~/.atlas/bootstrap/<project>.md`
 3. Starting auto-ingestion with file watching
@@ -17,12 +18,14 @@ Creates a persistent memory foundation for a project by:
 ## When to Use
 
 **Trigger phrases:**
+
 - "Let's start tracking this project in Atlas"
 - "Create an Atlas bootstrap for this codebase"
 - "Set up persistent memory for this research"
 - "/atlas-project <name> <path>"
 
 **Use cases:**
+
 - Starting work on a new codebase
 - Research project that will span multiple sessions
 - Client project requiring context persistence
@@ -49,6 +52,7 @@ Claude: [Analyzes directory and creates bootstrap]
 **File:** `~/.atlas/bootstrap/<project>.md`
 
 **Contents:**
+
 - Project identity (name, type, root path)
 - Entry points (main files, CLIs, servers)
 - Directory structure (navigational snapshot)
@@ -76,6 +80,7 @@ Claude: [Analyzes directory and creates bootstrap]
 3. Write bootstrap file
 
 4. Start ingestion:
+
    ```typescript
    await connection.request('atlas.ingest.start', {
      paths: [projectPath],
@@ -91,23 +96,28 @@ Claude: [Analyzes directory and creates bootstrap]
 ## Examples
 
 **Monorepo (TypeScript):**
-```markdown
+
+````markdown
 # MyApp Bootstrap
 
 **Version:** 1.0 | **Type:** Monorepo (Bun) | **Root:** `/Users/mannie/projects/myapp`
 
 ## Packages
+
 - `packages/core` - Core library
 - `packages/cli` - Command-line interface
 - `packages/web` - Web frontend
 
 ## Commands
+
 ```bash
-bun install
-bun test
-bun run dev
+pnpm install
+pnpm test
+pnpm dev
 ```
-```
+````
+
+````
 
 **Rust CLI:**
 ```markdown
@@ -124,8 +134,9 @@ bun run dev
 cargo build
 cargo test
 cargo run -- --help
-```
-```
+````
+
+````
 
 ---
 
@@ -147,7 +158,7 @@ The skill runs `/packages/claude-code/scripts/project-create.ts`:
 3. **File creation**: Writes `~/.atlas/bootstrap/<project>.md`
 4. **Auto-ingestion**: Registers project path for continuous memory updates via `atlas.ingest.start`
 
-**Daemon dependency**: Requires Atlas daemon running (`bun run daemon` in `packages/core`)
+**Daemon dependency**: Requires Atlas daemon running (`pnpm daemon` in `packages/core`)
 
 ---
 
@@ -158,18 +169,18 @@ If bootstrap creation fails:
 ```bash
 # 1. Check daemon is running
 cd ~/production/atlas/packages/core
-bun run daemon
+pnpm daemon
 
 # 2. Verify services are up
 curl http://localhost:6333/health  # Qdrant
 
 # 3. Check ingestion status
-bun run --filter @inherent.design/atlas-cli atlas ingest.status
+pnpm --filter @inherent.design/atlas-cli atlas ingest.status
 
 # 4. Manually create bootstrap if needed
 # Edit: ~/.atlas/bootstrap/<project>.md
-# Then: bun run --filter @inherent.design/atlas-cli atlas ingest.start <path> -r --watch
-```
+# Then: pnpm --filter @inherent.design/atlas-cli atlas ingest.start <path> -r --watch
+````
 
 ---
 
@@ -187,12 +198,14 @@ bun run --filter @inherent.design/atlas-cli atlas ingest.status
 ## Integration with PreTaskSpawn
 
 Once a project has a bootstrap file:
+
 1. `PreTaskSpawn` hook automatically detects it
 2. Injects full bootstrap content into sub-agent context
 3. Also injects relevant semantic chunks from Atlas
 4. Enables "cold-start recovery" for agents working on project tasks
 
 **Flow:**
+
 ```
 User spawns task → PreTaskSpawn hook
   ↓

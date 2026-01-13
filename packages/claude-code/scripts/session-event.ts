@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * PreCompact/SessionEnd hook: Send session event to Atlas daemon
  *
@@ -21,11 +21,20 @@ interface HookInput {
   compacted_summary?: string // Alternative field name
 }
 
+/** Read stdin using Node.js streams */
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = []
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks).toString('utf-8')
+}
+
 async function main() {
-  // Read input from stdin using Bun's native API
+  // Read input from stdin
   let input: HookInput
   try {
-    const data = await Bun.readableStreamToText(Bun.stdin.stream())
+    const data = await readStdin()
     input = JSON.parse(data)
   } catch {
     // Invalid input, exit silently
@@ -63,8 +72,7 @@ async function main() {
   }
 
   // Map hook event to daemon event type
-  const eventType =
-    input.hook_event_name === 'PreCompact' ? 'session.compacting' : 'session.ended'
+  const eventType = input.hook_event_name === 'PreCompact' ? 'session.compacting' : 'session.ended'
 
   try {
     // Connect to daemon and send event

@@ -10,10 +10,10 @@
  * - No API key required
  */
 
-import { OLLAMA_URL } from '../../../shared/config'
-import { createLogger } from '../../../shared/logger'
-import type { EmbeddingBackend, CanEmbedText, BatchEmbeddingResult } from '../types'
-import type { EmbeddingCapability, LatencyClass } from '../../../shared/capabilities'
+import { OLLAMA_URL } from '../../../shared/config.js'
+import { createLogger } from '../../../shared/logger.js'
+import type { EmbeddingBackend, CanEmbedText, BatchEmbeddingResult } from '../types.js'
+import type { EmbeddingCapability, LatencyClass } from '../../../shared/capabilities.js'
 
 const log = createLogger('embedding:ollama')
 

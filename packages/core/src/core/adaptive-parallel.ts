@@ -11,9 +11,9 @@
  */
 
 import { pMapIterable } from 'p-map'
-import { createLogger } from '../shared/logger'
-import { getSystemPressureMonitor } from './system-pressure-monitor'
-import type { PressureLevel, SystemCapacity } from './system'
+import { createLogger } from '../shared/logger.js'
+import { getSystemPressureMonitor } from './system-pressure-monitor.js'
+import type { PressureLevel, SystemCapacity } from './system.js'
 
 const log = createLogger('adaptive-parallel')
 

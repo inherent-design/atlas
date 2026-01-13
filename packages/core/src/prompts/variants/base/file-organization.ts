@@ -5,7 +5,7 @@
  * Template loaded from external .md file at runtime.
  */
 
-import { loadTemplate } from '../../template-loader'
+import { loadTemplate } from '../../template-loader.js'
 
 /**
  * File organization guidance for agents.

@@ -11,12 +11,12 @@
  * Uses QNTM query expansion to bridge vocabulary gaps.
  */
 
-import { createLogger } from '../../shared/logger'
-import { search } from '../search'
-import { generateQueryQNTMKeys, fetchExistingQNTMKeys } from '../../services/llm'
-import { getWorkingMemory } from './working'
-import type { ConversationTurn } from './working'
-import type { SearchResult } from '../../shared/types'
+import { createLogger } from '../../shared/logger.js'
+import { search } from '../search/index.js'
+import { generateQueryQNTMKeys, fetchExistingQNTMKeys } from '../../services/llm/index.js'
+import { getWorkingMemory } from './working.js'
+import type { ConversationTurn } from './working.js'
+import type { SearchResult } from '../../shared/types.js'
 
 const log = createLogger('memory:activation')
 

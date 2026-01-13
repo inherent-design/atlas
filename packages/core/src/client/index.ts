@@ -4,17 +4,17 @@
  * Provides programmatic access to Atlas daemon via JSON-RPC.
  */
 
-export * from './connection'
+export * from './connection.js'
 
-import { AtlasConnection } from './connection'
+import { AtlasConnection } from './connection.js'
 import type {
   IngestParams,
   SearchParams,
   ConsolidateParams,
   HealthResult,
   StatusResult,
-} from '../daemon/protocol'
-import type { AtlasEvent } from '../daemon/events'
+} from '../daemon/protocol.js'
+import type { AtlasEvent } from '../daemon/events.js'
 
 /**
  * Atlas client

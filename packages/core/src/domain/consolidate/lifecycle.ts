@@ -15,14 +15,14 @@
  *   before being hard deleted.
  */
 
-import { getStorageBackend } from '../../services/storage'
+import { getStorageBackend } from '../../services/storage/index.js'
 import {
-  QDRANT_COLLECTION_NAME,
   DELETION_GRACE_PERIOD_DAYS,
   STABILITY_SCORE_THRESHOLD,
-} from '../../shared/config'
-import { createLogger, startTimer } from '../../shared/logger'
-import type { ChunkPayload, ConsolidationLevel } from '../../shared/types'
+} from '../../shared/config.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import { createLogger, startTimer } from '../../shared/logger.js'
+import type { ChunkPayload, ConsolidationLevel } from '../../shared/types.js'
 
 const log = createLogger('lifecycle')
 
@@ -108,7 +108,7 @@ export async function vacuumEligibleChunks(options: {
 
   try {
     // Find deletion_eligible chunks
-    const scrollResult = await storage.scroll(QDRANT_COLLECTION_NAME, {
+    const scrollResult = await storage.scroll(getPrimaryCollectionName(), {
       filter: {
         must: [{ key: 'deletion_eligible', match: { value: true } }],
       },
@@ -139,7 +139,7 @@ export async function vacuumEligibleChunks(options: {
     // Hard delete
     if (toDelete.length > 0 && !dryRun) {
       try {
-        await storage.delete(QDRANT_COLLECTION_NAME, toDelete)
+        await storage.delete(getPrimaryCollectionName(), toDelete)
         result.deleted = toDelete.length
         log.info('Hard deleted chunks', { count: result.deleted })
       } catch (error) {
@@ -204,7 +204,7 @@ export async function updateStabilityScores(options: {
 
   try {
     // Find active (non-deleted) chunks
-    const scrollResult = await storage.scroll(QDRANT_COLLECTION_NAME, {
+    const scrollResult = await storage.scroll(getPrimaryCollectionName(), {
       filter: {
         must_not: [{ key: 'deletion_eligible', match: { value: true } }],
       },
@@ -224,7 +224,7 @@ export async function updateStabilityScores(options: {
       if (Math.abs(newScore - currentScore) >= 0.05) {
         if (!dryRun) {
           try {
-            await storage.setPayload(QDRANT_COLLECTION_NAME, [point.id as string], {
+            await storage.setPayload(getPrimaryCollectionName(), [point.id as string], {
               stability_score: newScore,
             })
             result.updated++
@@ -267,7 +267,7 @@ export async function markForDeletion(pointId: string, supersededBy?: string): P
 
   const now = new Date().toISOString()
 
-  await storage.setPayload(QDRANT_COLLECTION_NAME, [pointId], {
+  await storage.setPayload(getPrimaryCollectionName(), [pointId], {
     deletion_eligible: true,
     deletion_marked_at: now,
     ...(supersededBy && { superseded_by: supersededBy }),
@@ -289,7 +289,7 @@ export async function unmarkFromDeletion(pointId: string): Promise<void> {
     throw new Error('No storage backend available')
   }
 
-  await storage.setPayload(QDRANT_COLLECTION_NAME, [pointId], {
+  await storage.setPayload(getPrimaryCollectionName(), [pointId], {
     deletion_eligible: false,
     deletion_marked_at: undefined,
     superseded_by: undefined,

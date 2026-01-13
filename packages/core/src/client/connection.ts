@@ -5,8 +5,8 @@
  */
 
 import { Socket } from 'net'
-import { getSocketPath } from '../daemon/server'
-import { createLogger } from '../shared/logger'
+import { getSocketPath } from '../daemon/server.js'
+import { createLogger } from '../shared/logger.js'
 import type {
   JsonRpcRequest,
   JsonRpcResponse,
@@ -14,9 +14,9 @@ import type {
   AtlasMethod,
   MethodParams,
   MethodResult,
-} from '../daemon/protocol'
-import { createRequest, parseMessage, serializeMessage } from '../daemon/protocol'
-import type { AtlasEvent } from '../daemon/events'
+} from '../daemon/protocol.js'
+import { createRequest, parseMessage, serializeMessage } from '../daemon/protocol.js'
+import type { AtlasEvent } from '../daemon/events.js'
 
 const log = createLogger('client:connection')
 
@@ -158,8 +158,8 @@ export class AtlasConnection {
   /**
    * Handle incoming data
    */
-  private handleData(chunk: Buffer): void {
-    this.buffer += chunk.toString()
+  private handleData(chunk: Buffer | string): void {
+    this.buffer += typeof chunk === 'string' ? chunk : chunk.toString()
 
     // Process complete messages (newline-delimited)
     const lines = this.buffer.split('\n')

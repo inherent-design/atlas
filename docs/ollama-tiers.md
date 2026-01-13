@@ -40,15 +40,18 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** Classification, QNTM key generation, embedded systems, IoT devices
 
 #### LLM Models
+
 - `qwen2.5-coder:0.5b` (398MB) - Code-aware, surprisingly capable for size
 - `tinyllama:1.1b` (700MB) - Quick prototyping, rapid iteration
 - `smollm2:360m` (250MB) - Extreme edge deployment
 
 #### Embedding Models
+
 - `all-minilm:l6-v2` (46MB, 384 dims) - Fast semantic similarity
 - `snowflake-arctic-embed:xs` (44MB, 384 dims) - Production-tested retrieval
 
 #### Recommended Configuration
+
 ```typescript
 {
   'json-completion': 'qwen2.5-coder:0.5b',  // QNTM key generation
@@ -57,6 +60,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - QNTM key generation (semantic compression)
 - Lightweight classification tasks
 - Embedded systems with minimal resources
@@ -70,16 +74,19 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** General text generation, edge deployment, mobile devices
 
 #### LLM Models
+
 - `ministral-3:3b` (1.8GB) - Mistral's lightweight model, good quality/size ratio
 - `phi3:3.8b` (2.3GB) - Microsoft's efficient reasoning model
 - `gemma2:2b` (1.6GB) - Google's conversational model
 - `qwen2.5-coder:1.5b` (986MB) - Lightweight code completion
 
 #### Embedding Models
+
 - `nomic-embed-text` (262MB, 768 dims) - Most popular, 48.9M pulls
 - `granite-embedding:30m` (60MB) - IBM's English-only model
 
 #### Recommended Configuration
+
 ```typescript
 {
   'text-completion': 'ministral-3:3b',
@@ -89,6 +96,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - Edge devices with limited VRAM
 - Mobile deployment (tablets, high-end phones)
 - General text generation tasks
@@ -102,6 +110,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** Code generation, general purpose, balanced performance
 
 #### LLM Models
+
 - `mistral:7b` (4.4GB) - Fast iterations, function calling, general purpose
 - `qwen2.5-coder:7b` (4.7GB) - Strong code generation, 92+ languages
 - `deepseek-r1:8b` (4.5GB) - Reasoning specialist, chain-of-thought
@@ -109,10 +118,12 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 - `qwen3:8b` (4.5GB) - Agentic workflows, tool integration
 
 #### Embedding Models
+
 - `mxbai-embed-large` (670MB, 1024 dims) - MTEB 64.68, SOTA for size
 - `bge-large` (639MB, 1024 dims) - MTEB 63.98, English-focused
 
 #### Recommended Configuration
+
 ```typescript
 {
   'text-completion': 'llama3.1:8b',
@@ -123,6 +134,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - Development machines (most common tier)
 - Code generation and debugging
 - General purpose AI assistant
@@ -131,6 +143,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 - Function calling and tool use
 
 #### Notes
+
 - **Sweet spot for most users**: 7-8B models offer excellent quality without excessive VRAM
 - RTX 3060 12GB, RTX 4060 Ti 16GB ideal for this tier
 - Can run two models simultaneously (e.g., LLM + embedding)
@@ -142,16 +155,19 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** Complex reasoning, production code generation, enterprise applications
 
 #### LLM Models
+
 - `deepseek-r1:14b` (8GB) - Strong reasoning, distilled from 671B model
 - `phi4:14b` (9GB) - Microsoft's reasoning + function calling, low latency
 - `qwen2.5-coder:14b` (9GB) - Production-quality code generation
 - `deepseek-coder-v2:16b` (9GB) - 160K context, 300+ languages
 
 #### Embedding Models
+
 - `bge-m3` (1.06GB, 1024 dims) - Multilingual, 8192 token context
 - `qwen3-embedding:0.6b` (1.2GB) - Code + multilingual, 32K context
 
 #### Recommended Configuration
+
 ```typescript
 {
   'text-completion': 'deepseek-r1:14b',
@@ -162,6 +178,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - Complex multi-step reasoning tasks
 - Production code generation
 - Enterprise applications
@@ -170,6 +187,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 - Software engineering agents
 
 #### Notes
+
 - RTX 4070 Ti Super 16GB, RTX 4080 16GB recommended
 - Can run LLM + embedding model simultaneously
 - DeepSeek-R1 14B approaches GPT-4 class reasoning
@@ -181,15 +199,18 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** Maximum quality, complex codebases, frontier-adjacent performance
 
 #### LLM Models
+
 - `qwen2.5-coder:32b` (20GB) - Code repair, architecture understanding
 - `codellama:34b` (19GB) - Meta's production code generation
 - `deepseek-r1:32b` (18GB) - Advanced reasoning approaching O1-mini
 - `gemma2:27b` (16GB) - Outperforms models 2x its size
 
 #### Embedding Models
+
 - `qwen3-embedding:4b` (8GB) - 32K context, MTEB top tier
 
 #### Recommended Configuration
+
 ```typescript
 {
   'code-completion': 'qwen2.5-coder:32b',
@@ -199,6 +220,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - Complex codebase understanding
 - Code repair and refactoring at scale
 - Advanced reasoning requiring extended thinking
@@ -207,6 +229,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 - Repository-scale semantic search (32K context)
 
 #### Notes
+
 - RTX 4090 24GB can handle 20GB model + small embedding model
 - May require splitting VRAM between model + context cache
 - Consider 32GB cards (A6000, RTX 6000 Ada) for comfortable headroom
@@ -218,15 +241,18 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 **Best for:** Frontier capability, research, maximum quality requirements
 
 #### LLM Models
+
 - `llama3.3:70b` (43GB) - Matches Llama 3.1 405B performance, 128K context
 - `qwen3:70b` (40GB) - Agentic workflows at maximum quality
 - `deepseek-r1:70b` (40GB) - Frontier reasoning approaching O3 level
 - `mistral-large:123b` (70GB) - Multimodal MoE, enterprise workloads
 
 #### Embedding Models
+
 - `qwen3-embedding:8b` (16GB) - MTEB multilingual #1 (70.58 score)
 
 #### Recommended Configuration
+
 ```typescript
 {
   'text-completion': 'llama3.3:70b',
@@ -237,6 +263,7 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 ```
 
 #### Use Cases
+
 - State-of-the-art AI research
 - Frontier reasoning tasks
 - Maximum quality requirements
@@ -245,11 +272,13 @@ Tiers group models by VRAM requirements, from ultra-lightweight (<1GB) to fronti
 - Multilingual semantic search at scale
 
 #### Hardware Requirements
+
 - Single GPU: RTX 6000 Ada 48GB, A6000 48GB, H100 80GB
 - Multi-GPU: 2x RTX 4090 (48GB total), 2x A40 (96GB total)
 - Consider A100 80GB for single-card 70B deployment
 
 #### Notes
+
 - 70B models require 40-43GB VRAM (Q4_K_M quantization)
 - May need GPU pooling or CPU offloading for 43GB+ models on 48GB cards
 - 123B models (Mistral Large) require 70GB minimum
@@ -264,19 +293,20 @@ Quantization reduces model size by using fewer bits per weight. Atlas uses **Q4_
 
 ### Quantization Types
 
-| Type       | Bits   | Memory Multiplier | Quality vs FP16 | Speed     | Recommendation             |
-| ---------- | ------ | ----------------- | --------------- | --------- | -------------------------- |
-| **FP16**   | 16-bit | 1.0x              | 100% (baseline) | Slowest   | Maximum quality only       |
-| **Q8_0**   | 8-bit  | ~0.5x             | 99%             | Fast      | Near-original quality      |
-| **Q6_K**   | 6-bit  | ~0.38x            | 97%             | Faster    | High quality + efficiency  |
-| **Q5_K_M** | 5-bit  | ~0.34x            | 95%             | Faster    | Balanced quality/size      |
-| **Q4_K_M** | 4-bit  | ~0.29x            | 92%             | Fastest   | **Default (best balance)** |
+| Type       | Bits   | Memory Multiplier | Quality vs FP16 | Speed     | Recommendation              |
+| ---------- | ------ | ----------------- | --------------- | --------- | --------------------------- |
+| **FP16**   | 16-bit | 1.0x              | 100% (baseline) | Slowest   | Maximum quality only        |
+| **Q8_0**   | 8-bit  | ~0.5x             | 99%             | Fast      | Near-original quality       |
+| **Q6_K**   | 6-bit  | ~0.38x            | 97%             | Faster    | High quality + efficiency   |
+| **Q5_K_M** | 5-bit  | ~0.34x            | 95%             | Faster    | Balanced quality/size       |
+| **Q4_K_M** | 4-bit  | ~0.29x            | 92%             | Fastest   | **Default (best balance)**  |
 | **Q3_K**   | 3-bit  | ~0.19x            | 85%             | Very fast | ⚠️ Significant quality loss |
 | **Q2_K**   | 2-bit  | ~0.13x            | 70%             | Extreme   | ❌ Avoid                    |
 
 ### Memory Calculation Formula
 
 **Base model VRAM:**
+
 ```
 VRAM (GB) ≈ Parameters (B) × Quantization Multiplier
 
@@ -285,12 +315,14 @@ VRAM (GB) ≈ Parameters (B) × 0.57
 ```
 
 **Examples:**
+
 - 7B Q4_K_M: `7 × 0.57 ≈ 4.0 GB`
 - 14B Q4_K_M: `14 × 0.57 ≈ 8.0 GB`
 - 32B Q4_K_M: `32 × 0.57 ≈ 18.2 GB`
 - 70B Q4_K_M: `70 × 0.57 ≈ 40 GB`
 
 **Total VRAM needed:**
+
 ```
 Total = Model Memory + KV Cache + Overhead
 
@@ -306,16 +338,19 @@ Overhead:
 ### Quantization Trade-offs
 
 **Q4_K_M → Q5_K_M:**
+
 - +15-20% VRAM
 - +3% quality
 - Decision: Usually not worth it (diminishing returns)
 
 **Q5_K_M → Q8_0:**
+
 - +50% VRAM
 - +4% quality
 - Decision: Worth it for final production deployment with VRAM headroom
 
 **Q8_0 → FP16:**
+
 - +100% VRAM
 - +1% quality
 - Decision: Rarely worth it (2x VRAM for minimal gain)
@@ -339,31 +374,37 @@ Overhead:
 ### General Text Embedding (RAG, Semantic Search)
 
 **Best balance (quality/speed/memory):**
+
 1. **nomic-embed-text** (262MB, 768 dims, MTEB 53.01) - 48.9M pulls, very fast
 2. **mxbai-embed-large** (670MB, 1024 dims, MTEB 64.68) - SOTA for size
 3. **bge-large** (639MB, 1024 dims, MTEB 63.98) - English-only
 
 **Budget option (extreme constraints):**
+
 - **all-minilm:l6-v2** (46MB, 384 dims) - Very fast, acceptable quality
 - **snowflake-arctic-embed:xs** (44MB, 384 dims) - Production-optimized
 
 **Quality priority (VRAM available):**
+
 - **bge-m3** (1.06GB, 1024 dims, 8192 context) - Multilingual, long context
 - **qwen3-embedding:8b** (16GB, MTEB 70.58) - Multilingual #1
 
 ### Code Embedding & Technical Documentation
 
 **Specialized code models:**
+
 1. **jina-embeddings-v2-base-code** (768 dims, 8192 context) - 30 languages, 150M code pairs
 2. **qwen3-embedding:4b/8b** (32K context) - Programming languages + multilingual
 
 **Code-aware general models:**
+
 1. **embeddinggemma** (<200MB with quantization) - Trained on code/technical docs
 2. **qwen3-embedding** series - Explicit code retrieval optimization
 
 ### Multilingual Embedding
 
 **Best multilingual models:**
+
 1. **qwen3-embedding:8b** (16GB) - MTEB multilingual #1 (70.58), 100+ languages
 2. **bge-m3** (1.06GB) - 100+ languages, 8192 context
 3. **snowflake-arctic-embed2** (1.14GB) - Multilingual without English degradation
@@ -416,6 +457,7 @@ Atlas automatically detects embedding dimensions for common Ollama models:
 When VRAM overflows to system RAM, expect **5-30x slowdown**.
 
 **Examples:**
+
 - 7B Q4_K_M (4GB VRAM) → 6GB+ system RAM recommended
 - 70B Q4_K_M (40GB VRAM) → 60GB+ system RAM recommended
 - Running without GPU: Model size × 2-3 in system RAM
@@ -423,11 +465,13 @@ When VRAM overflows to system RAM, expect **5-30x slowdown**.
 ### Performance Expectations
 
 **Full VRAM (no overflow):**
+
 - 7B Q4_K_M: 40+ tokens/s (RTX 3060 12GB)
 - 8B Q4_K_M: 35-45 tokens/s (RTX 4060 Ti 16GB)
 - 70B Q4_K_M: 15-25 tokens/s (RTX 4090 24GB)
 
 **VRAM overflow (partial RAM usage):**
+
 - 25/36 layers in VRAM: ~5-10x slowdown
 - 50% overflow: ~10-20x slowdown
 - Full RAM (no GPU): ~20-30x slowdown
@@ -475,6 +519,7 @@ atlas ingest --embedding ollama:snowflake-arctic-embed:xs file.md
 ```
 
 **Logs will show:**
+
 ```
 [info] Model not available, attempting to pull... model=snowflake-arctic-embed:xs
 [info] Pulling Ollama embedding model model=snowflake-arctic-embed:xs
@@ -519,13 +564,16 @@ atlas ingest --embedding ollama:qwen3-embedding:8b file.md
 ### License Compatibility
 
 **Fully Open (Commercial Use):**
+
 - Apache 2.0: Qwen, Mistral (most), Phi, Gemma, StarCoder2, Granite
 - MIT: DeepSeek (all models)
 
 **Commercial with Restrictions:**
+
 - Llama License: Llama 3.x (revenue cap for large companies)
 
 **Commercial License Required:**
+
 - Mistral Commercial: Codestral, Mistral Large
 
 ---
@@ -539,6 +587,7 @@ Error: Model 'qwen2.5-coder:14b' not found
 ```
 
 **Solution:** Atlas auto-pulls models. If pull fails:
+
 1. Check Ollama is running: `ollama list`
 2. Manually pull: `ollama pull qwen2.5-coder:14b`
 3. Check network connectivity (Ollama downloads from registry)
@@ -550,6 +599,7 @@ Error: Dimension mismatch: collection expects 768, got 384
 ```
 
 **Solution:** Collection was created with different embedding model. Either:
+
 1. Drop collection: `atlas ingest --force ...` (re-creates collection)
 2. Switch to model matching existing dimensions
 3. Create new collection for new embedding model
@@ -561,6 +611,7 @@ Warning: Model too large, offloading to RAM (slow)
 ```
 
 **Solution:** Choose smaller model from lower tier, or:
+
 1. Reduce context window: `--context-size 8192` (smaller KV cache)
 2. Use Q4_K_M quantization (default, already optimal)
 3. Close other GPU applications
@@ -573,6 +624,7 @@ Generation taking >5 seconds per token
 ```
 
 **Check:**
+
 1. Is model fully loaded in VRAM? (use `nvidia-smi` or `ollama ps`)
 2. Is model quantized to Q4_K_M? (check `ollama show MODEL`)
 3. Are multiple models loaded? (Ollama caches models, may evict if memory tight)
@@ -594,7 +646,7 @@ backends:
 
 ollama:
   host: http://localhost:11434
-  timeout: 300000  # 5 minutes for large model loads
+  timeout: 300000 # 5 minutes for large model loads
 ```
 
 ### Per-Command Overrides
@@ -628,16 +680,19 @@ CUDA_VISIBLE_DEVICES=0,1 ollama serve  # Use both GPUs
 ## Resources
 
 ### Official Documentation
+
 - [Ollama Library](https://ollama.com/library) - Browse all available models
 - [Ollama Model Tags](https://ollama.com/library/MODEL/tags) - View quantization variants
 - [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md) - Integration guide
 
 ### Atlas-Specific Research
+
 - `/Users/zer0cell/.atlas/connector/reports/atlas/ollama-llm-models-2025-12-31.md` - LLM catalog
 - `/Users/zer0cell/.atlas/connector/reports/atlas/ollama-embedding-models-2025-12-31.md` - Embedding catalog
 - `/Users/zer0cell/.atlas/integrator/reports/atlas/ollama-autopull-2026-01-01.md` - Auto-pull implementation
 
 ### External Benchmarks
+
 - [MTEB Leaderboard](https://huggingface.co/spaces/mteb/leaderboard) - Embedding model rankings
 - [Aider Benchmark](https://aider.chat/docs/leaderboards/) - Code generation rankings
 - [LocalLLM VRAM Calculator](https://localllm.in/blog/interactive-vram-calculator) - Memory planning tool

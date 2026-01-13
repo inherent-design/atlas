@@ -4,8 +4,8 @@
  * Hypothesis falsification via adversarial testing with uncertainty tracking.
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const challengerPrompt: PromptDefinition = {
   id: 'agent-challenger',

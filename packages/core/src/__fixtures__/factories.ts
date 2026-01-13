@@ -2,12 +2,13 @@
  * Factory functions for dynamic fixture generation
  *
  * Provides builders and generators for test data.
+ * Structure matches live production data in __fixtures__/live-data/.
  */
 
-import type { ChunkPayload, SearchResult } from '../shared/types'
-import type { NamedVectors, VectorPoint } from '../services/storage/types'
-import { generateEmbedding, generateNamedVectors } from './embeddings'
-import { createChunkPayload } from './chunks'
+import type { ChunkPayload, SearchResult } from '../shared/types.js'
+import type { NamedVectors, VectorPoint } from '../services/storage/types.js'
+import { generateEmbedding, generateNamedVectors } from './embeddings.js'
+import { createChunkPayload } from './chunks.js'
 
 /**
  * ChunkPayload builder with fluent interface
@@ -214,13 +215,11 @@ export function generateVectorPointBatch(
   const points: VectorPoint[] = []
 
   for (let i = 0; i < count; i++) {
-    const builder = new VectorPointBuilder()
-      .withId(`${baseSeed}-${i}`)
-      .withPayload({
-        original_text: `Test point ${i} for batch generation`,
-        file_path: `/test/batch/${i}.md`,
-        qntm_keys: [`@test ~ ${baseSeed}`, `@batch ~ ${i}`],
-      })
+    const builder = new VectorPointBuilder().withId(`${baseSeed}-${i}`).withPayload({
+      original_text: `Test point ${i} for batch generation`,
+      file_path: `/test/batch/${i}.md`,
+      qntm_keys: [`@test ~ ${baseSeed}`, `@batch ~ ${i}`],
+    })
 
     // Add appropriate vector type
     switch (vectorType) {

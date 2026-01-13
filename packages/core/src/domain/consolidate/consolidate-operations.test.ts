@@ -38,8 +38,16 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/llm', () => ({
   completeJSON: mockLLM.completeJSON,
-  getLLMConfig: mockLLM.getLLMConfig,
   getLLMBackendFor: mockLLM.getLLMBackendFor,
+}))
+
+vi.mock('../../services/embedding', () => ({
+  getEmbeddingBackend: () => ({
+    name: 'voyage',
+    dimensions: 1024,
+    capabilities: new Set(['text-embedding']),
+  }),
+  getEmbeddingDimensions: () => 1024,
 }))
 
 vi.mock('../../shared/utils', async (importOriginal) => {
@@ -236,8 +244,8 @@ describe('domain/consolidate - Operations', () => {
     // Stateful mock: tracks call count for level 0 only
     let level0CallCount = 0
     mockQdrant.scroll.mockImplementation((_collection: string, options: any) => {
-      const level = options.filter?.must?.find((m: any) => m.key === 'consolidation_level')
-        ?.match?.value
+      const level = options.filter?.must?.find((m: any) => m.key === 'consolidation_level')?.match
+        ?.value
 
       if (level === 0) {
         level0CallCount++
@@ -271,8 +279,8 @@ describe('domain/consolidate - Operations', () => {
     // Each level is scanned once (levels 0-3), so 4 scroll calls total
     // But we only return points at level 0
     const level0Calls = mockQdrant.scroll.mock.calls.filter((call: any) => {
-      const level = call[1].filter?.must?.find((m: any) => m.key === 'consolidation_level')
-        ?.match?.value
+      const level = call[1].filter?.must?.find((m: any) => m.key === 'consolidation_level')?.match
+        ?.value
       return level === 0
     })
     expect(level0Calls.length).toBe(1) // Stopped after first page for level 0

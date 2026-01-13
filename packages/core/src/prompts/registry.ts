@@ -10,9 +10,9 @@ import type {
   PromptBackendInfo,
   RenderedPrompt,
   RenderOptions,
-} from './types'
-import { scoreVariant, compareVariantMatches, renderTemplate, validateVariables } from './types'
-import { createLogger } from '../shared/logger'
+} from './types.js'
+import { scoreVariant, compareVariantMatches, renderTemplate, validateVariables } from './types.js'
+import { createLogger } from '../shared/logger.js'
 
 const log = createLogger('prompts:registry')
 

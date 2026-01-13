@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/search-inject.ts",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/scripts/search-inject.js",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/session-event.ts",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-event.js",
             "timeout": 5
           }
         ]
@@ -27,18 +27,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/session-event.ts",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-event.js",
             "timeout": 5
           }
         ]
       }
     ],
-    "PreTaskSpawn": [
+    "PreToolUse": [
       {
+        "matcher": "Task",
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/task-spawn.ts",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/scripts/task-spawn.js",
             "timeout": 10
           }
         ]

@@ -5,7 +5,7 @@
  * Template loaded from external .md file at runtime.
  */
 
-import { loadTemplate } from '../../template-loader'
+import { loadTemplate } from '../../template-loader.js'
 
 /**
  * Atlas system identity and multi-agent orchestration framework.

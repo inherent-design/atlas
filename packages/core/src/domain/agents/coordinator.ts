@@ -10,8 +10,8 @@
  * - Error handling and retries
  */
 
-import { createLogger, startTimer } from '../../shared/logger'
-import { executeAgent } from './executor'
+import { createLogger, startTimer } from '../../shared/logger.js'
+import { executeAgent } from './executor.js'
 import type {
   WorkNode,
   WorkContext,
@@ -22,7 +22,7 @@ import type {
   ConditionalNode,
   LoopNode,
   AgentResult,
-} from './types'
+} from './types.js'
 
 const log = createLogger('agents:coordinator')
 
@@ -141,10 +141,7 @@ async function executeAgentNode(node: AgentNode, context: WorkContext): Promise<
 /**
  * Execute sequence node (children in order)
  */
-async function executeSequenceNode(
-  node: SequenceNode,
-  context: WorkContext
-): Promise<WorkContext> {
+async function executeSequenceNode(node: SequenceNode, context: WorkContext): Promise<WorkContext> {
   log.debug('Executing sequence node', {
     children: node.children.length,
     passContext: node.passContext,
@@ -185,10 +182,7 @@ async function executeSequenceNode(
 /**
  * Execute parallel node (children concurrently)
  */
-async function executeParallelNode(
-  node: ParallelNode,
-  context: WorkContext
-): Promise<WorkContext> {
+async function executeParallelNode(node: ParallelNode, context: WorkContext): Promise<WorkContext> {
   const maxConcurrency = node.maxConcurrency ?? node.children.length
 
   log.debug('Executing parallel node', {
@@ -335,10 +329,7 @@ async function executeCountLoop(node: LoopNode, context: WorkContext): Promise<W
 /**
  * Execute condition-based loop (while condition true)
  */
-async function executeConditionLoop(
-  node: LoopNode,
-  context: WorkContext
-): Promise<WorkContext> {
+async function executeConditionLoop(node: LoopNode, context: WorkContext): Promise<WorkContext> {
   if (!node.continueWhile) {
     throw new Error('Condition loop requires continueWhile expression')
   }
@@ -406,10 +397,7 @@ async function executeConditionLoop(
 /**
  * Execute infinite loop (manual control)
  */
-async function executeInfiniteLoop(
-  node: LoopNode,
-  context: WorkContext
-): Promise<WorkContext> {
+async function executeInfiniteLoop(node: LoopNode, context: WorkContext): Promise<WorkContext> {
   log.debug('Executing infinite loop')
 
   // Infinite loops should have external stop mechanism
@@ -428,10 +416,7 @@ async function executeInfiniteLoop(
 /**
  * Execute adaptive loop (agent decides when to stop)
  */
-async function executeAdaptiveLoop(
-  node: LoopNode,
-  context: WorkContext
-): Promise<WorkContext> {
+async function executeAdaptiveLoop(node: LoopNode, context: WorkContext): Promise<WorkContext> {
   const maxIterations = node.adaptiveConfig?.maxIterations ?? 10
   const evaluatorRole = node.adaptiveConfig?.evaluatorRole ?? 'meta'
 

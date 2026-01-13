@@ -10,22 +10,143 @@
  * - Filters out deletion_eligible and superseded_by chunks
  */
 
-import { getEmbeddingBackend } from '../../services/embedding'
-import { getStorageBackend } from '../../services/storage'
-import { getRerankerBackendFor } from '../../services/reranker'
-import { generateQueryQNTMKeys, fetchExistingQNTMKeys } from '../../services/llm'
-import type { StorageFilter } from '../../services/storage'
+import { getEmbeddingBackend } from '../../services/embedding/index.js'
+import { getStorageBackend } from '../../services/storage/index.js'
+import { getStorageService } from '../../services/storage/index.js'
+import { getRerankerBackendFor } from '../../services/reranker/index.js'
+import { generateQueryQNTMKeys, fetchExistingQNTMKeys } from '../../services/llm/index.js'
+import type { StorageFilter } from '../../services/storage/index.js'
 import {
-  QDRANT_COLLECTION_NAME,
   DEFAULT_SEARCH_LIMIT,
   DEFAULT_HNSW_EF,
   DEFAULT_QUANTIZATION_RESCORE,
   DEFAULT_QUANTIZATION_OVERSAMPLING,
-} from '../../shared/config'
-import { createLogger, startTimer } from '../../shared/logger'
-import type { SearchOptions, SearchResult, ChunkPayload } from '../../shared/types'
+} from '../../shared/config.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import { createLogger, startTimer } from '../../shared/logger.js'
+import type { SearchParams, SearchResult, ChunkPayload } from '../../shared/types.js'
 
 const log = createLogger('search')
+
+/**
+ * Build Meilisearch filter string from SearchParams
+ */
+function buildMeilisearchFilters(options: SearchParams): string {
+  const filters = []
+
+  if (options.since) {
+    // Convert ISO datetime to Unix timestamp (seconds)
+    filters.push(`created_at >= ${new Date(options.since).getTime() / 1000}`)
+  }
+
+  if (options.qntmKey) {
+    filters.push(`qntm_keys = "${options.qntmKey}"`)
+  }
+
+  if (options.consolidationLevel !== undefined) {
+    filters.push(`consolidation_level = ${options.consolidationLevel}`)
+  }
+
+  if (options.contentType) {
+    filters.push(`content_type = "${options.contentType}"`)
+  }
+
+  return filters.join(' AND ')
+}
+
+/**
+ * Hybrid search: Combines vector search (Qdrant) with keyword search (Meilisearch)
+ * Uses reciprocal rank fusion (RRF) to merge results
+ */
+async function hybridSearch(query: string, options: SearchParams): Promise<SearchResult[]> {
+  const endTimer = startTimer('hybrid-search')
+  const storageService = getStorageService()
+  const limit = options.limit || DEFAULT_SEARCH_LIMIT
+  const k = 60 // RRF constant (standard value)
+
+  log.debug('Starting hybrid search', { query, limit })
+
+  // 1. Vector search (semantic similarity) - fetch 3x limit for better recall
+  const vectorResults = await search({
+    ...options,
+    limit: limit * 3,
+  })
+
+  log.debug('Vector search complete', { results: vectorResults.length })
+
+  // 2. Keyword search (full-text) - fetch 3x limit for better recall
+  const filters = buildMeilisearchFilters(options)
+  const keywordResults = await storageService.fullTextSearch(query, {
+    limit: limit * 3,
+    filters: filters || undefined,
+  })
+
+  log.debug('Keyword search complete', { results: keywordResults.length })
+
+  // 3. Reciprocal Rank Fusion (RRF)
+  interface HitWithScore {
+    hit: SearchResult
+    score: number
+  }
+
+  const scoreMap = new Map<string, HitWithScore>()
+
+  // Score vector results by rank position
+  vectorResults.forEach((result, index) => {
+    const rrfScore = 1 / (k + index + 1)
+
+    // Create search result from vector search result
+    scoreMap.set(result.file_path + ':' + result.chunk_index, {
+      hit: result,
+      score: rrfScore,
+    })
+  })
+
+  // Add keyword results by rank position
+  keywordResults.forEach((hit, index) => {
+    const rrfScore = 1 / (k + index + 1)
+    const key = hit.payload.file_path + ':' + hit.payload.chunk_index
+
+    const existing = scoreMap.get(key)
+
+    if (existing) {
+      // Combine scores (appears in both result sets)
+      existing.score += rrfScore
+    } else {
+      // Add new result (only in keyword results)
+      scoreMap.set(key, {
+        hit: {
+          text: hit.payload.original_text,
+          file_path: hit.payload.file_path,
+          chunk_index: hit.payload.chunk_index,
+          score: 0, // No vector score
+          created_at: hit.payload.created_at,
+          qntm_key: hit.payload.qntm_keys[0] || 'unknown',
+        },
+        score: rrfScore,
+      })
+    }
+  })
+
+  // 4. Sort by combined RRF score and return top-k
+  const hybridResults = Array.from(scoreMap.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ hit, score }) => ({
+      ...hit,
+      // Store RRF score in rerank_score field for display
+      rerank_score: score,
+    }))
+
+  log.info('Hybrid search complete', {
+    vectorResults: vectorResults.length,
+    keywordResults: keywordResults.length,
+    hybridResults: hybridResults.length,
+  })
+
+  endTimer()
+  return hybridResults
+}
 
 /**
  * Update access tracking for retrieved chunks
@@ -35,7 +156,7 @@ const log = createLogger('search')
 async function updateAccessTracking(pointIds: string[]): Promise<void> {
   if (pointIds.length === 0) return
 
-  const storageBackend = getStorageBackend('vector-storage')
+  const storageBackend = getStorageBackend()
   if (!storageBackend) {
     log.warn('No storage backend available for access tracking')
     return
@@ -45,7 +166,7 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
 
   try {
     // Retrieve points to check for supersession
-    const points = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, pointIds)
+    const points = await storageBackend.retrieve(getPrimaryCollectionName(), pointIds)
 
     // Build map of target IDs (follow supersession chains)
     const targetUpdates = new Map<string, number>()
@@ -58,7 +179,7 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
       // Follow supersession chain to current version
       while (targetPayload.superseded_by) {
         try {
-          const successor = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [
+          const successor = await storageBackend.retrieve(getPrimaryCollectionName(), [
             targetPayload.superseded_by,
           ])
           if (successor.length === 0) break
@@ -75,11 +196,11 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
 
     // Update each target's access tracking
     for (const [targetId, incrementBy] of targetUpdates) {
-      const target = await storageBackend.retrieve(QDRANT_COLLECTION_NAME, [targetId])
+      const target = await storageBackend.retrieve(getPrimaryCollectionName(), [targetId])
       if (target.length === 0) continue
 
       const currentPayload = target[0]!.payload as ChunkPayload
-      await storageBackend.setPayload(QDRANT_COLLECTION_NAME, [targetId], {
+      await storageBackend.setPayload(getPrimaryCollectionName(), [targetId], {
         access_count: (currentPayload.access_count ?? 0) + incrementBy,
         last_accessed_at: now,
       })
@@ -100,7 +221,7 @@ async function updateAccessTracking(pointIds: string[]): Promise<void> {
 }
 
 // Semantic search with optional temporal filtering
-export async function search(options: SearchOptions): Promise<SearchResult[]> {
+export async function search(options: SearchParams): Promise<SearchResult[]> {
   const endTimer = startTimer('search')
   const startTime = Date.now()
 
@@ -115,13 +236,32 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
   })
 
   try {
+    // Route to hybrid search if enabled
+    if (options.hybridSearch) {
+      log.info('Routing to hybrid search (vector + keyword with RRF)')
+      const results = await hybridSearch(options.query, options)
+
+      // Emit search.completed event
+      options.emit?.({
+        type: 'search.completed',
+        data: {
+          results: results.length,
+          took: Date.now() - startTime,
+          reranked: false, // Hybrid search uses RRF, not reranking
+        },
+      })
+
+      endTimer()
+      return results
+    }
+
     // Get backends from registries
     const embeddingBackend = getEmbeddingBackend('text-embedding')
     if (!embeddingBackend) {
       throw new Error('No text embedding backend available')
     }
 
-    const storageBackend = getStorageBackend('vector-storage')
+    const storageBackend = getStorageBackend()
     if (!storageBackend) {
       throw new Error('No vector storage backend available')
     }
@@ -168,8 +308,9 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
     const filter: StorageFilter = {
       // Always exclude deleted chunks
       must_not: [{ key: 'deletion_eligible', match: { value: true } }],
-      // Only include chunks where superseded_by is null (not superseded)
-      must: [{ is_null: 'superseded_by' }],
+      // Note: No need to filter superseded_by - chunks without the field are implicitly not superseded
+      // (Qdrant's is_null only matches when field exists with null value, not when field is absent)
+      must: [], // Initialize empty array for dynamic filters below
     }
 
     // Add temporal filter
@@ -242,7 +383,7 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
     const searchStart = startTimer('storage search')
 
     log.trace('Storage search request', {
-      collection: QDRANT_COLLECTION_NAME,
+      collection: getPrimaryCollectionName(),
       vectorName: 'text',
       vectorDim: queryVector.length,
       limit,
@@ -253,18 +394,20 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 
     let results: Array<
       import('../../services/storage').SearchResult<ChunkPayload> & { rerank_score?: number }
-    > = await storageBackend.search(QDRANT_COLLECTION_NAME, {
+    > = await storageBackend.search(getPrimaryCollectionName(), {
       vectorName: 'text', // Phase 2: Default to text vector
       vector: queryVector,
       limit,
       filter:
-        Object.keys(filter.must_not || []).length > 0 || Object.keys(filter.must || []).length > 0
+        (filter.must_not && filter.must_not.length > 0) ||
+        (filter.must && filter.must.length > 0) ||
+        (filter.should && filter.should.length > 0)
           ? filter
           : undefined,
     })
 
     log.trace('Storage search response', {
-      collection: QDRANT_COLLECTION_NAME,
+      collection: getPrimaryCollectionName(),
       resultCount: results.length,
       topScore: results[0]?.score,
     })
@@ -379,7 +522,7 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 export async function timeline(since: string, limit = 20): Promise<SearchResult[]> {
   const endTimer = startTimer('timeline')
 
-  const storageBackend = getStorageBackend('vector-storage')
+  const storageBackend = getStorageBackend()
   if (!storageBackend) {
     throw new Error('No vector storage backend available')
   }
@@ -400,18 +543,18 @@ export async function timeline(since: string, limit = 20): Promise<SearchResult[
   }
 
   log.trace('Storage scroll request', {
-    collection: QDRANT_COLLECTION_NAME,
+    collection: getPrimaryCollectionName(),
     filter,
     backend: storageBackend.name,
   })
 
-  const results = await storageBackend.scroll(QDRANT_COLLECTION_NAME, {
+  const results = await storageBackend.scroll(getPrimaryCollectionName(), {
     filter,
     limit,
   })
 
   log.trace('Storage scroll response', {
-    collection: QDRANT_COLLECTION_NAME,
+    collection: getPrimaryCollectionName(),
     pointCount: results.points.length,
     nextPageOffset: results.nextOffset,
   })

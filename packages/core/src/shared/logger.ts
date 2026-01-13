@@ -21,7 +21,7 @@
  *     -> debug for ingest, warn for everything else
  */
 
-import { Glob } from 'bun'
+import picomatch from 'picomatch'
 import pino from 'pino'
 
 // Test mode: disable all logging for zero overhead (unless VITEST_LOG=true)
@@ -54,7 +54,7 @@ interface LogRule {
   pattern: string
   level: LogLevel
   specificity: number
-  glob: Glob
+  matcher: (input: string) => boolean
 }
 
 /**
@@ -106,7 +106,7 @@ function parseLogModules(config: string | undefined): LogRule[] {
         pattern,
         level,
         specificity: calculateSpecificity(pattern),
-        glob: new Glob(pattern),
+        matcher: picomatch(pattern),
       }
     })
     .sort((a, b) => b.specificity - a.specificity) // Most specific first
@@ -127,7 +127,7 @@ function getEffectiveLevel(module?: string): number {
 
   // Find first matching rule (already sorted by specificity)
   for (const rule of moduleRules) {
-    if (rule.glob.match(module)) {
+    if (rule.matcher(module)) {
       return LEVELS[rule.level]
     }
   }
@@ -142,7 +142,7 @@ export const logger = pino({
         target: 'pino-pretty',
         options: {
           colorize: true,
-          translateTime: 'HH:MM:ss',
+          translateTime: 'SYS:HH:MM:ss', // Use system local time instead of UTC
           ignore: 'pid,hostname',
           messageFormat: '{module} {msg}',
         },

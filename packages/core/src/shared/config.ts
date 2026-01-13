@@ -11,12 +11,16 @@ import {
   getAllEmbeddableExtensions,
   MEDIA_EXTENSIONS,
   TEXT_EXTENSIONS,
-} from '../services/embedding/types'
-import { createLogger } from './logger'
+} from '../services/embedding/types.js'
+import { createLogger } from './logger.js'
 
 const log = createLogger('config')
 
-// Collection name - hardcoded for now, will be dynamic for colpali support
+/**
+ * @deprecated Use getPrimaryCollectionName() from shared/utils.ts instead.
+ * Collection names are now dimension-based (atlas_384, atlas_768, atlas_1024).
+ * This constant remains for backwards compatibility only.
+ */
 export const QDRANT_COLLECTION_NAME = 'atlas'
 
 // Voyage AI config (Step 3)
@@ -32,6 +36,8 @@ export const CHUNK_SEPARATORS = ['\n\n', '\n', '. ', ' ', ''] // Hierarchical se
 // Search defaults
 export const DEFAULT_SEARCH_LIMIT = 5
 export const DEFAULT_HNSW_EF = 50 // From Step 3 production config
+export const HNSW_M_DEFAULT = 16 // Default HNSW m parameter (number of bi-directional links)
+export const HNSW_M_DISABLED = 0 // Disable HNSW indexing during batch operations
 export const DEFAULT_QUANTIZATION_RESCORE = true
 export const DEFAULT_QUANTIZATION_OVERSAMPLING = 3.0
 
@@ -169,12 +175,6 @@ export function buildCollectionConfig(dimensions: number) {
 export { CODE_EXTENSIONS, getAllEmbeddableExtensions, MEDIA_EXTENSIONS, TEXT_EXTENSIONS }
 
 /**
- * Legacy alias for backwards compatibility.
- * @deprecated Use TEXT_EXTENSIONS and CODE_EXTENSIONS directly instead
- */
-export const TEXT_FILE_EXTENSIONS = [...TEXT_EXTENSIONS, ...CODE_EXTENSIONS] as const
-
-/**
  * Directory and file patterns to ignore during recursive file operations.
  * Used by expandPaths() in utils.ts for file discovery and file watcher.
  *
@@ -289,17 +289,15 @@ export function getQdrantURL(): string {
 
 export const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 
-// Consolidation config
-export const CONSOLIDATION_BASE_THRESHOLD = 500 // chunks/points, not files
-export const CONSOLIDATION_SCALE_FACTOR = 0.05
-export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.8
-export const CONSOLIDATION_POLL_INTERVAL_MS = 30000 // 30 seconds
+// HNSW batch mode config (used by domain/ingest)
+export const BATCH_HNSW_THRESHOLD = 20 // Disable HNSW if batch size > this
 
-// Deletion config
+// Consolidation constants (used by domain/consolidate)
+export const CONSOLIDATION_SIMILARITY_THRESHOLD = 0.8
 export const DELETION_GRACE_PERIOD_DAYS = 14
 export const STABILITY_SCORE_THRESHOLD = 0.95
 
-// HNSW batch mode config
-export const HNSW_M_DEFAULT = 16
-export const HNSW_M_DISABLED = 0
-export const BATCH_HNSW_THRESHOLD = 20 // Disable HNSW if batch size > this
+// Consolidation watchdog constants (legacy - only for tests)
+export const CONSOLIDATION_BASE_THRESHOLD = 500
+export const CONSOLIDATION_SCALE_FACTOR = 0.05
+export const CONSOLIDATION_POLL_INTERVAL_MS = 300000 // 5 minutes

@@ -3,9 +3,9 @@
  */
 
 import { QdrantClient } from '@qdrant/js-client-rest'
-import { getQdrantURL } from '../../shared/config'
-import { createLogger } from '../../shared/logger'
-import { createSingleton } from '../../shared/utils'
+import { getQdrantURL } from '../../shared/config.js'
+import { createLogger } from '../../shared/logger.js'
+import { createSingleton } from '../../shared/utils.js'
 
 const log = createLogger('clients:qdrant')
 

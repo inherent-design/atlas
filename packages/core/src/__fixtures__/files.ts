@@ -36,7 +36,7 @@ export const TYPESCRIPT_FILE = `/**
  * Embedding service for Atlas
  */
 
-import type { EmbeddingBackend } from './types'
+import type { EmbeddingBackend } from './types.js'
 
 export class EmbeddingService {
   constructor(private backend: EmbeddingBackend) {}

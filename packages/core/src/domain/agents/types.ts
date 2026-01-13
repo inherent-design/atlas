@@ -8,6 +8,8 @@
  */
 
 import type { z } from 'zod'
+import type { ToolDefinition as BaseToolDefinition } from '../../services/llm/message.js'
+import type { AgentRole } from '../../prompts/types.js'
 
 // ============================================
 // Agent Roles
@@ -15,8 +17,9 @@ import type { z } from 'zod'
 
 /**
  * Agent role types matching INTERSTITIA philosophy
+ * Imported from prompts layer (single source of truth)
  */
-export type AgentRole = 'observer' | 'connector' | 'explainer' | 'challenger' | 'integrator' | 'meta'
+export type { AgentRole }
 
 /**
  * Agent configuration
@@ -28,8 +31,6 @@ export interface AgentConfig {
   task: string
   /** Context to provide to agent (from RAG or previous agents) */
   context?: string[]
-  /** Model to use (defaults to configured text-completion backend) */
-  model?: string
   /** Max turns for this agent (default: 5) */
   maxTurns?: number
   /** Temperature (default: 0.7) */
@@ -255,11 +256,9 @@ export interface WorkResult {
 // ============================================
 
 /**
- * Tool definition for agent use
+ * Tool definition for agent use (extends base with stricter schema)
  */
-export interface ToolDefinition {
-  name: string
-  description: string
+export interface ToolDefinition extends BaseToolDefinition {
   inputSchema: {
     type: 'object'
     properties: Record<string, unknown>
@@ -292,7 +291,8 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'read',
-    description: 'Read file contents from filesystem. Use for examining code, configs, documentation.',
+    description:
+      'Read file contents from filesystem. Use for examining code, configs, documentation.',
     inputSchema: {
       type: 'object',
       properties: {

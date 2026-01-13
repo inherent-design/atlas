@@ -10,8 +10,7 @@
  */
 
 import { AutoTokenizer, type PreTrainedTokenizer } from '@huggingface/transformers'
-import { createLogger } from '../../shared/logger'
-import { createSingleton } from '../../shared/utils'
+import { createLogger } from '../../shared/logger.js'
 
 const log = createLogger('tokenization')
 

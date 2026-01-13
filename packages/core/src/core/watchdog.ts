@@ -11,9 +11,9 @@
  */
 
 import pLimit from 'p-limit'
-import { createLogger } from '../shared/logger'
-import { PollingScheduler } from './scheduler'
-import { assessSystemCapacity, type PressureLevel } from './system'
+import { createLogger } from '../shared/logger.js'
+import { PollingScheduler } from './scheduler.js'
+import { assessSystemCapacity, type PressureLevel } from './system.js'
 
 const log = createLogger('watchdog')
 

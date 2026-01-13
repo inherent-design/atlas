@@ -1,36 +1,47 @@
 {
   "bin": {
-    "atlas": "./src/index.ts"
+    "atlas": "./dist/index.js"
   },
   "dependencies": {
-    "@inherent.design/atlas-core": "^0.0.0-alpha.4",
-    "commander": "^14.0.2"
+    "@inherent.design/atlas-core": "workspace:*",
+    "@qdrant/js-client-rest": "^1.16.2",
+    "commander": "^14.0.2",
+    "duckdb": "^1.4.3",
+    "ioredis": "^5.9.1",
+    "kysely": "^0.28.9",
+    "meilisearch": "^0.55.0",
+    "pg": "^8.16.3"
   },
   "description": "CLI for Atlas semantic memory - ingest, search, and manage context",
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/node": "^25.0.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
   "engines": {
-    "bun": ">=1.2.15"
+    "node": ">=24.12.0"
   },
   "files": [
-    "!src/**/*.test.ts",
-    "src/**/*.ts"
+    "dist",
+    "!dist/**/*.test.js"
   ],
   "module": "src/index.ts",
   "name": "@inherent.design/atlas-cli",
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "atlas": "bun run src/index.ts",
+    "build": "tsc --project tsconfig.build.json && chmod +x dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "type": "module",
-  "version": "0.0.0-alpha.3"
+  "version": "0.0.0-alpha.7"
 }

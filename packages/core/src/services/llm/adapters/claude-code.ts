@@ -10,7 +10,7 @@
  * - No tool_use, thinking, or content block details
  */
 
-import type { UnifiedRequest, UnifiedResponse, UnifiedMessage } from '../message'
+import type { UnifiedRequest, UnifiedResponse, UnifiedMessage } from '../message.js'
 
 /**
  * Claude Code CLI wrapper response

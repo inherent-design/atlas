@@ -9,9 +9,69 @@ import {
   QDRANT_COLLECTION_NAME,
   IGNORE_PATTERNS,
   QDRANT_COLLECTION_CONFIG,
-  TEXT_FILE_EXTENSIONS,
   buildCollectionConfig,
-} from './config'
+} from './config.js'
+import { TEXT_EXTENSIONS, CODE_EXTENSIONS } from '../services/embedding/types.js'
+import type { EmbeddingCapability } from './capabilities.js'
+import { getEmbeddingBackend } from '../services/embedding/index.js'
+
+// ============================================
+// Collection Name Generation
+// ============================================
+
+/**
+ * Get collection name based on embedding dimensions.
+ *
+ * Uses dimension-based naming to support multiple embedding models:
+ * - atlas_384 for 384-dimensional embeddings (all-minilm, snowflake-arctic-embed:xs)
+ * - atlas_768 for 768-dimensional embeddings (nomic-embed-text default)
+ * - atlas_1024 for 1024-dimensional embeddings (Voyage, mxbai-embed-large, bge-large)
+ *
+ * @param capability - Embedding capability to query (defaults to 'text-embedding')
+ * @returns Collection name in format "atlas_<dim>"
+ */
+export function getCollectionName(capability: EmbeddingCapability = 'text-embedding'): string {
+  // Top-level import is safe - no circular dependency exists
+  // (services/embedding does not import from shared/utils)
+  const backend = getEmbeddingBackend(capability)
+
+  if (!backend) {
+    throw new Error(`No backend registered for capability: ${capability}`)
+  }
+
+  // Future: Check if PDF backend (ColPali/ColQwen)
+  // if (isPDFBackend(backend)) {
+  //   return `atlas_pdf_${backend.dimensions}`
+  // }
+
+  return `atlas_${backend.dimensions}`
+}
+
+/**
+ * Get primary collection name from default text-embedding capability.
+ *
+ * This is the main collection name used throughout the application.
+ * @returns Collection name (e.g., "atlas_1024")
+ */
+export function getPrimaryCollectionName(): string {
+  return getCollectionName('text-embedding')
+}
+
+/**
+ * Parse dimensions from collection name.
+ *
+ * @param collectionName - Collection name like "atlas_1024"
+ * @returns Dimension number or null if invalid format
+ *
+ * @example
+ * parseDimensionsFromCollection('atlas_1024') // => 1024
+ * parseDimensionsFromCollection('atlas') // => null
+ * parseDimensionsFromCollection('foo_1024') // => null
+ */
+export function parseDimensionsFromCollection(collectionName: string): number | null {
+  const match = collectionName.match(/^atlas_(\d+)$/)
+  return match ? parseInt(match[1]!, 10) : null
+}
 
 // ============================================
 // Singleton Factory
@@ -60,11 +120,11 @@ export function createSingleton<T>(
 }
 
 // Import logger after singleton factory
-import { createLogger } from './logger'
+import { createLogger } from './logger.js'
 const log = createLogger('utils')
 
 // Import storage backend via registry (abstracted interface)
-import { getStorageBackend } from '../services/storage'
+import { getStorageBackend } from '../services/storage/index.js'
 
 // ============================================
 // Hash Generation
@@ -84,6 +144,13 @@ export function generateChunkId(filePath: string, chunkIndex: number): string {
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`
 }
 
+// Generate stable ID for source file (UUID format)
+export function generateSourceId(filePath: string): string {
+  const hash = createHash('md5').update(filePath).digest('hex')
+  // Format MD5 hash as UUID (8-4-4-4-12 format)
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`
+}
+
 // Generate SHA-256 hash of content (for file tracking)
 export function hashContent(content: string): string {
   return createHash('sha256').update(content, 'utf-8').digest('hex')
@@ -96,17 +163,35 @@ const PAYLOAD_INDEXES = [
   { field: 'consolidated', schema: 'bool' as const },
 ]
 
-// Ensure collection exists with Step 3 production config
-export async function ensureCollection(collectionName?: string): Promise<void> {
+/**
+ * Ensure collection exists with Step 3 production config.
+ *
+ * If collectionName is not provided, uses dimension-based naming (atlas_<dim>).
+ *
+ * @param collectionName - Optional explicit collection name (for testing or legacy)
+ * @param dimensions - Optional explicit dimensions (for testing)
+ */
+export async function ensureCollection(
+  collectionName?: string,
+  dimensions?: number
+): Promise<void> {
   const backend = getStorageBackend()
   if (!backend) {
     throw new Error('No storage backend available')
   }
-  const name = collectionName || QDRANT_COLLECTION_NAME
 
-  // Get embedding dimensions from configured backend
+  // Determine collection name: explicit > dimension-based > legacy constant
+  let name: string
+  if (collectionName) {
+    name = collectionName
+  } else {
+    // Use dimension-based naming
+    name = getPrimaryCollectionName()
+  }
+
+  // Get embedding dimensions from configured backend or use provided
   const { getEmbeddingDimensions } = await import('../services/embedding')
-  const expectedDimensions = getEmbeddingDimensions()
+  const expectedDimensions = dimensions ?? getEmbeddingDimensions()
 
   const exists = await backend.collectionExists(name)
   if (exists) {
@@ -121,13 +206,13 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
       const codeVectorDims = typeof dims === 'object' ? dims.code : undefined
 
       if (textVectorDims && textVectorDims !== expectedDimensions) {
-        const errorMsg = `Collection '${name}' dimension mismatch: collection has ${textVectorDims} dimensions but configured embedding model outputs ${expectedDimensions}.\nEither:\n1. Change embedding.backend in config to match existing collection\n2. Run 'atlas qdrant drop --yes' to recreate collection with new dimensions`
+        const errorMsg = `Collection '${name}' dimension mismatch: collection has ${textVectorDims} dimensions but configured embedding model outputs ${expectedDimensions}.\nEither:\n1. Change embedding.backend in config to match existing collection\n2. Run 'atlas qdrant drop ${name} --yes' to recreate collection with new dimensions`
         log.error(errorMsg)
         throw new Error(errorMsg)
       }
 
       if (codeVectorDims && codeVectorDims !== expectedDimensions) {
-        const errorMsg = `Collection '${name}' dimension mismatch: collection code vector has ${codeVectorDims} dimensions but configured embedding model outputs ${expectedDimensions}.\nEither:\n1. Change embedding.backend in config to match existing collection\n2. Run 'atlas qdrant drop --yes' to recreate collection with new dimensions`
+        const errorMsg = `Collection '${name}' dimension mismatch: collection code vector has ${codeVectorDims} dimensions but configured embedding model outputs ${expectedDimensions}.\nEither:\n1. Change embedding.backend in config to match existing collection\n2. Run 'atlas qdrant drop ${name} --yes' to recreate collection with new dimensions`
         log.error(errorMsg)
         throw new Error(errorMsg)
       }
@@ -161,17 +246,21 @@ export async function ensureCollection(collectionName?: string): Promise<void> {
  *
  * Use this for operations that should NOT create the collection (e.g., consolidation).
  * Throws an error with actionable message if collection is missing.
+ *
+ * @param collectionName - Optional explicit collection name (uses dimension-based if not provided)
  */
 export async function requireCollection(collectionName?: string): Promise<void> {
   const backend = getStorageBackend()
   if (!backend) {
     throw new Error('No storage backend available')
   }
-  const name = collectionName || QDRANT_COLLECTION_NAME
+
+  // Determine collection name: explicit > dimension-based
+  const name = collectionName ?? getPrimaryCollectionName()
 
   const exists = await backend.collectionExists(name)
   if (!exists) {
-    const msg = `Collection '${name}' does not exist. Run 'bun atlas ingest' first to create it.`
+    const msg = `Collection '${name}' does not exist. Run 'atlas ingest' first to create it.`
     log.error(msg)
     throw new Error(msg)
   }
@@ -180,23 +269,29 @@ export async function requireCollection(collectionName?: string): Promise<void> 
 
 /**
  * Check if collection exists (non-throwing)
+ *
+ * @param collectionName - Optional explicit collection name (uses dimension-based if not provided)
  */
 export async function collectionExists(collectionName?: string): Promise<boolean> {
   const backend = getStorageBackend()
   if (!backend) {
     return false
   }
-  const name = collectionName || QDRANT_COLLECTION_NAME
+  const name = collectionName ?? getPrimaryCollectionName()
   return backend.collectionExists(name)
 }
 
-// Ensure payload indexes exist (idempotent)
+/**
+ * Ensure payload indexes exist (idempotent)
+ *
+ * @param collectionName - Optional explicit collection name (uses dimension-based if not provided)
+ */
 export async function ensurePayloadIndexes(collectionName?: string): Promise<void> {
   const backend = getStorageBackend()
   if (!backend) {
     throw new Error('No storage backend available')
   }
-  const name = collectionName || QDRANT_COLLECTION_NAME
+  const name = collectionName ?? getPrimaryCollectionName()
 
   // createPayloadIndex is optional (Qdrant-specific)
   if (!backend.createPayloadIndex) {
@@ -245,7 +340,8 @@ export function findFiles(dirPath: string, recursive = false): string[] {
         walk(fullPath)
       } else if (entry.isFile()) {
         const ext = extname(entry.name)
-        if ((TEXT_FILE_EXTENSIONS as readonly string[]).includes(ext)) {
+        const allExtensions = [...TEXT_EXTENSIONS, ...CODE_EXTENSIONS] as readonly string[]
+        if (allExtensions.includes(ext)) {
           files.push(fullPath)
         }
       }

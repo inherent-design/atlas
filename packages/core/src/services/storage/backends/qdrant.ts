@@ -6,8 +6,8 @@
  */
 
 import type { QdrantClient as QdrantClientType } from '@qdrant/js-client-rest'
-import { getQdrantClient } from '../client'
-import { createLogger } from '../../../shared/logger'
+import { getQdrantClient } from '../client.js'
+import { createLogger } from '../../../shared/logger.js'
 import type {
   StorageBackend,
   StorageCapability,
@@ -18,9 +18,9 @@ import type {
   ScrollOptions,
   ScrollResult,
   CollectionConfig,
-} from '../types'
-import type { ChunkPayload } from '../../../shared/types'
-import type { StorageFilter, FilterCondition } from '../types'
+} from '../types.js'
+import type { ChunkPayload } from '../../../shared/types.js'
+import type { StorageFilter, FilterCondition } from '../types.js'
 
 const log = createLogger('storage:qdrant')
 

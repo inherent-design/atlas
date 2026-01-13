@@ -7,14 +7,15 @@
  * Pattern: Resolve once on context creation, cache for duration of ingest operation.
  */
 
-import { getEmbeddingBackend } from '../../services/embedding'
-import { getStorageBackend } from '../../services/storage'
-import { getLLMBackend } from '../../services/llm'
-import { createLogger } from '../../shared/logger'
-import type { EmbeddingBackend } from '../../services/embedding/types'
-import type { StorageBackend } from '../../services/storage'
-import type { LLMBackend, CanCompleteJSON } from '../../services/llm/types'
-import type { IngestOptions } from '../../shared/types'
+import { getEmbeddingBackend } from '../../services/embedding/index.js'
+import { getStorageBackend, getStorageService, type StorageService } from '../../services/storage/index.js'
+import { getLLMBackend } from '../../services/llm/index.js'
+import { createLogger } from '../../shared/logger.js'
+import { getConfig } from '../../shared/config.loader.js'
+import type { EmbeddingBackend } from '../../services/embedding/types.js'
+import type { StorageBackend } from '../../services/storage/index.js'
+import type { LLMBackend, CanCompleteJSON } from '../../services/llm/types.js'
+import type { IngestParams } from '../../shared/types.js'
 
 const log = createLogger('ingest:context')
 
@@ -28,7 +29,9 @@ export interface IngestContext {
   getCodeEmbeddingBackend(): Promise<EmbeddingBackend | null>
   getContextualizedEmbeddingBackend(): Promise<EmbeddingBackend | null>
   getStorageBackend(): Promise<StorageBackend>
+  getStorageService(): StorageService
   getLLMBackend(): Promise<LLMBackend & CanCompleteJSON>
+  getDatabase(): import('kysely').Kysely<import('../../services/storage/backends/database.types').Database>
 
   // Flags (computed once from config)
   readonly contextualizedAvailable: boolean
@@ -39,6 +42,7 @@ export interface IngestContext {
 
   // Event emitter (optional, for daemon mode)
   readonly emit?: (event: any) => void
+  readonly config: any
 }
 
 /**
@@ -47,9 +51,15 @@ export interface IngestContext {
  * Backends are resolved once on first access and cached.
  * Flags are computed eagerly to enable fast capability checks.
  */
-export async function createIngestContext(config: IngestOptions): Promise<IngestContext> {
+export async function createIngestContext(config: IngestParams): Promise<IngestContext> {
   const rootDir = config.rootDir || process.cwd()
   const existingQNTMKeys = config.existingKeys || []
+
+  // Get Atlas config for storage service
+  const atlasConfig = getConfig()
+
+  // Initialize storage service (multi-tier coordinator)
+  const storageService = getStorageService(atlasConfig)
 
   // Eagerly check backend availability for flags
   const textBackend = getEmbeddingBackend('text-embedding')
@@ -166,7 +176,7 @@ export async function createIngestContext(config: IngestOptions): Promise<Ingest
 
     async getStorageBackend() {
       if (!storageBackendCache) {
-        const backend = getStorageBackend('vector-storage')
+        const backend = getStorageBackend()
         if (!backend) {
           throw new Error('No vector storage backend available')
         }
@@ -174,6 +184,14 @@ export async function createIngestContext(config: IngestOptions): Promise<Ingest
         log.trace('Cached storage backend', { backend: backend.name })
       }
       return storageBackendCache
+    },
+
+    getStorageService() {
+      return storageService
+    },
+
+    getDatabase() {
+      return storageService.getDatabase()
     },
 
     async getLLMBackend() {
@@ -197,5 +215,6 @@ export async function createIngestContext(config: IngestOptions): Promise<Ingest
 
     // Event emitter (optional)
     emit: config.emit,
+    config: atlasConfig,
   }
 }

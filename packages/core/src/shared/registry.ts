@@ -11,8 +11,8 @@
  * - Get backends by capability or name
  */
 
-import type { BackendDescriptor } from './capabilities'
-import { createLogger } from './logger'
+import type { BackendDescriptor } from './capabilities.js'
+import { createLogger } from './logger.js'
 
 const log = createLogger('registry')
 

@@ -8,7 +8,7 @@
  * - State introspection
  */
 
-import { createLogger, type Logger } from '../shared/logger'
+import { createLogger, type Logger } from '../shared/logger.js'
 
 export interface PollingSchedulerOptions {
   name: string
@@ -18,7 +18,7 @@ export interface PollingSchedulerOptions {
 }
 
 export class PollingScheduler {
-  private interval: Timer | null = null
+  private interval: NodeJS.Timeout | null = null
   private isShuttingDown = false
   private tickInProgress = false
   private readonly name: string

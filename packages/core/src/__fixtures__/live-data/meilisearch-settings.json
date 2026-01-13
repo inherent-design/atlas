@@ -1,0 +1,58 @@
+{
+  "displayedAttributes": [
+    "*"
+  ],
+  "searchableAttributes": [
+    "original_text",
+    "file_path",
+    "qntm_keys"
+  ],
+  "filterableAttributes": [
+    "file_type",
+    "consolidation_level",
+    "content_type",
+    "created_at",
+    "importance",
+    "memory_type"
+  ],
+  "sortableAttributes": [],
+  "rankingRules": [
+    "words",
+    "typo",
+    "proximity",
+    "attribute",
+    "sort",
+    "exactness"
+  ],
+  "stopWords": [],
+  "nonSeparatorTokens": [],
+  "separatorTokens": [],
+  "dictionary": [],
+  "synonyms": {},
+  "distinctAttribute": null,
+  "proximityPrecision": "byWord",
+  "typoTolerance": {
+    "enabled": true,
+    "minWordSizeForTypos": {
+      "oneTypo": 5,
+      "twoTypos": 9
+    },
+    "disableOnWords": [],
+    "disableOnAttributes": [],
+    "disableOnNumbers": false
+  },
+  "faceting": {
+    "maxValuesPerFacet": 100,
+    "sortFacetValuesBy": {
+      "*": "alpha"
+    }
+  },
+  "pagination": {
+    "maxTotalHits": 1000
+  },
+  "embedders": {},
+  "searchCutoffMs": null,
+  "localizedAttributes": null,
+  "facetSearch": true,
+  "prefixSearch": "indexingTime"
+}

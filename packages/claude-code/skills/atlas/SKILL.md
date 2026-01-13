@@ -1,7 +1,7 @@
 ---
 name: atlas
 description: Persistent semantic memory for AI agents. Ingest, search, consolidate context across sessions. Manages Qdrant + Ollama infrastructure and background daemon.
-allowed-tools: Bash(docker:*), Bash(docker-compose:*), Bash(bun:*), Bash(curl:*), Bash(cd:*)
+allowed-tools: Bash(docker:*), Bash(docker-compose:*), Bash(pnpm:*), Bash(curl:*), Bash(cd:*)
 ---
 
 # Atlas - Persistent Semantic Memory
@@ -20,6 +20,7 @@ docker compose up -d
 ```
 
 Starts:
+
 - **Qdrant** (port 6333) - Vector database with HNSW index
 - **Ollama** (port 11434) - Local LLM for QNTM generation (optional)
 
@@ -79,16 +80,16 @@ Store files in persistent memory:
 
 ```bash
 # Single file
-bun run --filter @inherent.design/atlas-cli atlas ingest /path/to/file.md
+pnpm --filter @inherent.design/atlas-cli atlas ingest /path/to/file.md
 
 # Directory (recursive)
-bun run --filter @inherent.design/atlas-cli atlas ingest ./docs -r
+pnpm --filter @inherent.design/atlas-cli atlas ingest ./docs -r
 
 # Multiple paths
-bun run --filter @inherent.design/atlas-cli atlas ingest README.md src/ docs/ -r
+pnpm --filter @inherent.design/atlas-cli atlas ingest README.md src/ docs/ -r
 
 # Verbose output
-bun run --filter @inherent.design/atlas-cli atlas ingest ./src -r --verbose
+pnpm --filter @inherent.design/atlas-cli atlas ingest ./src -r --verbose
 ```
 
 **Supported formats:** `.md`, `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.yaml`, `.rs`, `.go`, `.py`, `.sh`, `.css`, `.html`, `.qntm`
@@ -101,16 +102,16 @@ Semantic search across stored context:
 
 ```bash
 # Basic search
-bun run --filter @inherent.design/atlas-cli atlas search "authentication patterns"
+pnpm --filter @inherent.design/atlas-cli atlas search "authentication patterns"
 
 # With limit
-bun run --filter @inherent.design/atlas-cli atlas search "error handling" --limit 10
+pnpm --filter @inherent.design/atlas-cli atlas search "error handling" --limit 10
 
 # With reranking (higher quality, slower)
-bun run --filter @inherent.design/atlas-cli atlas search "memory consolidation" --rerank
+pnpm --filter @inherent.design/atlas-cli atlas search "memory consolidation" --rerank
 
 # Temporal filter
-bun run --filter @inherent.design/atlas-cli atlas search "api design" --since "2025-12-01"
+pnpm --filter @inherent.design/atlas-cli atlas search "api design" --since "2025-12-01"
 ```
 
 ### Timeline
@@ -119,13 +120,13 @@ Chronological view of stored context:
 
 ```bash
 # Recent entries
-bun run --filter @inherent.design/atlas-cli atlas timeline
+pnpm --filter @inherent.design/atlas-cli atlas timeline
 
 # Since date
-bun run --filter @inherent.design/atlas-cli atlas timeline --since "2025-12-15"
+pnpm --filter @inherent.design/atlas-cli atlas timeline --since "2025-12-15"
 
 # Limit results
-bun run --filter @inherent.design/atlas-cli atlas timeline --limit 50
+pnpm --filter @inherent.design/atlas-cli atlas timeline --limit 50
 ```
 
 ### Consolidate
@@ -134,13 +135,13 @@ Merge similar chunks to reduce redundancy:
 
 ```bash
 # Dry run (preview only)
-bun run --filter @inherent.design/atlas-cli atlas consolidate --dry-run
+pnpm --filter @inherent.design/atlas-cli atlas consolidate --dry-run
 
 # Execute consolidation
-bun run --filter @inherent.design/atlas-cli atlas consolidate
+pnpm --filter @inherent.design/atlas-cli atlas consolidate
 
 # With verbose output
-bun run --filter @inherent.design/atlas-cli atlas consolidate --verbose
+pnpm --filter @inherent.design/atlas-cli atlas consolidate --verbose
 ```
 
 ### Doctor
@@ -148,10 +149,11 @@ bun run --filter @inherent.design/atlas-cli atlas consolidate --verbose
 Diagnose system health:
 
 ```bash
-bun run --filter @inherent.design/atlas-cli atlas doctor
+pnpm --filter @inherent.design/atlas-cli atlas doctor
 ```
 
 Checks:
+
 - Environment variables (API keys)
 - Service connectivity (Qdrant, Ollama, Voyage, Anthropic)
 - Ollama model availability
@@ -162,13 +164,13 @@ Checks:
 
 ```bash
 # Drop collection (destructive!)
-bun run --filter @inherent.design/atlas-cli atlas qdrant drop --yes
+pnpm --filter @inherent.design/atlas-cli atlas qdrant drop --yes
 
 # Disable HNSW (for batch ingestion - faster writes)
-bun run --filter @inherent.design/atlas-cli atlas qdrant hnsw off
+pnpm --filter @inherent.design/atlas-cli atlas qdrant hnsw off
 
 # Enable HNSW (after batch ingestion - enables search)
-bun run --filter @inherent.design/atlas-cli atlas qdrant hnsw on
+pnpm --filter @inherent.design/atlas-cli atlas qdrant hnsw on
 ```
 
 ---
@@ -181,17 +183,18 @@ Background service for file watching and auto-ingestion.
 
 ```bash
 cd ~/production/atlas/packages/core
-bun run daemon
+pnpm daemon
 ```
 
 Or via CLI:
 
 ```bash
 cd ~/production/atlas
-bun run --filter @inherent.design/atlas-cli atlas daemon start
+pnpm --filter @inherent.design/atlas-cli atlas daemon start
 ```
 
 The daemon:
+
 - Watches `~/.atlas/` for new files (recursive)
 - Auto-ingests files matching embeddable extensions
 - Runs consolidation watchdog
@@ -200,13 +203,13 @@ The daemon:
 ### Stop Daemon
 
 ```bash
-bun run --filter @inherent.design/atlas-cli atlas daemon stop
+pnpm --filter @inherent.design/atlas-cli atlas daemon stop
 ```
 
 ### Check Status
 
 ```bash
-bun run --filter @inherent.design/atlas-cli atlas daemon status
+pnpm --filter @inherent.design/atlas-cli atlas daemon status
 ```
 
 ---
@@ -216,14 +219,14 @@ bun run --filter @inherent.design/atlas-cli atlas daemon status
 ```bash
 cd ~/production/atlas/packages/core
 
-# Run tests (296 tests)
-bun run test
+# Run tests (298 tests)
+pnpm test
 
 # Type check
-bunx tsc --noEmit
+pnpm exec tsc --noEmit
 
 # Watch mode
-bun run test:watch
+pnpm test:watch
 ```
 
 ---
@@ -231,6 +234,7 @@ bun run test:watch
 ## When to Use This Skill
 
 **Trigger phrases:**
+
 - "Remember this across sessions"
 - "Store this in memory"
 - "Search previous work"
@@ -241,6 +245,7 @@ bun run test:watch
 - "Check atlas health"
 
 **Use cases:**
+
 - Project context too large for single session
 - Building on previous research/decisions
 - Documentation needs to be queryable
@@ -251,15 +256,16 @@ bun run test:watch
 
 ## Architecture Summary
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Embeddings | Voyage-3-large (1024d) | Semantic vectors |
-| Vector DB | Qdrant (HNSW, int8) | Storage + search |
-| LLM | Anthropic/Ollama | QNTM key generation |
-| Reranker | Voyage rerank-2.5 | Result quality boost |
-| Daemon | Unix socket server | Background processing |
+| Component  | Technology             | Purpose               |
+| ---------- | ---------------------- | --------------------- |
+| Embeddings | Voyage-3-large (1024d) | Semantic vectors      |
+| Vector DB  | Qdrant (HNSW, int8)    | Storage + search      |
+| LLM        | Anthropic/Ollama       | QNTM key generation   |
+| Reranker   | Voyage rerank-2.5      | Result quality boost  |
+| Daemon     | Unix socket server     | Background processing |
 
 **Performance:**
+
 - Recall@10: >0.98
 - Latency: 10-50ms (p95)
 - Compression: 4x via int8 quantization
@@ -280,19 +286,19 @@ curl http://localhost:6333/health
 curl http://localhost:11434/api/tags
 
 # 3. Run diagnostics
-bun run --filter @inherent.design/atlas-cli atlas doctor
+pnpm --filter @inherent.design/atlas-cli atlas doctor
 
 # 4. Nuclear option: drop and re-ingest
-bun run --filter @inherent.design/atlas-cli atlas qdrant drop --yes
-bun run --filter @inherent.design/atlas-cli atlas ingest ~/.atlas -r
+pnpm --filter @inherent.design/atlas-cli atlas qdrant drop --yes
+pnpm --filter @inherent.design/atlas-cli atlas ingest ~/.atlas -r
 ```
 
 ---
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
+| Package                       | Description                                |
+| ----------------------------- | ------------------------------------------ |
 | `@inherent.design/atlas-core` | Core library (embeddings, storage, search) |
-| `@inherent.design/atlas-cli` | Command-line interface |
-| `@inherent.design/atlas-mcp` | MCP server for Claude Code |
+| `@inherent.design/atlas-cli`  | Command-line interface                     |
+| `@inherent.design/atlas-mcp`  | MCP server for Claude Code                 |

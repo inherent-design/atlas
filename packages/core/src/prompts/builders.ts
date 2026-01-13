@@ -4,10 +4,10 @@
  * High-level functions for building agent and task prompts.
  */
 
-import { promptRegistry } from './registry'
-import { loadSection, sections } from './sections'
-import { renderTemplate as renderTemplateSync } from './types'
-import type { AgentRole, PromptBackendInfo } from './types'
+import { promptRegistry } from './registry.js'
+import { loadSection, sections } from './sections.js'
+import { renderTemplate as renderTemplateSync } from './types.js'
+import type { AgentRole, PromptBackendInfo } from './types.js'
 
 // NOTE: Prompt registration is now lazy (no module-level side effect).
 // Consumers must call registerPrompts() explicitly at application startup.
@@ -194,33 +194,6 @@ export function buildArtifactPath(
   const homeDir = process.env.HOME || '/tmp'
   const filename = `${taskName}-${timestamp}.md`
   return `${homeDir}/.atlas/${role}/${outputType}/${project}/${filename}`
-}
-
-/**
- * Build frontmatter for .atlas files.
- *
- * @param role - Agent role
- * @param outputType - Type of output
- * @param project - Project name
- * @param task - Task name
- * @returns YAML frontmatter string (with trailing newlines)
- */
-export function buildFrontmatter(
-  role: AgentRole,
-  outputType: string,
-  project: string,
-  task: string
-): string {
-  const date = new Date().toISOString().split('T')[0]
-  return `---
-agent: ${role}
-output_type: ${outputType}
-project: ${project}
-task: ${task}
-date: ${date}
----
-
-`
 }
 
 /**

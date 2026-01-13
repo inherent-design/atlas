@@ -9,27 +9,29 @@
  */
 
 import { mkdirSync, rmSync } from 'fs'
-import type { ChunkPayload } from './types'
+import type { ChunkPayload } from './types.js'
 
 // ============================================
-// Platform Simulation (validated via experiments)
+// Platform Simulation
 // ============================================
 
 /**
  * Platform simulator for cross-platform system tests.
- * Mocks Bun.spawnSync and process.platform for deterministic testing.
+ * Mocks process.platform for deterministic testing.
+ *
+ * NOTE: This does NOT spy on child_process.spawnSync anymore due to ESM limitations.
+ * Tests that need to mock spawnSync should use vi.mock('child_process') at the test file level.
  *
  * Usage:
  * ```typescript
  * const platform = new PlatformSimulator()
- * platform.simulateMacOS(45) // 45% free memory
+ * platform.simulateMacOS() // only sets process.platform
  * // ... run tests ...
  * platform.restore()
  * ```
  */
 export class PlatformSimulator {
   private originalPlatform: NodeJS.Platform
-  private spawnSpy: ReturnType<typeof vi.spyOn> | null = null
   private restored = false
 
   constructor() {
@@ -37,113 +39,37 @@ export class PlatformSimulator {
   }
 
   /**
-   * Simulate macOS environment with configurable memory pressure
+   * Simulate macOS environment (only sets process.platform)
    */
   simulateMacOS(
-    memoryFreePercent: number,
-    options?: {
+    _memoryFreePercent?: number,
+    _options?: {
       loadAvg?: [number, number, number]
       cpuCount?: number
       swapIns?: number
       swapOuts?: number
     }
   ): void {
-    const loadAvg = options?.loadAvg ?? [2.5, 2.0, 1.8]
-    const cpuCount = options?.cpuCount ?? 8
-    const swapIns = options?.swapIns ?? 0
-    const swapOuts = options?.swapOuts ?? 0
-
     Object.defineProperty(process, 'platform', {
       value: 'darwin',
       configurable: true,
     })
-
-    this.spawnSpy = vi.spyOn(Bun, 'spawnSync')
-    this.spawnSpy.mockImplementation((cmd: string[]) => {
-      const cmdStr = cmd.join(' ')
-
-      if (cmdStr.includes('hw.memsize')) {
-        return { success: true, stdout: Buffer.from('17179869184'), stderr: Buffer.from('') }
-      }
-      if (cmdStr.includes('memory_pressure')) {
-        return {
-          success: true,
-          stdout: Buffer.from(
-            `System-wide memory free percentage: ${memoryFreePercent}%\n` +
-              `Swapins: ${swapIns}\nSwapouts: ${swapOuts}`
-          ),
-          stderr: Buffer.from(''),
-        }
-      }
-      if (cmdStr.includes('vm.loadavg')) {
-        return {
-          success: true,
-          stdout: Buffer.from(`{ ${loadAvg[0]} ${loadAvg[1]} ${loadAvg[2]} }`),
-          stderr: Buffer.from(''),
-        }
-      }
-      if (cmdStr.includes('hw.ncpu')) {
-        return { success: true, stdout: Buffer.from(String(cpuCount)), stderr: Buffer.from('') }
-      }
-
-      // Default: command not found
-      return { success: false, stdout: Buffer.from(''), stderr: Buffer.from('command not found') }
-    })
   }
 
   /**
-   * Simulate Linux environment with configurable memory usage
+   * Simulate Linux environment (only sets process.platform)
    */
   simulateLinux(
-    memUsedPercent: number,
-    options?: {
+    _memUsedPercent?: number,
+    _options?: {
       loadAvg?: [number, number, number]
       cpuCount?: number
       swapUsedPercent?: number
     }
   ): void {
-    const loadAvg = options?.loadAvg ?? [2.5, 2.0, 1.8]
-    const cpuCount = options?.cpuCount ?? 8
-    const swapUsedPercent = options?.swapUsedPercent ?? 5
-
-    const totalMem = 16000000 // kB
-    const availMem = Math.floor((totalMem * (100 - memUsedPercent)) / 100)
-    const swapTotal = 4000000 // kB
-    const swapFree = Math.floor((swapTotal * (100 - swapUsedPercent)) / 100)
-
     Object.defineProperty(process, 'platform', {
       value: 'linux',
       configurable: true,
-    })
-
-    this.spawnSpy = vi.spyOn(Bun, 'spawnSync')
-    this.spawnSpy.mockImplementation((cmd: string[]) => {
-      const cmdStr = cmd.join(' ')
-
-      if (cmdStr.includes('/proc/meminfo')) {
-        return {
-          success: true,
-          stdout: Buffer.from(
-            `MemTotal:       ${totalMem} kB\n` +
-              `MemAvailable:   ${availMem} kB\n` +
-              `SwapTotal:      ${swapTotal} kB\n` +
-              `SwapFree:       ${swapFree} kB`
-          ),
-          stderr: Buffer.from(''),
-        }
-      }
-      if (cmdStr.includes('/proc/loadavg')) {
-        return {
-          success: true,
-          stdout: Buffer.from(`${loadAvg[0]} ${loadAvg[1]} ${loadAvg[2]} 1/100 12345`),
-          stderr: Buffer.from(''),
-        }
-      }
-      if (cmdStr.includes('nproc')) {
-        return { success: true, stdout: Buffer.from(String(cpuCount)), stderr: Buffer.from('') }
-      }
-
-      return { success: false, stdout: Buffer.from(''), stderr: Buffer.from('command not found') }
     })
   }
 
@@ -155,29 +81,10 @@ export class PlatformSimulator {
       value: platform,
       configurable: true,
     })
-
-    this.spawnSpy = vi.spyOn(Bun, 'spawnSync')
-    this.spawnSpy.mockImplementation(() => ({
-      success: false,
-      stdout: Buffer.from(''),
-      stderr: Buffer.from('not supported'),
-    }))
   }
 
   /**
-   * Simulate command failures for error path testing
-   */
-  simulateCommandFailure(): void {
-    this.spawnSpy = vi.spyOn(Bun, 'spawnSync')
-    this.spawnSpy.mockImplementation(() => ({
-      success: false,
-      stdout: Buffer.from(''),
-      stderr: Buffer.from('command failed'),
-    }))
-  }
-
-  /**
-   * Restore original platform and mocks
+   * Restore original platform
    */
   restore(): void {
     if (this.restored) return
@@ -187,11 +94,6 @@ export class PlatformSimulator {
       value: this.originalPlatform,
       configurable: true,
     })
-
-    if (this.spawnSpy) {
-      this.spawnSpy.mockRestore()
-      this.spawnSpy = null
-    }
   }
 }
 
@@ -347,11 +249,6 @@ export function createMockLLMService() {
 
   return {
     completeJSON: mockCompleteJSON,
-    getLLMConfig: vi.fn(() => ({
-      provider: 'ollama' as const,
-      model: 'test-model',
-      temperature: 0.1,
-    })) as any,
     complete: vi.fn(() => Promise.resolve({ content: '{}', usage: {} })) as any,
     getLLMBackendFor: vi.fn(() => ({
       name: 'test-backend',

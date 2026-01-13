@@ -15,7 +15,7 @@ import type {
   LatencyClass,
   PricingInfo,
   RerankerCapability,
-} from '../../shared/capabilities'
+} from '../../shared/capabilities.js'
 
 // ============================================
 // Result Types
@@ -102,25 +102,6 @@ export interface CanRerankText {
 }
 
 /**
- * Code-optimized reranking capability.
- * Uses models trained on code structure and semantics.
- *
- * Supported by: Jina Reranker v2, Qwen3 Reranking
- * NOT supported by: Voyage rerankers
- */
-export interface CanRerankCode {
-  /**
-   * Rerank code documents with code-aware model.
-   *
-   * @param query - The search query (can be natural language or code)
-   * @param documents - Array of code documents to rerank
-   * @param options - Reranking options
-   * @returns Reranked results sorted by score
-   */
-  rerankCode(query: string, documents: string[], options?: RerankOptions): Promise<RerankResponse>
-}
-
-/**
  * Multilingual reranking capability.
  * Handles queries and documents in multiple languages.
  *
@@ -144,19 +125,6 @@ export interface CanRerankMultilingual {
 
   /** List of supported language codes */
   readonly supportedLanguages: string[]
-}
-
-// ============================================
-// Capability Map (for type narrowing)
-// ============================================
-
-/**
- * Maps capability strings to their interface types.
- */
-export type RerankerCapabilityMap = {
-  'text-reranking': CanRerankText
-  'code-reranking': CanRerankCode
-  'multilingual-reranking': CanRerankMultilingual
 }
 
 // ============================================
@@ -187,24 +155,6 @@ export interface InstructedRerankOptions extends RerankOptions {
    * @example "Focus on recent content from the last 12 months"
    */
   instructions?: string
-}
-
-// ============================================
-// Configuration Types
-// ============================================
-
-/**
- * Configuration for initializing a reranker backend
- */
-export interface RerankerBackendConfig {
-  /** Model identifier */
-  model: string
-  /** API key (if required) */
-  apiKey?: string
-  /** Base URL for API (for self-hosted) */
-  baseUrl?: string
-  /** Request timeout in milliseconds */
-  timeout?: number
 }
 
 // ============================================

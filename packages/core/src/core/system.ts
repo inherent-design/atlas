@@ -10,7 +10,8 @@
  * - Windows: TODO (fails open for now)
  */
 
-import { createLogger } from '../shared/logger'
+import { spawnSync } from 'child_process'
+import { createLogger } from '../shared/logger.js'
 
 const log = createLogger('system')
 
@@ -73,12 +74,17 @@ export function _resetCapacityCache(): void {
  * Run a shell command and return stdout
  */
 function runCommand(cmd: string[]): string | null {
+  if (cmd.length === 0 || !cmd[0]) {
+    log.trace('Invalid command', { cmd })
+    return null
+  }
+
   try {
-    const proc = Bun.spawnSync(cmd, { stdout: 'pipe', stderr: 'pipe' })
-    if (proc.success) {
-      return proc.stdout.toString().trim()
+    const proc = spawnSync(cmd[0], cmd.slice(1), { encoding: 'utf8' })
+    if (proc.status === 0 && proc.stdout) {
+      return proc.stdout.trim()
     }
-    log.trace('Command failed', { cmd: cmd.join(' '), stderr: proc.stderr.toString() })
+    log.trace('Command failed', { cmd: cmd.join(' '), stderr: proc.stderr || '' })
     return null
   } catch (error) {
     log.trace('Command error', { cmd: cmd.join(' '), error: (error as Error).message })
@@ -385,13 +391,15 @@ function failOpenCapacity(): SystemCapacity {
  */
 export async function getGPUCapabilities(): Promise<GPUCapability> {
   try {
-    // Dynamically import bun-webgpu to avoid loading if not needed
-    const { setupGlobals } = await import('bun-webgpu')
-    setupGlobals()
+    // Dynamically import webgpu to avoid loading if not needed
+    const { create } = await import('webgpu')
 
     log.trace('Requesting WebGPU adapter')
 
-    const adapter = await (navigator as any).gpu?.requestAdapter()
+    // Create GPU instance for Node.js
+    const gpu = create([])
+    const adapter = await gpu.requestAdapter()
+
     if (!adapter) {
       log.debug('No WebGPU adapter available')
       return { available: false, error: 'No GPU adapter found' }

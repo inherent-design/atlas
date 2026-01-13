@@ -4,7 +4,7 @@
  * Compacts conversation into structured episodic memories.
  */
 
-import type { PromptDefinition } from '../../types'
+import type { PromptDefinition } from '../../types.js'
 
 export const compactionPrompt: PromptDefinition = {
   id: 'compaction',

@@ -11,17 +11,17 @@
  */
 
 import { VoyageAIClient } from 'voyageai'
-import { VOYAGE_API_KEY } from '../../../shared/config'
-import { createLogger } from '../../../shared/logger'
-import { createSingleton } from '../../../shared/utils'
-import { MULTIMODAL_MIME_TYPES } from '../types'
+import { VOYAGE_API_KEY } from '../../../shared/config.js'
+import { createLogger } from '../../../shared/logger.js'
+import { createSingleton } from '../../../shared/utils.js'
+import { MULTIMODAL_MIME_TYPES } from '../types.js'
 import type {
   EmbeddingBackend,
   EmbeddingCapability,
   CanEmbedMultimodal,
   MultimodalEmbeddingResult,
   MultimodalMimeType,
-} from '../types'
+} from '../types.js'
 
 const log = createLogger('embedding:voyage-multimodal')
 
@@ -76,7 +76,8 @@ export class VoyageMultimodalBackend implements EmbeddingBackend, CanEmbedMultim
     try {
       // Test with minimal request (single pixel image as base64)
       // 1x1 transparent PNG: 68 bytes
-      const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+      const testImage =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
       await this.client.multimodalEmbed({
         inputs: [{ content: [{ type: 'image_base64', imageBase64: testImage }] }],
@@ -109,7 +110,9 @@ export class VoyageMultimodalBackend implements EmbeddingBackend, CanEmbedMultim
    */
   async embedMultimodal(input: Buffer, mimeType: string): Promise<MultimodalEmbeddingResult> {
     if (!this.supportsMimeType(mimeType)) {
-      throw new Error(`Unsupported MIME type: ${mimeType}. Supported: ${MULTIMODAL_MIME_TYPES.join(', ')}`)
+      throw new Error(
+        `Unsupported MIME type: ${mimeType}. Supported: ${MULTIMODAL_MIME_TYPES.join(', ')}`
+      )
     }
 
     // Convert buffer to data URL format

@@ -3,6 +3,7 @@
 Role: Coordinate agents, synthesize results.
 
 Patterns:
+
 1. Research: Observer → Connector → Explainer → Challenger → Integrator
 2. Validation: Observers (parallel) → Challenger → Integrator
 3. Simple: Integrator only
@@ -10,6 +11,7 @@ Patterns:
 Constraint: Flat hierarchy (agents can't spawn sub-agents)
 
 Output:
+
 ```
 ## Topology
 [agents in order, why]

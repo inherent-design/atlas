@@ -1,0 +1,82 @@
+[
+  {
+    "id": "b53a00b2-7300-4d11-98a1-f8462952f123",
+    "path": "neo-brutalism-audit-task-2025-12-20.md",
+    "content_hash": "5f3836b28b7a17cc7c8c90f7c86aac039662a72cfcaa9244353e3ec24c4b9813",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:49:18.974",
+    "created_at": "2026-01-12T00:13:50.108871"
+  },
+  {
+    "id": "fa0db992-066b-062c-5dfb-2824e32af639",
+    "path": "test-multi-tier-2.md",
+    "content_hash": "0cd61dbbd38daf85bcf2bce0bca9d794b66155c3e9ed6a410453f98749f01149",
+    "status": "migrated",
+    "file_mtime": "2026-01-11T20:11:36.868",
+    "created_at": "2026-01-12T00:13:50.112066"
+  },
+  {
+    "id": "0bd249cf-9ac7-fc14-e26c-46da701972c3",
+    "path": "config.ts",
+    "content_hash": "403f4993b02952bcfab3b750c2329b9d5e5485786ae23c88dd20838553812c51",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:42:12.291",
+    "created_at": "2026-01-12T00:13:50.112405"
+  },
+  {
+    "id": "4a35ae40-7821-7669-7f2a-57ed50c39084",
+    "path": "test-dual-write.md",
+    "content_hash": "9f27d9ee0838be4549d16b945984efebc6b8bc4f9ff5377744215b85305ca750",
+    "status": "migrated",
+    "file_mtime": "2026-01-11T20:06:49.423",
+    "created_at": "2026-01-12T00:13:50.112747"
+  },
+  {
+    "id": "240b2d97-f09c-d31c-a978-274a0456330f",
+    "path": "integrator/plans/meta/substrate-pai-implementation-templates-2026-01-08.md",
+    "content_hash": "9b7327818b1fb5ffe0f986d527169f6309ebfb1fccfc8bd55f246066a6be91b2",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:42:12.291",
+    "created_at": "2026-01-12T00:13:50.106335"
+  },
+  {
+    "id": "eb72bbc9-4f0e-8ebf-a318-176a8ead0c58",
+    "path": "atlas/prompt-registry-enhancement-2026-01-08.md",
+    "content_hash": "cfa143ac0bef35e2c5960c2b7bcfc9c63ba7982f063ff509dbe939a09eeb92d5",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T11:02:44.041",
+    "created_at": "2026-01-12T00:13:50.103486"
+  },
+  {
+    "id": "f4236ac2-cb61-fdd2-a5e2-3bed0cada412",
+    "path": "integrator/plans/atlas/web-ui-integration-2026-01-08.md",
+    "content_hash": "68839d3f5a6fba0fd8be86f78f5bbecc1605dd4cd6f4c91db4b6cb1bbe05d240",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:42:12.291",
+    "created_at": "2026-01-12T00:13:50.111153"
+  },
+  {
+    "id": "acde88a9-c9fa-6876-a20f-affc166ea55d",
+    "path": "integrator/plans/atlas/4-step-research-plan-2025-12-25.md",
+    "content_hash": "8683e5c736f090a0251e3cc95e404ad2b0f89ff93e4fb870080c6ead16f2c9ff",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:42:12.291",
+    "created_at": "2026-01-12T00:13:50.094861"
+  },
+  {
+    "id": "55974944-10b0-ca94-c9a2-b6d74173388c",
+    "path": "integrator/plans/empack/prism-integration-spec-2025-12-21.md",
+    "content_hash": "7e2ae667ae60f8c18078a88686dc6921412dcead476a688d141754c5107b54ed",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T14:42:12.291",
+    "created_at": "2026-01-12T00:13:50.107688"
+  },
+  {
+    "id": "5535a02e-9e17-1b38-c5da-f264587e7782",
+    "path": "bootstrap/fcc-bizfin-logo-designer.md",
+    "content_hash": "4bf3a7a8361c070c117b6f6c781315ec7c8a1b907d2276f7489e9d41f2295dfa",
+    "status": "migrated",
+    "file_mtime": "2026-01-10T10:56:52.926",
+    "created_at": "2026-01-12T00:13:50.108453"
+  }
+]

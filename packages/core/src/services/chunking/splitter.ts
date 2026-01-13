@@ -3,7 +3,7 @@
  */
 
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
-import { CHUNK_SIZE, CHUNK_OVERLAP, CHUNK_SEPARATORS } from '../../shared/config'
+import { CHUNK_SIZE, CHUNK_OVERLAP, CHUNK_SEPARATORS } from '../../shared/config.js'
 
 export function createTextSplitter(): RecursiveCharacterTextSplitter {
   return new RecursiveCharacterTextSplitter({

@@ -11,7 +11,7 @@
  * - PromptRegistry: Selects best variant for a given backend
  */
 
-import type { LLMCapability } from '../shared/capabilities'
+import type { LLMCapability } from '../shared/capabilities.js'
 
 // ============================================
 // Target Specification
@@ -424,20 +424,3 @@ export type AgentRole =
   | 'challenger' // Falsification testing
   | 'integrator-6role' // Task execution (explicit 6-role)
   | 'meta' // Orchestration
-
-/**
- * Map from agent role to prompt ID
- */
-export const agentPromptMap: Record<AgentRole, KnownPromptId> = {
-  // 3-role
-  sensor: 'agent-sensor',
-  reasoner: 'agent-reasoner',
-  integrator: 'agent-integrator',
-  // 6-role
-  observer: 'agent-observer',
-  connector: 'agent-connector',
-  explainer: 'agent-explainer',
-  challenger: 'agent-challenger',
-  'integrator-6role': 'agent-integrator-6role',
-  meta: 'agent-meta',
-}

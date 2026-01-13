@@ -19,12 +19,12 @@ import type {
   CompletionResult,
   CompletionOptions,
   ClaudeModelKey,
-} from '../types'
-import { CLAUDE_MODELS } from '../types'
-import type { LLMCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities'
-import { createLogger } from '../../../shared/logger'
-import { AnthropicAdapter } from '../adapters/anthropic'
-import type { UnifiedRequest, UnifiedResponse } from '../message'
+} from '../types.js'
+import { CLAUDE_MODELS } from '../types.js'
+import type { LLMCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities.js'
+import { createLogger } from '../../../shared/logger.js'
+import { AnthropicAdapter } from '../adapters/anthropic.js'
+import type { UnifiedRequest, UnifiedResponse } from '../message.js'
 
 const log = createLogger('llm:anthropic')
 
@@ -272,29 +272,9 @@ export class AnthropicBackend implements LLMBackend, CanComplete, CanCompleteJSO
 }
 
 /**
- * Create singleton instances for common Claude models
+ * Backend lifecycle management:
+ * Backends are managed by the registry in services/llm/index.ts.
+ * Use llmRegistry.get('anthropic:haiku') to retrieve instances.
+ *
+ * Singleton pattern removed in favor of registry-managed lifecycle.
  */
-let opusInstance: AnthropicBackend | undefined
-let sonnetInstance: AnthropicBackend | undefined
-let haikuInstance: AnthropicBackend | undefined
-
-export function getOpusBackend(): AnthropicBackend {
-  if (!opusInstance) {
-    opusInstance = new AnthropicBackend('opus-4.5')
-  }
-  return opusInstance
-}
-
-export function getSonnetBackend(): AnthropicBackend {
-  if (!sonnetInstance) {
-    sonnetInstance = new AnthropicBackend('sonnet-4.5')
-  }
-  return sonnetInstance
-}
-
-export function getHaikuBackend(): AnthropicBackend {
-  if (!haikuInstance) {
-    haikuInstance = new AnthropicBackend('haiku-4.5')
-  }
-  return haikuInstance
-}

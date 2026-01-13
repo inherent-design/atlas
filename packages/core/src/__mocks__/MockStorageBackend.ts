@@ -3,6 +3,17 @@
  *
  * In-memory vector storage using Map.
  * Implements full StorageBackend interface for testing.
+ *
+ * IMPORTANT: Payload structure matches live data captured in __fixtures__/live-data/.
+ * See loader.ts for real production payload examples with fields like:
+ * - qntm_keys: string[]
+ * - consolidation_level: number
+ * - embedding_model: string
+ * - embedding_strategy: string
+ * - vectors_present: string[]
+ * - parents: string[] (for consolidated chunks)
+ * - occurrences: string[] (timestamps)
+ * - consolidation_type/direction/reasoning
  */
 
 import type {
@@ -15,9 +26,9 @@ import type {
   CollectionConfig,
   StorageFilter,
   NamedVectors,
-} from '../services/storage/types'
-import type { ChunkPayload } from '../shared/types'
-import { cosineSimilarity } from '../__fixtures__/embeddings'
+} from '../services/storage/types.js'
+import type { ChunkPayload } from '../shared/types.js'
+import { cosineSimilarity } from '../__fixtures__/embeddings.js'
 
 /**
  * Configuration for MockStorageBackend
@@ -51,7 +62,11 @@ export class MockStorageBackend implements StorageBackend {
   private config: MockStorageConfig
   private calls: Array<{ method: string; args: any[]; timestamp: number }> = []
 
-  constructor(config: MockStorageConfig = {}, dimensions = 1024, distance: 'cosine' | 'dot' | 'euclidean' = 'cosine') {
+  constructor(
+    config: MockStorageConfig = {},
+    dimensions = 1024,
+    distance: 'cosine' | 'dot' | 'euclidean' = 'cosine'
+  ) {
     this.config = config
     this.dimensions = dimensions
     this.distance = distance
@@ -252,7 +267,8 @@ export class MockStorageBackend implements StorageBackend {
 
     // Slice for pagination
     const points = filtered.slice(offset, offset + options.limit)
-    const nextOffset = offset + options.limit < filtered.length ? String(offset + options.limit) : null
+    const nextOffset =
+      offset + options.limit < filtered.length ? String(offset + options.limit) : null
 
     return {
       points,
@@ -395,6 +411,26 @@ export class MockStorageBackend implements StorageBackend {
         if (lt !== undefined && value >= lt) return false
         return true
       }
+    }
+
+    // Handle special condition types without 'key' field
+    if ('has_id' in condition) {
+      // has_id: Check if point ID is in array
+      return condition.has_id.includes((payload as any).id || '')
+    }
+
+    if ('is_null' in condition) {
+      // is_null: Check if field is null/undefined
+      const value = payload[condition.is_null]
+      return value === null || value === undefined
+    }
+
+    if ('is_empty' in condition) {
+      // is_empty: Check if array/string field is empty
+      const value = payload[condition.is_empty]
+      if (Array.isArray(value)) return value.length === 0
+      if (typeof value === 'string') return value === ''
+      return false
     }
 
     return false

@@ -50,14 +50,17 @@ OBSERVATION [uuid]
 **What you NEVER do**:
 
 **O6 - Never explain causation**:
+
 - ❌ "Error occurs BECAUSE module X is missing"
 - ✅ "OBSERVATION: Error message contains 'module not found'" (verbatim)
 
 **O7 - Never filter observations**:
+
 - ❌ "These errors seem relevant, ignoring noise"
 - ✅ "OBSERVATION 1: file-a.ts ..." "OBSERVATION 2: file-b.ts ..." (all data)
 
 **O8 - Never interpret patterns**:
+
 - ❌ "These observations are similar to previous issue"
 - ✅ "OBSERVATION 15: TypeScript error at line 42" (raw fact)
 

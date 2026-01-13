@@ -2,19 +2,19 @@
  * Embedding Service - Voyage AI
  */
 
-import { BackendRegistry } from '../../shared/registry'
-import { VoyageSnippetBackend, VoyageCodeBackend } from './backends/voyage'
-import { VoyageContextBackend } from './backends/voyage-context'
-import { VoyageMultimodalBackend } from './backends/voyage-multimodal'
-import { OllamaEmbeddingBackend, getOllamaDimensions } from './backends/ollama'
-import { getConfig } from '../../shared/config.loader'
-import { parseBackendSpecifier } from '../../shared/config.schema'
-import { createLogger } from '../../shared/logger'
-import type { EmbeddingCapability } from '../../shared/capabilities'
-import type { EmbeddingBackend } from './types'
+import { BackendRegistry } from '../../shared/registry.js'
+import { VoyageSnippetBackend, VoyageCodeBackend } from './backends/voyage.js'
+import { VoyageContextBackend } from './backends/voyage-context.js'
+import { VoyageMultimodalBackend } from './backends/voyage-multimodal.js'
+import { OllamaEmbeddingBackend, getOllamaDimensions } from './backends/ollama.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { parseBackendSpecifier } from '../../shared/config.schema.js'
+import { createLogger } from '../../shared/logger.js'
+import type { EmbeddingCapability } from '../../shared/capabilities.js'
+import type { EmbeddingBackend } from './types.js'
 
 // Re-export types
-export type * from './types'
+export type * from './types.js'
 
 const log = createLogger('embedding')
 
@@ -47,7 +47,8 @@ export function initializeEmbeddingBackends(): void {
   const codeEmbedding = (config.backends?.['code-embedding'] || 'voyage:voyage-code-3') as string
   const contextEmbedding = (config.backends?.['contextualized-embedding'] ||
     'voyage:voyage-context-3') as string
-  const multimodalEmbedding = (config.backends?.['multimodal-embedding'] || 'voyage:voyage-multimodal-3') as string
+  const multimodalEmbedding = (config.backends?.['multimodal-embedding'] ||
+    'voyage:voyage-multimodal-3') as string
 
   log.debug('Initializing embedding backends', {
     textEmbedding,

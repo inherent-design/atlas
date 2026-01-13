@@ -8,7 +8,7 @@
  */
 
 import { v4 as uuid } from 'uuid'
-import type { IngestionTask } from './protocol'
+import type { IngestionTask } from './protocol.js'
 
 export interface ConsolidationLock {
   locked: boolean

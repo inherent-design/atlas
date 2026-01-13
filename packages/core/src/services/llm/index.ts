@@ -13,11 +13,12 @@
  * - QNTM semantic key generation
  */
 
-import { OLLAMA_URL, QDRANT_COLLECTION_NAME } from '../../shared/config'
-import { createLogger } from '../../shared/logger'
-import { BackendRegistry } from '../../shared/registry'
-import { getConfig } from '../../shared/config.loader'
-import type { LLMBackend } from './types'
+import { OLLAMA_URL } from '../../shared/config.js'
+import { createLogger } from '../../shared/logger.js'
+import { BackendRegistry } from '../../shared/registry.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import type { LLMBackend } from './types.js'
 
 const log = createLogger('llm')
 
@@ -25,8 +26,8 @@ const log = createLogger('llm')
 // Backend Registry
 // ============================================
 
-import { OllamaLLMBackend } from './backends/ollama'
-import { getClaudeCodeBackend } from './backends/claude-code'
+import { OllamaLLMBackend } from './backends/ollama.js'
+import { getClaudeCodeBackend } from './backends/claude-code.js'
 
 /**
  * Global LLM backend registry.
@@ -52,7 +53,6 @@ export function initializeLLMBackends(): void {
   log.debug('Initializing LLM backends', {
     textCompletion: config.backends?.['text-completion'],
     jsonCompletion: config.backends?.['json-completion'],
-    qntmGeneration: config.backends?.['qntm-generation'],
   })
 
   // Always register Claude Code backends (uses CLI, no API key needed)
@@ -113,16 +113,34 @@ export function getLLMBackend(name: string): LLMBackend | undefined {
  * Get LLM backend for a capability, respecting config preferences.
  *
  * Lookup order:
- * 1. Config-specified backend for this capability (e.g., backends['json-completion'])
- * 2. First registered backend with this capability (fallback)
+ * 1. Domain-specific backend (if domain provided, e.g., 'qntm-generation')
+ * 2. Capability-level backend (e.g., 'json-completion')
+ * 3. First registered backend with this capability (fallback)
  *
  * @param capability - LLM capability to look for
+ * @param domain - Optional domain-specific override (e.g., 'qntm-generation', 'consolidation')
  * @returns Backend or undefined if none support it
  */
-export function getLLMBackendFor(capability: string): LLMBackend | undefined {
+export function getLLMBackendFor(capability: string, domain?: string): LLMBackend | undefined {
   const config = getConfig()
 
-  // Check if config specifies a backend for this capability
+  // Priority 1: Domain-specific backend
+  if (domain) {
+    const domainBackend = config.backends?.[domain as keyof typeof config.backends]
+    if (domainBackend) {
+      const backend = llmRegistry.get(domainBackend)
+      if (backend) {
+        log.trace('Using domain-specific backend', { domain, backend: backend.name })
+        return backend
+      }
+      log.debug('Configured domain backend not found in registry', {
+        domain,
+        configured: domainBackend,
+      })
+    }
+  }
+
+  // Priority 2: Capability-level backend
   const configuredBackend = config.backends?.[capability as keyof typeof config.backends]
   if (configuredBackend) {
     const backend = llmRegistry.get(configuredBackend)
@@ -136,7 +154,7 @@ export function getLLMBackendFor(capability: string): LLMBackend | undefined {
     })
   }
 
-  // Fallback: first backend with capability
+  // Priority 3: Registry fallback
   return llmRegistry.getFor(capability)
 }
 
@@ -145,66 +163,45 @@ export function getLLMBackendFor(capability: string): LLMBackend | undefined {
 // ============================================
 
 // Re-export types
-export type { CompletionResult } from './types'
+export type { CompletionResult } from './types.js'
+export type { ToolDefinition } from './message.js'
 
 // ============================================
-// Legacy Configuration Types
+// Legacy Configuration Types - REMOVED IN v2.0
 // ============================================
 
 /**
- * Legacy LLM configuration type.
- * Used for backward compatibility with QNTM code.
- * New code should use backend registry directly.
+ * MIGRATION GUIDE (v2.0 Breaking Change):
+ *
+ * The legacy LLMConfig/LLMProvider system has been completely removed.
+ * Use the backend registry instead:
+ *
+ * OLD API (removed):
+ *   import { setLLMConfig, getLLMConfig, setQNTMProvider, getQNTMProvider } from '@inherent.design/atlas-core'
+ *   setLLMConfig({ provider: 'ollama', model: 'mistral' })
+ *   const config = getLLMConfig()
+ *
+ * NEW API (use this):
+ *   import { getLLMBackendFor } from '@inherent.design/atlas-core'
+ *   const backend = getLLMBackendFor('json-completion')  // or 'text-completion', 'qntm-generation'
+ *   const result = await backend.completeJSON(prompt)
+ *
+ * Configuration now uses config.yaml:
+ *   backends:
+ *     text-completion: "ollama:ministral-3:3b"
+ *     json-completion: "claude-code:haiku"
+ *     qntm-generation: "anthropic:opus"
+ *
+ * See: https://docs.inherent.design/atlas/backends for full migration guide
  */
-export type LLMProvider = 'anthropic' | 'claude-code' | 'ollama' | 'openai' | 'voyage'
-
-export interface LLMConfig {
-  provider: LLMProvider
-  model?: string
-  temperature?: number
-  maxTokens?: number
-  ollamaHost?: string
-}
-
-const defaultConfig: LLMConfig = {
-  provider: 'ollama',
-  model: 'ministral-3:3b',
-  ollamaHost: OLLAMA_URL,
-  temperature: 0.1,
-}
-
-let globalConfig: LLMConfig = { ...defaultConfig }
-
-/**
- * Reset LLM config to defaults (for testing)
- * @internal Test-only export
- */
-export function _resetLLMConfig(): void {
-  globalConfig = { ...defaultConfig }
-}
-
-/**
- * Set global LLM configuration
- */
-export function setLLMConfig(config: Partial<LLMConfig>): void {
-  globalConfig = { ...globalConfig, ...config }
-  log.info('LLM config updated', globalConfig)
-}
-
-/**
- * Get current LLM configuration
- */
-export function getLLMConfig(): LLMConfig {
-  return { ...globalConfig }
-}
 
 // ============================================
 // QNTM Semantic Key Generation
 // ============================================
 
-import { generateQNTMKeysWithProvider, generateQueryQNTMKeys } from './qntm'
-export { generateQueryQNTMKeys } from './qntm'
-export type { QNTMAbstractionLevel, QNTMGenerationInputWithLevel } from './qntm'
+import { generateQNTMKeysWithProvider, generateQueryQNTMKeys } from './qntm.js'
+export { generateQueryQNTMKeys } from './qntm.js'
+export type { QNTMAbstractionLevel, QNTMGenerationInputWithLevel } from './qntm.js'
 
 export interface QNTMGenerationInput {
   chunk: string
@@ -222,34 +219,15 @@ export interface QNTMGenerationResult {
 }
 
 /**
- * Set QNTM provider configuration
- * (Delegates to LLM config)
- */
-export function setQNTMProvider(config: Partial<LLMConfig>): void {
-  setLLMConfig(config)
-  log.info('QNTM provider configured', config)
-}
-
-/**
- * Get current QNTM provider configuration
- */
-export function getQNTMProvider(): LLMConfig {
-  return getLLMConfig()
-}
-
-/**
  * Generate QNTM semantic keys for a chunk
  *
  * @param input - Chunk text, existing keys for reuse, optional context
  * @returns Array of QNTM keys (1-3 semantic addresses)
  */
 export async function generateQNTMKeys(input: QNTMGenerationInput): Promise<QNTMGenerationResult> {
-  const config = getLLMConfig()
-  const result = await generateQNTMKeysWithProvider(input, config)
+  const result = await generateQNTMKeysWithProvider(input)
 
   log.debug('QNTM keys generated', {
-    provider: config.provider,
-    model: config.model,
     keyCount: result.keys.length,
   })
 
@@ -275,61 +253,30 @@ export function sanitizeQNTMKey(key: string): string {
 /**
  * Fetch all existing QNTM keys from unified atlas collection
  *
- * Scrolls through collection to collect unique qntm_keys from payloads.
+ * Uses multi-tier caching for performance:
+ * 1. Try Valkey cache (fastest, ~1ms)
+ * 2. Try PostgreSQL metadata DB (fast, ~10ms)
+ * 3. Fallback to Qdrant scroll (slow, ~15s for 1,188 points)
+ *
  * Used for key reuse during QNTM generation (avoid near-duplicates).
  *
  * @returns Array of unique QNTM keys
  */
 export async function fetchExistingQNTMKeys(): Promise<string[]> {
-  const { getStorageBackend } = await import('../storage')
-  const storage = getStorageBackend()
-  if (!storage) {
-    log.debug('No storage backend available')
-    return []
-  }
-
   try {
-    // Check if collection exists
-    const exists = await storage.collectionExists(QDRANT_COLLECTION_NAME)
-    if (!exists) {
-      log.debug('Collection does not exist yet, no existing keys')
-      return []
-    }
+    // Use StorageService multi-tier pattern (cache → metadata → vector)
+    const { getStorageService } = await import('../storage')
+    const storageService = getStorageService()
 
-    // Scroll through collection to collect unique keys
-    const uniqueKeys = new Set<string>()
-    let offset: string | number | null | undefined = undefined
-    const SCROLL_LIMIT = 100
+    const keys = await storageService.getAllQNTMKeys(getPrimaryCollectionName())
 
-    do {
-      const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
-        limit: SCROLL_LIMIT,
-        offset,
-        withPayload: true,
-        withVector: false,
-      })
-
-      for (const point of result.points) {
-        const keys = (point.payload as any)?.qntm_keys as string[] | undefined
-        if (keys) {
-          for (const key of keys) {
-            uniqueKeys.add(key)
-          }
-        }
-      }
-
-      offset = result.nextOffset
-    } while (offset !== null && offset !== undefined)
-
-    const keysArray = Array.from(uniqueKeys)
-
-    log.debug('Fetched existing QNTM keys from unified collection', {
-      total: keysArray.length,
+    log.debug('Fetched existing QNTM keys', {
+      total: keys.length,
     })
 
-    return keysArray
+    return keys
   } catch (error) {
-    log.error('Failed to fetch QNTM keys from Qdrant', error as Error)
+    log.error('Failed to fetch QNTM keys', error as Error)
     return []
   }
 }

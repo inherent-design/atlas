@@ -9,10 +9,10 @@ import { createServer, Server as NetServer, Socket } from 'net'
 import { unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { homedir, platform } from 'os'
-import { createLogger } from '../shared/logger'
-import type { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification } from './protocol'
-import { parseMessage, serializeMessage, createErrorResponse, JsonRpcErrorCode } from './protocol'
-import type { EventRouter } from './router'
+import { createLogger } from '../shared/logger.js'
+import type { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification } from './protocol.js'
+import { parseMessage, serializeMessage, createErrorResponse, JsonRpcErrorCode } from './protocol.js'
+import type { EventRouter } from './router.js'
 
 const log = createLogger('daemon:server')
 

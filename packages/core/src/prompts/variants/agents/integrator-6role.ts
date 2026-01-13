@@ -4,8 +4,8 @@
  * Task execution and synthesis. Cannot spawn sub-agents (flat hierarchy).
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const integrator6RolePrompt: PromptDefinition = {
   id: 'agent-integrator-6role',

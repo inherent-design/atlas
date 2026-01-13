@@ -2,7 +2,19 @@
  * JSON-RPC 2.0 protocol for Atlas daemon communication
  */
 
-import type { AtlasEvent } from './events'
+import { z } from 'zod'
+import type { AtlasEvent } from './events.js'
+import type {
+  IngestParams,
+  IngestResult as DomainIngestResult,
+  SearchParams,
+  SearchResult as DomainSearchResult,
+  ConsolidateParams,
+  ConsolidateResult as DomainConsolidateResult,
+  QNTMGenerateParams,
+  QNTMGenerateResult as DomainQNTMGenerateResult,
+  TimelineParams,
+} from '../shared/types.js'
 
 // ============================================
 // JSON-RPC Base Types
@@ -61,34 +73,41 @@ export const JsonRpcErrorCode = {
 
 /**
  * atlas.ingest - Ingest files into vector database
+ *
+ * Uses canonical IngestParams (already camelCase, no transformation needed)
+ * Re-exported from ../shared/types via import above
  */
-export interface IngestParams {
-  paths: string[]
-  recursive?: boolean
-  verbose?: boolean
-}
+export type { IngestParams }
 
-export interface IngestResult {
+/**
+ * IngestResultDTO: camelCase RPC layer
+ * Transforms domain IngestResult (snake_case) to camelCase for JSON-RPC
+ */
+export interface IngestResultDTO {
   filesProcessed: number
   chunksStored: number
   errors: Array<{ file: string; error: string }>
+  durationMs?: number
+  peakMemoryBytes?: number
+  skippedFiles?: number
 }
+
+// Legacy alias (backwards compatibility)
+export type IngestResult = IngestResultDTO
 
 /**
  * atlas.search - Semantic search
+ *
+ * Uses canonical SearchParams (already camelCase, no transformation needed)
+ * Re-exported from ../shared/types via import above
  */
-export interface SearchParams {
-  query: string
-  limit?: number
-  since?: string // ISO 8601
-  qntmKey?: string
-  rerank?: boolean
-  sessionId?: string
-  consolidationLevel?: 0 | 1 | 2 | 3
-  expandQuery?: boolean
-}
+export type { SearchParams }
 
-export interface SearchResult {
+/**
+ * Search result DTO for JSON-RPC protocol (camelCase for JSON convention)
+ * Note: Different from domain SearchResult which uses snake_case for DB
+ */
+export interface SearchResultDTO {
   text: string
   filePath: string
   chunkIndex: number
@@ -100,20 +119,37 @@ export interface SearchResult {
 
 /**
  * atlas.consolidate - Consolidate similar chunks
+ *
+ * Uses canonical ConsolidateParams (already camelCase, no transformation needed)
+ * Re-exported from ../shared/types via import above
  */
-export interface ConsolidateParams {
-  dryRun?: boolean
-  threshold?: number
+export type { ConsolidateParams }
+
+/**
+ * ConsolidateResultDTO: camelCase RPC layer
+ * Aligns with canonical ConsolidateResult fields (no fake data)
+ */
+export interface ConsolidateResultDTO {
+  consolidationsPerformed: number
+  chunksAbsorbed: number
+  candidatesEvaluated: number
+  typeBreakdown?: {
+    duplicate_work: number
+    sequential_iteration: number
+    contextual_convergence: number
+  }
+  durationMs?: number
+  preview?: Array<{
+    primary_id: string
+    secondary_id: string
+    similarity: number
+    consolidation_type: 'duplicate_work' | 'sequential_iteration' | 'contextual_convergence'
+    reasoning: string
+  }>
 }
 
-export interface ConsolidateResult {
-  candidatesFound: number
-  consolidated: number
-  deleted: number
-  rounds: number
-  maxLevel: number
-  levelStats: Record<number, number>
-}
+// Legacy alias (backwards compatibility)
+export type ConsolidateResult = ConsolidateResultDTO
 
 /**
  * atlas.subscribe - Subscribe to event types
@@ -195,6 +231,144 @@ export interface ExecuteWorkParams {
   project?: string
   /** Initial context variables */
   variables?: Record<string, unknown>
+}
+
+/**
+ * Zod schema for WorkNode runtime validation.
+ * Validates work graph structure before execution.
+ */
+const BaseWorkNodeSchema = z.object({
+  type: z.enum(['agent', 'sequence', 'parallel', 'conditional', 'loop']),
+  id: z.string().optional(),
+})
+
+const AgentConfigSchema = z.object({
+  role: z.enum(['observer', 'connector', 'explainer', 'challenger', 'integrator']),
+  task: z.string(),
+  project: z.string().optional(),
+  context: z.array(z.string()).optional(),
+  qntmKeys: z.array(z.string()).optional(),
+  consolidationLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  maxTurns: z.number().optional(),
+  temperature: z.number().optional(),
+  maxTokens: z.number().optional(),
+  writeArtifacts: z.boolean().optional(),
+})
+
+// Forward declare WorkNode for recursive types
+type WorkNodeType = z.infer<typeof BaseWorkNodeSchema> & {
+  config?: z.infer<typeof AgentConfigSchema>
+  children?: WorkNodeType[]
+  child?: WorkNodeType
+  then?: WorkNodeType
+  else?: WorkNodeType
+  condition?: string
+  passContext?: boolean
+  maxConcurrency?: number
+  loopType?: 'count' | 'condition' | 'infinite' | 'adaptive'
+  iterations?: number
+  continueWhile?: string
+  loopContext?: Record<string, unknown>
+  conditionContext?: Record<string, unknown>
+  adaptiveConfig?: {
+    evaluatorRole?: string
+    maxIterations?: number
+  }
+}
+
+// Use simpler approach: validate discriminated union with unknown for recursive parts
+const WorkNodeSchema: z.ZodSchema = z.union([
+  // AgentNode
+  BaseWorkNodeSchema.extend({
+    type: z.literal('agent'),
+    config: AgentConfigSchema,
+  }),
+  // SequenceNode
+  BaseWorkNodeSchema.extend({
+    type: z.literal('sequence'),
+    children: z.array(z.any()), // Validated recursively at runtime
+    passContext: z.boolean().optional(),
+  }),
+  // ParallelNode
+  BaseWorkNodeSchema.extend({
+    type: z.literal('parallel'),
+    children: z.array(z.any()), // Validated recursively at runtime
+    maxConcurrency: z.number().optional(),
+  }),
+  // ConditionalNode
+  BaseWorkNodeSchema.extend({
+    type: z.literal('conditional'),
+    condition: z.string(),
+    then: z.any(), // Validated recursively at runtime
+    else: z.any().optional(), // Validated recursively at runtime
+    conditionContext: z.record(z.string(), z.unknown()).optional(),
+  }),
+  // LoopNode
+  BaseWorkNodeSchema.extend({
+    type: z.literal('loop'),
+    loopType: z.enum(['count', 'condition', 'infinite', 'adaptive']),
+    child: z.any(), // Validated recursively at runtime
+    iterations: z.number().optional(),
+    continueWhile: z.string().optional(),
+    loopContext: z.record(z.string(), z.unknown()).optional(),
+    adaptiveConfig: z
+      .object({
+        evaluatorRole: z.string().optional(),
+        maxIterations: z.number().optional(),
+      })
+      .optional(),
+  }),
+])
+
+/**
+ * Recursively validate WorkNode structure.
+ * Validates top-level first, then validates nested nodes.
+ */
+function validateWorkNodeRecursive(node: unknown, path: string = 'work'): void {
+  // Parse top-level structure
+  const parsed = WorkNodeSchema.parse(node) as any
+
+  // Recursively validate children based on type
+  switch (parsed.type) {
+    case 'sequence':
+    case 'parallel':
+      if (parsed.children) {
+        parsed.children.forEach((child: unknown, i: number) => {
+          validateWorkNodeRecursive(child, `${path}.children[${i}]`)
+        })
+      }
+      break
+    case 'conditional':
+      if (parsed.then) {
+        validateWorkNodeRecursive(parsed.then, `${path}.then`)
+      }
+      if (parsed.else) {
+        validateWorkNodeRecursive(parsed.else, `${path}.else`)
+      }
+      break
+    case 'loop':
+      if (parsed.child) {
+        validateWorkNodeRecursive(parsed.child, `${path}.child`)
+      }
+      break
+    // 'agent' has no nested nodes
+  }
+}
+
+/**
+ * Validate ExecuteWorkParams at runtime.
+ * Throws if work graph is malformed.
+ */
+export function validateExecuteWorkParams(params: ExecuteWorkParams): void {
+  try {
+    validateWorkNodeRecursive(params.work)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issues = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ')
+      throw new Error(`Invalid work graph: ${issues}`)
+    }
+    throw error
+  }
 }
 
 export interface ExecuteWorkResult {
@@ -331,25 +505,31 @@ export interface ConsolidateStopResult {
 
 /**
  * atlas.qntm.generate - Generate QNTM keys for text
+ *
+ * Uses canonical QNTMGenerateParams (already camelCase, no transformation needed)
+ * Re-exported from ../shared/types via import above
  */
-export interface QntmGenerateParams {
-  text: string
-  maxKeys?: number
-}
+export type { QNTMGenerateParams }
 
-export interface QntmGenerateResult {
+/**
+ * QntmGenerateResultDTO: camelCase RPC layer
+ * Matches canonical QNTMGenerateResult (already camelCase)
+ */
+export interface QntmGenerateResultDTO {
   keys: string[]
   reasoning?: string
 }
 
+// Legacy alias (backwards compatibility)
+export type QntmGenerateResult = QntmGenerateResultDTO
+
 /**
  * atlas.timeline - Query timeline with filters
+ *
+ * Uses canonical TimelineParams (already camelCase, no transformation needed)
+ * Re-exported from ../shared/types via import above
  */
-export interface TimelineParams {
-  since?: string // ISO date
-  limit?: number
-  qntmKey?: string
-}
+export type { TimelineParams }
 
 export interface TimelineResult {
   chunks: Array<{
@@ -405,7 +585,7 @@ export type MethodParams<M extends AtlasMethod> = M extends 'atlas.ingest'
                 : M extends 'atlas.consolidate.stop'
                   ? ConsolidateStopParams
                   : M extends 'atlas.qntm.generate'
-                    ? QntmGenerateParams
+                    ? QNTMGenerateParams
                     : M extends 'atlas.timeline'
                       ? TimelineParams
                       : M extends 'atlas.subscribe'
@@ -433,7 +613,7 @@ export type MethodResult<M extends AtlasMethod> = M extends 'atlas.ingest'
       : M extends 'atlas.ingest.stop'
         ? IngestStopResult
         : M extends 'atlas.search'
-          ? SearchResult[]
+          ? SearchResultDTO[]
           : M extends 'atlas.consolidate'
             ? ConsolidateResult
             : M extends 'atlas.consolidate.start'

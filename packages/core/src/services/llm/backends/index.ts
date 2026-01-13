@@ -2,8 +2,9 @@
  * LLM Backend Exports
  *
  * All backend implementations exported for registry registration.
+ * Note: Singleton getters removed - registry manages lifecycle.
  */
 
-export { AnthropicBackend, getOpusBackend, getSonnetBackend, getHaikuBackend } from './anthropic'
-export { OllamaLLMBackend, createOllamaBackend } from './ollama'
-export { ClaudeCodeBackend, getClaudeCodeBackend } from './claude-code'
+export { AnthropicBackend } from './anthropic.js'
+export { OllamaLLMBackend, createOllamaBackend } from './ollama.js'
+export { ClaudeCodeBackend, getClaudeCodeBackend } from './claude-code.js'

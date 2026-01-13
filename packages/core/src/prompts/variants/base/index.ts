@@ -5,6 +5,6 @@
  * Import specific modules for better tree-shaking.
  */
 
-export { getFileOrgContext } from './file-organization'
-export { getClaudeSys } from './system-identity'
-export { getSignalSystem } from './signal-system'
+export { getFileOrgContext } from './file-organization.js'
+export { getClaudeSys } from './system-identity.js'
+export { getSignalSystem } from './signal-system.js'

@@ -1,19 +1,19 @@
 /**
- * Event router with multi-lane architecture
+ * Event router - Thin RPC layer delegating to ApplicationService
  *
- * Routes JSON-RPC requests to appropriate handlers and manages event lanes:
- * - Ingest Lane: embed, qntm, upsert operations
- * - Search Lane: activate, format operations
- * - Consolidate Lane: background consolidation
- * - Watch Lane: file watcher operations
- * - Admin Lane: health checks, dependencies
+ * Routes JSON-RPC requests to ApplicationService methods and manages:
+ * - Request validation and error handling
+ * - Event emission for progress updates
+ * - Client subscription management
+ * - Background task coordination (async ingest/consolidate)
  */
 
-import type { JsonRpcRequest, JsonRpcResponse, AtlasMethod } from './protocol'
+import type { JsonRpcRequest, JsonRpcResponse, AtlasMethod } from './protocol.js'
 import {
   createResponse,
   createErrorResponse,
   JsonRpcErrorCode,
+  validateExecuteWorkParams,
   type IngestParams,
   type IngestResult,
   type IngestStartParams,
@@ -23,7 +23,7 @@ import {
   type IngestStopParams,
   type IngestStopResult,
   type SearchParams,
-  type SearchResult,
+  type SearchResultDTO,
   type ConsolidateParams,
   type ConsolidateResult,
   type ConsolidateStartParams,
@@ -32,7 +32,7 @@ import {
   type ConsolidateStatusResult,
   type ConsolidateStopParams,
   type ConsolidateStopResult,
-  type QntmGenerateParams,
+  type QNTMGenerateParams,
   type QntmGenerateResult,
   type TimelineParams,
   type TimelineResult,
@@ -50,12 +50,15 @@ import {
   type ExecuteWorkResult,
   type GetAgentContextParams,
   type GetAgentContextResult,
-} from './protocol'
-import { createLogger } from '../shared/logger'
-import type { AtlasDaemonServer } from './server'
-import type { AtlasEvent } from './events'
-import { daemonState } from './state'
+} from './protocol.js'
+import { createLogger } from '../shared/logger.js'
+import type { AtlasDaemonServer } from './server.js'
+import type { AtlasEvent } from './events.js'
+import { daemonState } from './state.js'
 import { v4 as uuid } from 'uuid'
+import { DefaultApplicationService } from '../services/application/index.js'
+import type { AtlasConfig } from '../shared/config.schema.js'
+import { getConfig } from '../shared/config.loader.js'
 
 const log = createLogger('daemon:router')
 
@@ -65,17 +68,30 @@ const log = createLogger('daemon:router')
 type MethodHandler<P = unknown, R = unknown> = (params: P, clientId: string) => Promise<R>
 
 /**
- * Event router
+ * Event router - Delegates to ApplicationService
  */
 export class EventRouter {
   private handlers: Map<AtlasMethod, MethodHandler<any, any>> = new Map()
   private server: AtlasDaemonServer | null = null
   private eventListeners: Set<(event: AtlasEvent) => void> = new Set()
   private startTime: number
+  private app: DefaultApplicationService
+  private config: AtlasConfig
 
-  constructor() {
+  constructor(config?: AtlasConfig) {
     this.startTime = Date.now()
+    this.config = config || getConfig()
+    this.app = new DefaultApplicationService(this.config)
     this.registerDefaultHandlers()
+    log.info('EventRouter created')
+  }
+
+  /**
+   * Initialize ApplicationService
+   */
+  async initialize(): Promise<void> {
+    await this.app.initialize()
+    log.info('EventRouter initialized')
   }
 
   /**
@@ -187,17 +203,12 @@ export class EventRouter {
   // ============================================
 
   /**
-   * Handle atlas.ingest
+   * Handle atlas.ingest - Delegate to ApplicationService
+   * Forward ALL IngestParams fields (no information loss)
    */
   private async handleIngest(params: IngestParams, _clientId: string): Promise<IngestResult> {
-    // Import ingest function dynamically to avoid circular dependencies
-    const { ingest } = await import('../domain/ingest')
-
-    const result = await ingest({
-      paths: params.paths,
-      recursive: params.recursive ?? false,
-      verbose: params.verbose ?? false,
-      // Pass event emitter to domain function
+    const result = await this.app.ingest({
+      ...params,
       emit: (event) => this.emit(event),
     })
 
@@ -205,28 +216,23 @@ export class EventRouter {
       filesProcessed: result.filesProcessed,
       chunksStored: result.chunksStored,
       errors: result.errors,
+      durationMs: result.durationMs,
+      peakMemoryBytes: result.peakMemoryBytes,
+      skippedFiles: result.skippedFiles,
     }
   }
 
   /**
-   * Handle atlas.search
+   * Handle atlas.search - Delegate to ApplicationService
+   * Forward ALL SearchParams fields (no information loss)
    */
-  private async handleSearch(params: SearchParams, _clientId: string): Promise<SearchResult[]> {
-    // Import search function dynamically
-    const { search } = await import('../domain/search')
-
-    const results = await search({
-      query: params.query,
-      limit: params.limit,
-      since: params.since,
-      qntmKey: params.qntmKey,
-      rerank: params.rerank ?? false,
-      consolidationLevel: params.consolidationLevel,
-      expandQuery: params.expandQuery ?? false,
-      // Pass event emitter to domain function
+  private async handleSearch(params: SearchParams, _clientId: string): Promise<SearchResultDTO[]> {
+    const results = await this.app.search({
+      ...params,
       emit: (event) => this.emit(event),
     })
 
+    // Map to DTO format (snake_case → camelCase)
     return results.map((r) => ({
       text: r.text,
       filePath: r.file_path,
@@ -239,29 +245,27 @@ export class EventRouter {
   }
 
   /**
-   * Handle atlas.consolidate
+   * Handle atlas.consolidate - Delegate to ApplicationService
+   * Forward ALL ConsolidateParams fields (no information loss)
+   * Return ConsolidateResult with NO fake data (aligned with canonical schema)
    */
   private async handleConsolidate(
     params: ConsolidateParams,
     _clientId: string
   ): Promise<ConsolidateResult> {
-    // Import consolidate function dynamically
-    const { consolidate } = await import('../domain/consolidate')
-
-    const result = await consolidate({
-      dryRun: params.dryRun,
-      threshold: params.threshold,
-      // Pass event emitter to domain function
+    const domainResult = await this.app.consolidate({
+      ...params,
       emit: (event) => this.emit(event),
     })
 
+    // Map ApplicationService result to daemon protocol format (aligned with canonical)
     return {
-      candidatesFound: result.candidatesFound,
-      consolidated: result.consolidated,
-      deleted: result.deleted,
-      rounds: result.rounds,
-      maxLevel: result.maxLevel,
-      levelStats: result.levelStats,
+      consolidationsPerformed: domainResult.consolidationsPerformed,
+      chunksAbsorbed: domainResult.chunksAbsorbed,
+      candidatesEvaluated: domainResult.candidatesEvaluated,
+      typeBreakdown: domainResult.typeBreakdown,
+      durationMs: domainResult.durationMs,
+      preview: domainResult.preview,
     }
   }
 
@@ -302,62 +306,51 @@ export class EventRouter {
   }
 
   /**
-   * Handle atlas.health
+   * Handle atlas.health - Delegate to ApplicationService
    */
   private async handleHealth(_params: HealthParams, _clientId: string): Promise<HealthResult> {
-    // Check Qdrant
-    let qdrant = { available: false, url: '', error: '' }
-    try {
-      const { getStorageBackend } = await import('../services/storage')
-      const storage = getStorageBackend()
-      if (storage) {
-        qdrant = { available: true, url: 'http://localhost:6333', error: '' }
-      }
-    } catch (error) {
-      qdrant.error = (error as Error).message
+    const healthStatus = await this.app.health()
+
+    // Map HealthStatus to daemon protocol HealthResult (simplified format)
+    const vectorService = healthStatus.services.vector
+    const qdrant = {
+      available: vectorService.status === 'healthy',
+      url: this.config.storage?.qdrant?.url || 'http://localhost:6333',
+      error: vectorService.error || '',
     }
 
-    // Check Ollama
-    let ollama = { available: false, url: '', error: '' }
-    try {
-      const { OLLAMA_URL } = await import('../shared/config')
-      const response = await fetch(`${OLLAMA_URL}/api/tags`)
-      ollama = { available: response.ok, url: OLLAMA_URL, error: '' }
-    } catch (error) {
-      ollama.error = (error as Error).message
+    // Check Ollama backend health
+    const ollamaBackend = healthStatus.services.llm.backends.find((b) => b.name.includes('ollama'))
+    const ollama = {
+      available: ollamaBackend?.status === 'healthy',
+      url: 'http://localhost:11434',
+      error: ollamaBackend?.error || '',
     }
 
-    // Check Voyage
+    // Check Voyage backend health
+    const voyageBackend = healthStatus.services.embedding.backends.find((b) =>
+      b.name.includes('voyage')
+    )
     const voyage = {
-      available: !!process.env.VOYAGE_API_KEY,
+      available: voyageBackend?.status === 'healthy',
       hasKey: !!process.env.VOYAGE_API_KEY,
-      error: !process.env.VOYAGE_API_KEY ? 'VOYAGE_API_KEY not set' : undefined,
+      error: voyageBackend?.error,
     }
 
-    // Determine overall health
-    let overall: 'healthy' | 'degraded' | 'unhealthy'
-    if (qdrant.available && (voyage.available || ollama.available)) {
-      overall = 'healthy'
-    } else if (qdrant.available) {
-      overall = 'degraded'
-    } else {
-      overall = 'unhealthy'
-    }
-
-    return { qdrant, ollama, voyage, overall }
+    return { qdrant, ollama, voyage, overall: healthStatus.overall }
   }
 
   /**
-   * Handle atlas.status
+   * Handle atlas.status - Mix ApplicationService + daemon-specific info
    */
   private async handleStatus(_params: StatusParams, _clientId: string): Promise<StatusResult> {
-    const status = this.server?.getStatus() || { clients: 0, uptime: 0, socket: '' }
+    const serverStatus = this.server?.getStatus() || { clients: 0, uptime: 0, socket: '' }
 
     return {
       pid: process.pid,
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
-      socket: status.socket,
-      clients: status.clients,
+      socket: serverStatus.socket,
+      clients: serverStatus.clients,
       version: '0.1.0',
     }
   }
@@ -466,7 +459,10 @@ export class EventRouter {
         .join('\n\n---\n\n')
 
       if (!relevantContent || relevantContent.length < 100) {
-        log.debug('Insufficient content to ingest from session', { sessionId, length: relevantContent?.length || 0 })
+        log.debug('Insufficient content to ingest from session', {
+          sessionId,
+          length: relevantContent?.length || 0,
+        })
         return
       }
 
@@ -475,9 +471,8 @@ export class EventRouter {
       const sessionHeader = `# Claude Code Session ${sessionId}\n\nEvent: ${eventType}\nTimestamp: ${new Date().toISOString()}\n\n`
       await fs.writeFile(tempPath, sessionHeader + relevantContent, 'utf-8')
 
-      // Ingest the session content
-      const { ingest } = await import('../domain/ingest')
-      const result = await ingest({
+      // Ingest the session content via ApplicationService
+      const result = await this.app.ingest({
         paths: [tempPath],
         recursive: false,
         verbose: false,
@@ -499,7 +494,12 @@ export class EventRouter {
         },
       })
 
-      log.info('Session transcript ingested', { sessionId, eventType, chunks: result.chunksStored, took })
+      log.info('Session transcript ingested', {
+        sessionId,
+        eventType,
+        chunks: result.chunksStored,
+        took,
+      })
     } catch (error) {
       // Emit error event
       this.emit({
@@ -522,9 +522,12 @@ export class EventRouter {
     params: ExecuteWorkParams,
     _clientId: string
   ): Promise<ExecuteWorkResult> {
-    const { executeWork, buildWorkContext } = await import('../domain/agents/coordinator')
+    const { executeWork, buildWorkContext } = await import('../domain/agents')
 
     log.info('Executing work graph', { project: params.project })
+
+    // Validate work graph structure before execution
+    validateExecuteWorkParams(params)
 
     // Build context with emit function so agents can broadcast events
     const context = buildWorkContext(
@@ -553,13 +556,12 @@ export class EventRouter {
 
   /**
    * Handle atlas.get_agent_context - Get RAG context for agent spawn
+   * Delegate to ApplicationService's search
    */
   private async handleGetAgentContext(
     params: GetAgentContextParams,
     _clientId: string
   ): Promise<GetAgentContextResult> {
-    const { search } = await import('../domain/search')
-
     log.debug('Getting agent context', {
       qntmKeys: params.qntmKeys,
       limit: params.limit,
@@ -568,7 +570,7 @@ export class EventRouter {
     const context: string[] = []
 
     for (const key of params.qntmKeys) {
-      const results = await search({
+      const results = await this.app.search({
         query: key,
         qntmKey: key,
         limit: params.limit ?? 5,
@@ -619,7 +621,7 @@ export class EventRouter {
   }
 
   /**
-   * Background ingestion runner
+   * Background ingestion runner - Delegate to ApplicationService
    */
   private async runIngestionTask(
     taskId: string,
@@ -627,9 +629,7 @@ export class EventRouter {
     recursive: boolean,
     watch: boolean
   ): Promise<void> {
-    const { ingest } = await import('../domain/ingest')
-
-    const result = await ingest({
+    const result = await this.app.ingest({
       paths,
       recursive,
       emit: (event) => {
@@ -740,7 +740,7 @@ export class EventRouter {
   }
 
   /**
-   * Background consolidation runner
+   * Background consolidation runner - Delegate to ApplicationService
    */
   private async runConsolidationTask(
     taskId: string,
@@ -748,8 +748,7 @@ export class EventRouter {
     dryRun?: boolean
   ): Promise<void> {
     try {
-      const { consolidate } = await import('../domain/consolidate')
-      await consolidate({
+      await this.app.consolidate({
         threshold,
         dryRun,
         emit: (event) => {
@@ -800,82 +799,49 @@ export class EventRouter {
   }
 
   /**
-   * Handle atlas.qntm.generate - Generate QNTM keys for text
+   * Handle atlas.qntm.generate - Delegate to ApplicationService
+   * Forward ALL QntmGenerateParams fields (no information loss)
    */
   private async handleQntmGenerate(
-    params: QntmGenerateParams,
+    params: QNTMGenerateParams,
     _clientId: string
   ): Promise<QntmGenerateResult> {
-    const { text, maxKeys = 5 } = params
-    const { generateQNTMKeys } = await import('../services/llm')
-
-    const result = await generateQNTMKeys({
-      chunk: text,
-      existingKeys: [],
-      context: {
+    const result = await this.app.generateQNTM({
+      text: params.text,
+      existingKeys: params.existingKeys ?? [],
+      level: params.level ?? 'concrete',
+      context: params.context ?? {
         fileName: '<manual>',
       },
     })
 
     return {
-      keys: result.keys.slice(0, maxKeys),
+      keys: result.keys,
       reasoning: result.reasoning,
     }
   }
 
   /**
-   * Handle atlas.timeline - Query timeline with filters
+   * Handle atlas.timeline - Delegate to ApplicationService
+   * Forward ALL TimelineParams fields (no information loss)
    */
-  private async handleTimeline(
-    params: TimelineParams,
-    _clientId: string
-  ): Promise<TimelineResult> {
-    const { since, limit = 50, qntmKey } = params
-    const { getStorageBackend } = await import('../services/storage')
-    const { QDRANT_COLLECTION_NAME } = await import('../shared/config')
-    const storage = getStorageBackend()
-
-    if (!storage) {
-      throw new Error('Storage backend not available')
-    }
-
-    // Build filter
-    const filter: any = {
-      must: [],
-    }
-
-    if (since) {
-      filter.must.push({
-        key: 'created_at',
-        range: {
-          gte: since,
-        },
-      })
-    }
-
-    if (qntmKey) {
-      filter.must.push({
-        key: 'qntm_keys',
-        match: {
-          any: [qntmKey],
-        },
-      })
-    }
-
-    // Scroll with filter
-    const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
-      filter: filter.must.length > 0 ? filter : undefined,
-      limit,
-      withPayload: true,
-      withVector: false,
+  private async handleTimeline(params: TimelineParams, _clientId: string): Promise<TimelineResult> {
+    const results = await this.app.timeline({
+      since: params.since,
+      until: params.until,
+      limit: params.limit ?? 50,
+      timelineId: params.timelineId,
+      includeCausalLinks: params.includeCausalLinks ?? false,
+      granularity: params.granularity ?? 'day',
     })
 
-    const chunks = result.points.map((point) => ({
-      id: point.id as string,
-      text: (point.payload?.original_text as string) || '',
-      filePath: (point.payload?.file_path as string) || '',
-      createdAt: (point.payload?.created_at as string) || '',
-      qntmKeys: (point.payload?.qntm_keys as string[]) || [],
+    // Map to timeline result format
+    const chunks = results.map((r) => ({
+      id: '', // TODO: Add chunk ID to SearchResult
+      text: r.text,
+      filePath: r.file_path,
+      createdAt: r.created_at,
+      qntmKeys: [r.qntm_key],
     }))
 
     // Sort by created_at descending (most recent first)

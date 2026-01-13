@@ -270,7 +270,10 @@ export function isToolResultContent(
  * ```
  */
 export function extractText(message: UnifiedMessage): string {
-  return message.content.filter(isTextContent).map((block) => block.text).join('')
+  return message.content
+    .filter(isTextContent)
+    .map((block) => block.text)
+    .join('')
 }
 
 /**

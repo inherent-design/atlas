@@ -1,40 +1,74 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * Atlas CLI Entrypoint
  *
- * Unified command-line interface for Atlas context ingestion and search.
+ * Thin wrapper over ApplicationService - delegates all operations.
  */
 
+import { Command } from 'commander'
 import {
+  loadConfig,
+  createLogger,
+  setLogLevel,
+  setModuleRules,
+  registerPrompts,
+  getApplicationService,
+  getStorageService,
   CONSOLIDATION_SIMILARITY_THRESHOLD,
   DEFAULT_SEARCH_LIMIT,
   OLLAMA_URL,
-  applyRuntimeOverrides,
-  createLogger,
-  getConfig,
-  loadConfig,
-  parseBackendSpecifier,
-  setLogLevel,
-  setModuleRules,
+  type AtlasConfig,
 } from '@inherent.design/atlas-core'
-import { Command } from 'commander'
 
-const log = createLogger('app')
+const log = createLogger('cli')
 
-// Main async function to load config before importing services
+/**
+ * Build config overrides from CLI options
+ */
+function buildConfigFromOptions(globalOpts: any, commandOpts: any = {}): Partial<AtlasConfig> {
+  const overrides: any = {}
+
+  // Qdrant URL (merge with existing storage config, don't replace it)
+  if (globalOpts.qdrantUrl) {
+    if (!overrides.storage) overrides.storage = {}
+    overrides.storage.qdrant = { url: globalOpts.qdrantUrl }
+  }
+
+  // Backend overrides
+  if (commandOpts.embedding || commandOpts.llm || commandOpts.reranker) {
+    overrides.backends = {}
+
+    if (commandOpts.embedding) {
+      overrides.backends['text-embedding'] = commandOpts.embedding
+      overrides.backends['code-embedding'] = commandOpts.embedding
+      overrides.backends['contextualized-embedding'] = commandOpts.embedding
+    }
+
+    if (commandOpts.llm) {
+      overrides.backends['text-completion'] = commandOpts.llm
+      overrides.backends['json-completion'] = commandOpts.llm
+    }
+
+    if (commandOpts.reranker) {
+      overrides.backends['reranking'] = commandOpts.reranker
+    }
+  }
+
+  // Logging level
+  if (globalOpts.logLevel) {
+    overrides.logging = { level: globalOpts.logLevel }
+  }
+
+  return overrides
+}
+
+// Main async function
 async function main() {
-  // Load config first (services call getConfig() at module load)
+  // Load config first
   await loadConfig()
 
-  // Register prompts (MUST be called before using prompt system)
-  const { registerPrompts } = await import('@inherent.design/atlas-core')
+  // Register prompts
   registerPrompts()
-
-  // Dynamic imports AFTER config is loaded
-  const { ingest } = await import('@inherent.design/atlas-core')
-  const { setQNTMProvider } = await import('@inherent.design/atlas-core')
-  const { formatResults, search, timeline } = await import('@inherent.design/atlas-core')
-  const { computeRootDir } = await import('@inherent.design/atlas-core')
 
   const program = new Command()
 
@@ -75,6 +109,10 @@ async function main() {
         setModuleRules(opts.logModules)
       }
 
+      // Set environment variables that aren't in config
+      if (opts.voyageKey) process.env.VOYAGE_API_KEY = opts.voyageKey
+      if (opts.jobs) process.env.QNTM_CONCURRENCY = String(opts.jobs)
+
       log.debug('CLI options parsed', {
         jobs: opts.jobs,
         logLevel: opts.logLevel,
@@ -89,98 +127,36 @@ async function main() {
     .argument('<paths...>', 'Files or directories to ingest')
     .option('-r, --recursive', 'Recursively ingest directories', false)
     .option('-q, --quiet', 'Suppress verbose output', false)
+    .option('--no-consolidation', 'Disable auto-consolidation after ingest', false)
+    .option('--consolidation-threshold <n>', 'Chunks threshold for consolidation', parseInt, 500)
+    .option('-w, --watch', 'Watch for file changes and re-ingest', false)
     .option('--embedding <backend>', 'Override embedding backend (e.g., voyage:voyage-3-large)')
     .option('--llm <backend>', 'Override LLM backend (e.g., claude-code:haiku)')
     .action(async (paths: string[], options, command) => {
       const globalOpts = command.parent?.opts() || {}
 
-      // Apply runtime config overrides (immutable pattern)
-      const overrides: any = {}
-
-      if (globalOpts.qdrantUrl) {
-        overrides.qdrant = { url: globalOpts.qdrantUrl }
-      }
-
-      if (options.embedding || options.llm) {
-        overrides.backends = {}
-
-        if (options.embedding) {
-          log.debug('Overriding embedding backend', { backend: options.embedding })
-          overrides.backends['text-embedding'] = options.embedding
-          overrides.backends['code-embedding'] = options.embedding
-          overrides.backends['contextualized-embedding'] = options.embedding
-        }
-
-        if (options.llm) {
-          log.debug('Overriding LLM backend', { backend: options.llm })
-          overrides.backends['text-completion'] = options.llm
-          overrides.backends['json-completion'] = options.llm
-          overrides.backends['qntm-generation'] = options.llm
-        }
-      }
-
-      // Apply overrides to config (validates provider-capability compatibility)
-      if (Object.keys(overrides).length > 0) {
-        applyRuntimeOverrides(overrides)
-      }
-
-      // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } =
-        await import('@inherent.design/atlas-core')
-      initializeEmbeddingBackends()
-      initializeLLMBackends()
-
-      // Set env vars that aren't in config (API keys)
-      if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-
-      // Configure QNTM concurrency
-      if (globalOpts.jobs) {
-        process.env.QNTM_CONCURRENCY = String(globalOpts.jobs)
-        log.debug('QNTM concurrency configured', { jobs: globalOpts.jobs })
-      }
-
-      // Configure QNTM provider (from --llm flag or config)
-      if (options.llm) {
-        const parsed = parseBackendSpecifier(options.llm)
-        const provider = parsed.provider
-        const model =
-          parsed.model ||
-          (provider === 'anthropic'
-            ? 'haiku'
-            : provider === 'claude-code'
-              ? 'haiku'
-              : 'ministral-3:3b')
-
-        log.debug('Configuring QNTM provider from --llm flag', { provider, model })
-        setQNTMProvider({
-          provider,
-          model,
-          ollamaHost: globalOpts.ollamaUrl,
-        })
-      } else {
-        // Use config defaults (already set via config.loader)
-        const config = getConfig()
-        const llmBackend = config.backends?.['qntm-generation'] || 'ollama:ministral-3:3b'
-        const parsed = parseBackendSpecifier(llmBackend)
-        const provider = parsed.provider
-        const model = parsed.model || 'ministral-3:3b'
-
-        log.debug('Configuring QNTM provider from config', { provider, model })
-        setQNTMProvider({
-          provider,
-          model,
-          ollamaHost: globalOpts.ollamaUrl,
-        })
-      }
-
       try {
-        const result = await ingest({
+        // Build config overrides from CLI options
+        const configOverrides = buildConfigFromOptions(globalOpts, options)
+
+        // Get ApplicationService with config
+        const app = getApplicationService()
+        if (Object.keys(configOverrides).length > 0) {
+          app.applyOverrides(configOverrides)
+        }
+        await app.initialize()
+
+        // Delegate to ApplicationService
+        const result = await app.ingest({
           paths,
           recursive: options.recursive,
-          rootDir: computeRootDir(paths),
           verbose: !options.quiet,
+          allowConsolidation: !options.noConsolidation,
+          consolidationThreshold: options.consolidationThreshold,
+          watch: options.watch,
         })
 
+        // Format output
         if (result.errors.length > 0) {
           log.error(`${result.errors.length} file(s) failed to ingest`)
           for (const { file, error } of result.errors) {
@@ -223,46 +199,19 @@ async function main() {
     .action(async (query: string, options, command) => {
       const globalOpts = command.parent?.opts() || {}
 
-      // Apply runtime config overrides (immutable pattern)
-      const overrides: any = {}
-
-      if (globalOpts.qdrantUrl) {
-        overrides.qdrant = { url: globalOpts.qdrantUrl }
-      }
-
-      if (options.embedding || options.reranker) {
-        overrides.backends = {}
-
-        if (options.embedding) {
-          log.debug('Overriding embedding backend', { backend: options.embedding })
-          overrides.backends['text-embedding'] = options.embedding
-          overrides.backends['code-embedding'] = options.embedding
-          overrides.backends['contextualized-embedding'] = options.embedding
-        }
-
-        if (options.reranker) {
-          log.debug('Overriding reranker backend', { backend: options.reranker })
-          overrides.backends['reranking'] = options.reranker
-        }
-      }
-
-      // Apply overrides to config (validates provider-capability compatibility)
-      if (Object.keys(overrides).length > 0) {
-        applyRuntimeOverrides(overrides)
-      }
-
-      // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } =
-        await import('@inherent.design/atlas-core')
-      initializeEmbeddingBackends()
-      initializeLLMBackends()
-
-      // Set env vars that aren't in config (API keys)
-      if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-
       try {
-        log.info('Starting search', { query, limit: options.limit, rerank: options.rerank })
-        const results = await search({
+        // Build config overrides from CLI options
+        const configOverrides = buildConfigFromOptions(globalOpts, options)
+
+        // Get ApplicationService with config
+        const app = getApplicationService()
+        if (Object.keys(configOverrides).length > 0) {
+          app.applyOverrides(configOverrides)
+        }
+        await app.initialize()
+
+        // Delegate to ApplicationService
+        const results = await app.search({
           query,
           limit: options.limit,
           since: options.since,
@@ -273,7 +222,9 @@ async function main() {
           agentRole: options.agentRole,
           temperature: options.temperature,
         })
-        log.debug('Search complete', { resultCount: results.length })
+
+        // Format output
+        const { formatResults } = await import('@inherent.design/atlas-core')
         console.log(formatResults(results))
       } catch (error) {
         log.error('Search failed', error as Error)
@@ -291,40 +242,27 @@ async function main() {
     .action(async (options, command) => {
       const globalOpts = command.parent?.opts() || {}
 
-      // Apply runtime config overrides (immutable pattern)
-      const overrides: any = {}
-
-      if (globalOpts.qdrantUrl) {
-        overrides.qdrant = { url: globalOpts.qdrantUrl }
-      }
-
-      if (options.embedding) {
-        log.debug('Overriding embedding backend', { backend: options.embedding })
-        overrides.backends = {
-          'text-embedding': options.embedding,
-          'code-embedding': options.embedding,
-          'contextualized-embedding': options.embedding,
-        }
-      }
-
-      // Apply overrides to config (validates provider-capability compatibility)
-      if (Object.keys(overrides).length > 0) {
-        applyRuntimeOverrides(overrides)
-      }
-
-      // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } =
-        await import('@inherent.design/atlas-core')
-      initializeEmbeddingBackends()
-      initializeLLMBackends()
-
-      // Set env vars that aren't in config (API keys)
-      if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-
       try {
-        log.info('Starting timeline query', { since: options.since, limit: options.limit })
-        const results = await timeline(options.since, options.limit)
-        log.debug('Timeline complete', { resultCount: results.length })
+        // Build config overrides from CLI options
+        const configOverrides = buildConfigFromOptions(globalOpts, options)
+
+        // Get ApplicationService with config
+        const app = getApplicationService()
+        if (Object.keys(configOverrides).length > 0) {
+          app.applyOverrides(configOverrides)
+        }
+        await app.initialize()
+
+        // Delegate to ApplicationService
+        const results = await app.timeline({
+          since: options.since,
+          limit: options.limit || 20,
+          includeCausalLinks: false,
+          granularity: 'day',
+        })
+
+        // Format output
+        const { formatResults } = await import('@inherent.design/atlas-core')
         console.log(formatResults(results))
       } catch (error) {
         log.error('Timeline failed', error as Error)
@@ -347,73 +285,30 @@ async function main() {
     .action(async (options, command) => {
       const globalOpts = command.parent?.opts() || {}
 
-      // Apply runtime config overrides (immutable pattern)
-      const overrides: any = {}
-
-      if (globalOpts.qdrantUrl) {
-        overrides.qdrant = { url: globalOpts.qdrantUrl }
-      }
-
-      if (options.llm) {
-        log.debug('Overriding LLM backend', { backend: options.llm })
-        overrides.backends = {
-          'text-completion': options.llm,
-          'json-completion': options.llm,
-          'qntm-generation': options.llm,
-        }
-
-        // Also update legacy QNTM provider
-        const parsed = parseBackendSpecifier(options.llm)
-        const model =
-          parsed.model ||
-          (parsed.provider === 'anthropic'
-            ? 'haiku'
-            : parsed.provider === 'claude-code'
-              ? 'haiku'
-              : 'ministral-3:3b')
-        setQNTMProvider({ provider: parsed.provider, model })
-      }
-
-      // Apply overrides to config (validates provider-capability compatibility)
-      if (Object.keys(overrides).length > 0) {
-        applyRuntimeOverrides(overrides)
-      }
-
-      // Re-initialize backends after applying runtime overrides
-      const { initializeEmbeddingBackends, initializeLLMBackends } =
-        await import('@inherent.design/atlas-core')
-      initializeEmbeddingBackends()
-      initializeLLMBackends()
-
-      // Set env vars that aren't in config (API keys)
-      if (globalOpts.voyageKey) process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-
       try {
-        const { consolidate } = await import('@inherent.design/atlas-core')
-        const result = await consolidate({
+        // Build config overrides from CLI options
+        const configOverrides = buildConfigFromOptions(globalOpts, options)
+
+        // Get ApplicationService with config
+        const app = getApplicationService()
+        if (Object.keys(configOverrides).length > 0) {
+          app.applyOverrides(configOverrides)
+        }
+        await app.initialize()
+
+        // Delegate to ApplicationService
+        const result = await app.consolidate({
           dryRun: options.dryRun,
           threshold: options.threshold,
         })
 
+        // Format output
         if (options.dryRun) {
-          log.info(`Dry run: found ${result.candidatesFound} consolidation candidates`)
-          if (result.candidates && result.candidates.length > 0) {
-            for (const candidate of result.candidates.slice(0, 10)) {
-              console.log(
-                `  - ${candidate.file_path} (similarity: ${candidate.similarity.toFixed(3)})`
-              )
-            }
-            if (result.candidates.length > 10) {
-              console.log(`  ... and ${result.candidates.length - 10} more`)
-            }
-          }
+          log.info(`Dry run: found ${result.candidatesEvaluated} consolidation candidates`)
         } else {
           log.info(
-            `Consolidation complete: ${result.consolidated} chunks merged (${result.deleted} removed) in ${result.rounds} rounds, max level: ${result.maxLevel}`
+            `Consolidation complete: ${result.consolidationsPerformed} chunks merged (${result.chunksAbsorbed} removed)`
           )
-          if (Object.keys(result.levelStats).length > 0) {
-            console.log('Level stats:', result.levelStats)
-          }
         }
       } catch (error) {
         log.error('Consolidation failed', error as Error)
@@ -421,212 +316,7 @@ async function main() {
       }
     })
 
-  // Qdrant management command
-  program
-    .command('qdrant')
-    .description('Qdrant database management commands')
-    .addCommand(
-      new Command('drop')
-        .description('Drop atlas collection (DESTRUCTIVE)')
-        .option('-y, --yes', 'Confirm deletion without prompt')
-        .action(async (options, command) => {
-          const globalOpts = command.parent?.parent?.opts() || {}
-
-          // Set Qdrant URL from CLI option (env var override)
-          if (globalOpts.qdrantUrl) {
-            process.env.QDRANT_URL = globalOpts.qdrantUrl
-          }
-
-          if (!options.yes) {
-            log.error('DESTRUCTIVE OPERATION: This will delete all ingested data.')
-            log.error('Use --yes flag to confirm: atlas qdrant drop --yes')
-            process.exit(1)
-          }
-
-          try {
-            const { getStorageBackend, QDRANT_COLLECTION_NAME } =
-              await import('@inherent.design/atlas-core')
-
-            const storage = getStorageBackend()
-            if (!storage) {
-              log.error('No storage backend available')
-              process.exit(1)
-            }
-
-            // Check if collection exists
-            const exists = await storage.collectionExists(QDRANT_COLLECTION_NAME)
-            if (!exists) {
-              log.warn(`Collection '${QDRANT_COLLECTION_NAME}' does not exist`)
-              return
-            }
-
-            // Get collection info before deletion
-            const info = await storage.getCollectionInfo(QDRANT_COLLECTION_NAME)
-            log.warn('Dropping collection', {
-              collection: QDRANT_COLLECTION_NAME,
-              points: info.points_count,
-              dimensions: info.vector_dimensions,
-            })
-
-            // Perform deletion
-            await storage.deleteCollection(QDRANT_COLLECTION_NAME)
-            log.info(`Collection '${QDRANT_COLLECTION_NAME}' dropped successfully`)
-          } catch (error) {
-            log.error('Drop collection failed', error as Error)
-            process.exit(1)
-          }
-        })
-    )
-    .addCommand(
-      new Command('hnsw')
-        .description('Toggle HNSW indexing (on|off)')
-        .argument('<state>', 'on or off')
-        .action(async (state: string, options, command) => {
-          const globalOpts = command.parent?.parent?.opts() || {}
-
-          // Set Qdrant URL from CLI option (env var override)
-          if (globalOpts.qdrantUrl) {
-            process.env.QDRANT_URL = globalOpts.qdrantUrl
-          }
-          if (globalOpts.voyageKey) {
-            process.env.VOYAGE_API_KEY = globalOpts.voyageKey
-          }
-
-          const validStates = ['on', 'off']
-          if (!validStates.includes(state)) {
-            log.error(`Invalid state: ${state}. Use: on or off`)
-            process.exit(1)
-          }
-
-          try {
-            const { enableHNSW, disableHNSW } = await import('@inherent.design/atlas-core')
-
-            if (state === 'on') {
-              await enableHNSW()
-              log.info('HNSW indexing enabled (m=16)')
-            } else {
-              await disableHNSW()
-              log.info('HNSW indexing disabled (m=0)')
-            }
-          } catch (error) {
-            log.error('HNSW toggle failed', error as Error)
-            process.exit(1)
-          }
-        })
-    )
-    .addCommand(
-      new Command('vacuum')
-        .description('Hard-delete chunks past grace period (14 days default)')
-        .option('-f, --force', 'Bypass grace period and delete immediately')
-        .option('-n, --dry-run', 'Show what would be deleted without deleting')
-        .option('-l, --limit <n>', 'Max chunks to process', '1000')
-        .action(async (options, command) => {
-          const globalOpts = command.parent?.parent?.opts() || {}
-
-          // Set Qdrant URL from CLI option (env var override)
-          if (globalOpts.qdrantUrl) {
-            process.env.QDRANT_URL = globalOpts.qdrantUrl
-          }
-
-          try {
-            const { getStorageBackend, QDRANT_COLLECTION_NAME, DELETION_GRACE_PERIOD_DAYS } =
-              await import('@inherent.design/atlas-core')
-
-            const storage = getStorageBackend()
-            if (!storage) {
-              log.error('No storage backend available')
-              process.exit(1)
-            }
-
-            const limit = parseInt(options.limit, 10)
-            const dryRun = options.dryRun || false
-            const force = options.force || false
-
-            // Get collection stats first
-            const collectionInfo = await storage.getCollectionInfo(QDRANT_COLLECTION_NAME)
-            log.info('Collection stats before vacuum', {
-              totalPoints: collectionInfo.points_count,
-              segments: collectionInfo.segments_count,
-            })
-
-            // Find deletion-eligible chunks
-            const scrollResult = await storage.scroll(QDRANT_COLLECTION_NAME, {
-              filter: {
-                must: [{ key: 'deletion_eligible', match: { value: true } }],
-              },
-              limit,
-              withPayload: true,
-              withVector: false,
-            })
-
-            const eligibleCount = scrollResult.points.length
-
-            if (eligibleCount === 0) {
-              log.info('No chunks marked for deletion')
-              return
-            }
-
-            // Filter by grace period unless --force
-            const now = new Date()
-            const toDelete: string[] = []
-            let skippedGracePeriod = 0
-
-            for (const point of scrollResult.points) {
-              const payload = point.payload as { deletion_marked_at?: string }
-              const markedAt = payload.deletion_marked_at
-                ? new Date(payload.deletion_marked_at)
-                : null
-
-              if (force || !markedAt) {
-                // Force delete or no timestamp (legacy)
-                toDelete.push(point.id as string)
-              } else {
-                const daysSinceMarked = (now.getTime() - markedAt.getTime()) / (1000 * 60 * 60 * 24)
-                if (daysSinceMarked >= DELETION_GRACE_PERIOD_DAYS) {
-                  toDelete.push(point.id as string)
-                } else {
-                  skippedGracePeriod++
-                }
-              }
-            }
-
-            log.info('Vacuum candidates', {
-              markedForDeletion: eligibleCount,
-              pastGracePeriod: toDelete.length,
-              withinGracePeriod: skippedGracePeriod,
-              gracePeriodDays: force ? 'BYPASSED' : DELETION_GRACE_PERIOD_DAYS,
-            })
-
-            if (toDelete.length === 0) {
-              log.info('No chunks past grace period. Use --force to bypass.')
-              return
-            }
-
-            if (dryRun) {
-              log.info('Dry run: would delete', {
-                count: toDelete.length,
-                sampleIds: toDelete.slice(0, 5),
-              })
-              return
-            }
-
-            // Perform hard delete
-            await storage.delete(QDRANT_COLLECTION_NAME, toDelete)
-            log.info('Hard deleted chunks', { count: toDelete.length })
-
-            // Get updated stats
-            const afterInfo = await storage.getCollectionInfo(QDRANT_COLLECTION_NAME)
-            log.info('Collection stats after vacuum', {
-              totalPoints: afterInfo.points_count,
-              segments: afterInfo.segments_count,
-              pointsRemoved: collectionInfo.points_count - afterInfo.points_count,
-            })
-          } catch (error) {
-            log.error('Vacuum failed', error as Error)
-            process.exit(1)
-          }
-        })
-    )
+  // (Old qdrant command removed - consolidated into dimension-based version below)
 
   // Daemon command - start daemon (ssh-agent style output)
   program
@@ -637,12 +327,7 @@ async function main() {
     .option('--tcp <port>', 'Also listen on TCP port', parseInt)
     .action(async (options) => {
       try {
-        // Re-initialize backends after config is loaded
-        const { initializeEmbeddingBackends, initializeLLMBackends, startDaemon } =
-          await import('@inherent.design/atlas-core')
-        initializeEmbeddingBackends()
-        initializeLLMBackends()
-
+        const { startDaemon } = await import('@inherent.design/atlas-core')
         await startDaemon({
           detach: options.detach,
           enableFileWatcher: options.watch,
@@ -703,91 +388,411 @@ async function main() {
     .description('Diagnose Atlas environment and service availability')
     .action(async () => {
       try {
-        const { runDiagnostics } = await import('@inherent.design/atlas-core')
-        const report = await runDiagnostics()
+        // Get ApplicationService
+        const app = getApplicationService()
+        await app.initialize()
+
+        // Get health status
+        const health = await app.health()
 
         // Print header
         console.log('Atlas Doctor')
         console.log('============\n')
 
-        // Environment
-        console.log('Environment:')
-        for (const check of report.environment) {
-          const status = formatStatus(check.status)
-          console.log(`  ${check.name.padEnd(20)} ${status} (${check.value})`)
+        // Overall status
+        console.log(`Overall: ${health.overall}`)
+        console.log(`Timestamp: ${health.timestamp}\n`)
+
+        // Vector service
+        console.log('Vector Storage:')
+        console.log(`  ${health.services.vector.name.padEnd(20)} ${health.services.vector.status}`)
+        if (health.services.vector.error) {
+          console.log(`  Error: ${health.services.vector.error}`)
         }
         console.log('')
 
-        // Services
-        console.log('Services:')
-        for (const service of report.services) {
-          const status = formatStatus(service.status)
-          let line = `  ${service.name.padEnd(20)} ${status}`
-          if (service.version) {
-            line += ` (v${service.version})`
-          }
-          if (service.details) {
-            line += ` - ${service.details}`
-          }
-          if (service.extra?.points !== undefined) {
-            line += `, ${service.extra.points} points`
-          }
-          console.log(line)
+        // Metadata service
+        console.log('Metadata Storage:')
+        console.log(
+          `  ${health.services.metadata.name.padEnd(20)} ${health.services.metadata.status}`
+        )
+        if (health.services.metadata.error) {
+          console.log(`  Error: ${health.services.metadata.error}`)
         }
         console.log('')
 
-        // Ollama models
-        if (report.models.ollama.available.length > 0 || report.models.ollama.missing.length > 0) {
-          console.log('Ollama Models:')
-          if (report.models.ollama.available.length > 0) {
-            console.log(
-              `  Available: ${report.models.ollama.available.slice(0, 5).join(', ')}${report.models.ollama.available.length > 5 ? ` (+ ${report.models.ollama.available.length - 5} more)` : ''}`
-            )
+        // Embedding backends
+        if (health.services.embedding.backends.length > 0) {
+          console.log('Embedding Backends:')
+          for (const backend of health.services.embedding.backends) {
+            console.log(`  ${backend.name.padEnd(20)} ${backend.status}`)
           }
-          if (report.models.ollama.missing.length > 0) {
-            console.log(
-              `  Missing:   ${report.models.ollama.missing.join(', ')} (configured but not pulled)`
-            )
-          }
+          console.log(
+            `  Total: ${health.services.embedding.available}/${health.services.embedding.total}`
+          )
           console.log('')
         }
 
-        // Configuration
-        console.log('Configuration:')
-        console.log(`  Config file: ${report.configuration.path ?? 'not found'}`)
-        console.log(
-          `  Validation:  ${report.configuration.valid ? 'ok' : `error: ${report.configuration.error}`}`
-        )
-        console.log('')
-
-        // Tracking database
-        console.log('Tracking Database:')
-        if (report.tracking) {
-          console.log(`  Path:    ${report.tracking.path}`)
-          console.log(`  Sources: ${report.tracking.sources} files tracked`)
-          console.log(
-            `  Chunks:  ${report.tracking.activeChunks} active, ${report.tracking.supersededChunks} superseded`
-          )
-        } else {
-          console.log('  Status:  not initialized')
+        // LLM backends
+        if (health.services.llm.backends.length > 0) {
+          console.log('LLM Backends:')
+          for (const backend of health.services.llm.backends) {
+            console.log(`  ${backend.name.padEnd(20)} ${backend.status}`)
+          }
+          console.log(`  Total: ${health.services.llm.available}/${health.services.llm.total}`)
+          console.log('')
         }
-        console.log('')
 
-        // Summary
-        const { ok, warning, error, notConfigured } = report.summary
-        const parts: string[] = []
-        if (ok > 0) parts.push(`${ok} ok`)
-        if (warning > 0) parts.push(`${warning} warning`)
-        if (error > 0) parts.push(`${error} error`)
-        if (notConfigured > 0) parts.push(`${notConfigured} not configured`)
-        console.log(`Summary: ${parts.join(', ')}`)
+        // Reranker backends
+        if (health.services.reranker.backends.length > 0) {
+          console.log('Reranker Backends:')
+          for (const backend of health.services.reranker.backends) {
+            console.log(`  ${backend.name.padEnd(20)} ${backend.status}`)
+          }
+          console.log(
+            `  Total: ${health.services.reranker.available}/${health.services.reranker.total}`
+          )
+          console.log('')
+        }
 
-        // Exit code based on errors
-        if (error > 0) {
+        // Exit code based on health
+        if (health.overall === 'unhealthy') {
           process.exit(1)
         }
       } catch (error) {
         log.error('Doctor failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Qdrant management commands
+  const qdrantCmd = program
+    .command('qdrant')
+    .description('Qdrant collection management commands')
+
+  // List collections
+  qdrantCmd
+    .command('list')
+    .description('List all atlas_* collections with active status')
+    .action(async () => {
+      try {
+        const { getQdrantClient, getPrimaryCollectionName, getStorageService, loadConfig } =
+          await import('@inherent.design/atlas-core')
+
+        // Initialize storage service
+        const config = await loadConfig()
+        getStorageService(config)
+
+        const client = getQdrantClient()
+        const response = await client.getCollections()
+        const allCollections = response.collections.map((c) => c.name)
+        const atlasCollections = allCollections.filter((name) => name.startsWith('atlas'))
+
+        if (atlasCollections.length === 0) {
+          console.log('No atlas collections found.')
+          console.log('Run "atlas ingest" to create the first collection.')
+          return
+        }
+
+        const activeCollection = getPrimaryCollectionName()
+
+        console.log('Atlas Collections:')
+        for (const name of atlasCollections) {
+          const isActive = name === activeCollection
+          const marker = isActive ? ' (active)' : ''
+          console.log(`  ${name}${marker}`)
+        }
+        console.log(`\nActive collection: ${activeCollection}`)
+      } catch (error) {
+        log.error('Failed to list collections', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Rename collection
+  qdrantCmd
+    .command('rename')
+    .description('Rename a collection')
+    .argument('<old-name>', 'Current collection name')
+    .argument('<new-name>', 'New collection name')
+    .action(async (oldName: string, newName: string) => {
+      try {
+        const { getStorageBackend, getStorageService, loadConfig } = await import(
+          '@inherent.design/atlas-core'
+        )
+
+        // Initialize storage service
+        const config = await loadConfig()
+        getStorageService(config)
+
+        const storage = getStorageBackend()
+        if (!storage) {
+          log.error('No storage backend available')
+          process.exit(1)
+        }
+
+        // Check if old collection exists
+        const exists = await storage.collectionExists(oldName)
+        if (!exists) {
+          log.error(`Collection '${oldName}' does not exist`)
+          process.exit(1)
+        }
+
+        // Check if new name already exists
+        const newExists = await storage.collectionExists(newName)
+        if (newExists) {
+          log.error(`Collection '${newName}' already exists`)
+          process.exit(1)
+        }
+
+        // Rename via Qdrant client (create alias or manual migration)
+        const { getQdrantClient } = await import('@inherent.design/atlas-core')
+        const qdrant = getQdrantClient()
+
+        // Create collection alias as rename mechanism
+        await qdrant.updateCollectionAliases({
+          actions: [
+            {
+              create_alias: {
+                collection_name: oldName,
+                alias_name: newName,
+              },
+            },
+          ],
+        })
+
+        console.log(`Collection renamed: ${oldName} → ${newName}`)
+        console.log(
+          `Note: This creates an alias. To fully migrate, use Qdrant's snapshot feature.`
+        )
+      } catch (error) {
+        log.error('Failed to rename collection', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Drop collection
+  qdrantCmd
+    .command('drop')
+    .description('Delete a collection (CAUTION: irreversible)')
+    .argument('[collection-name]', 'Collection name to drop (defaults to active collection)')
+    .option('--yes', 'Skip confirmation prompt')
+    .action(async (collectionName: string | undefined, options) => {
+      try {
+        const { getStorageBackend, getPrimaryCollectionName, getStorageService, loadConfig } =
+          await import('@inherent.design/atlas-core')
+
+        // Initialize storage service
+        const config = await loadConfig()
+        getStorageService(config)
+
+        const storage = getStorageBackend()
+        if (!storage) {
+          log.error('No storage backend available')
+          process.exit(1)
+        }
+
+        const targetCollection = collectionName || getPrimaryCollectionName()
+
+        // Check if collection exists
+        const exists = await storage.collectionExists(targetCollection)
+        if (!exists) {
+          log.error(`Collection '${targetCollection}' does not exist`)
+          process.exit(1)
+        }
+
+        // Confirm deletion unless --yes flag
+        if (!options.yes) {
+          const readline = await import('readline/promises')
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          })
+
+          const answer = await rl.question(
+            `Are you sure you want to delete collection '${targetCollection}'? [y/N] `
+          )
+          rl.close()
+
+          if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+            console.log('Deletion cancelled')
+            return
+          }
+        }
+
+        // Delete collection
+        await storage.deleteCollection(targetCollection)
+        console.log(`Collection '${targetCollection}' deleted`)
+      } catch (error) {
+        log.error('Failed to delete collection', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Collection doctor command
+  qdrantCmd
+    .command('doctor')
+    .description('Diagnose collection issues and suggest fixes')
+    .action(async () => {
+      try {
+        const {
+          getQdrantClient,
+          getPrimaryCollectionName,
+          parseDimensionsFromCollection,
+          getStorageService,
+          loadConfig,
+        } = await import('@inherent.design/atlas-core')
+
+        // Initialize storage service
+        const config = await loadConfig()
+        getStorageService(config)
+
+        console.log('Atlas Collection Doctor')
+        console.log('=======================\n')
+
+        // Get all collections
+        const client = getQdrantClient()
+        const response = await client.getCollections()
+        const allCollections = response.collections.map((c) => c.name)
+        const atlasCollections = allCollections.filter((name) => name.startsWith('atlas'))
+
+        // Check for legacy 'atlas' collection
+        const hasLegacy = atlasCollections.includes('atlas')
+        if (hasLegacy) {
+          console.log('⚠️  Legacy Collection Detected')
+          console.log('  Found: atlas (old naming convention)')
+          console.log(
+            '  Action: Rename to dimension-based format (e.g., atlas_1024, atlas_768, atlas_384)'
+          )
+          console.log('  Command: atlas qdrant rename atlas atlas_<dimension>')
+          console.log('')
+        }
+
+        // List all atlas collections with dimensions
+        const activeCollection = getPrimaryCollectionName()
+        console.log('Current Collections:')
+        for (const name of atlasCollections) {
+          const dims = parseDimensionsFromCollection(name)
+          const isActive = name === activeCollection
+          const marker = isActive ? ' (active)' : ''
+          const dimInfo = dims ? ` [${dims} dimensions]` : ' [unknown format]'
+          console.log(`  ${name}${dimInfo}${marker}`)
+        }
+        console.log(`\nActive collection: ${activeCollection}`)
+        console.log('')
+
+        // Check for dimension mismatches
+        const { getEmbeddingDimensions } = await import('@inherent.design/atlas-core')
+        const configDims = getEmbeddingDimensions()
+        const activeDims = parseDimensionsFromCollection(activeCollection)
+
+        if (activeDims !== configDims) {
+          console.log('⚠️  Dimension Mismatch')
+          console.log(`  Config expects: ${configDims} dimensions`)
+          console.log(`  Active collection: ${activeDims} dimensions`)
+          console.log('  Action: Update config or recreate collection')
+          console.log(`  Command: atlas qdrant drop ${activeCollection} --yes`)
+          console.log('')
+        } else {
+          console.log('✅ Active collection dimensions match config')
+          console.log('')
+        }
+      } catch (error) {
+        log.error('Collection doctor failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Status command - show current status
+  program
+    .command('status')
+    .description('Show current Atlas status')
+    .action(async () => {
+      try {
+        // Get ApplicationService
+        const app = getApplicationService()
+        await app.initialize()
+
+        // Get status
+        const status = await app.status()
+
+        // Print header
+        console.log('Atlas Status')
+        console.log('============\n')
+
+        // Collection stats
+        console.log('Collection:')
+        console.log(`  Name:         ${status.collection.name}`)
+        console.log(`  Total chunks: ${status.collection.totalChunks}`)
+        console.log(`  Total files:  ${status.collection.totalFiles}`)
+        console.log(`  QNTM keys:    ${status.collection.totalQNTMKeys}`)
+        console.log('')
+
+        // Storage config
+        console.log('Storage:')
+        console.log(`  Vector:    ${status.backends.storage}`)
+        console.log(`  Metadata:  ${status.storage.metadata}`)
+        console.log(`  Cache:     ${status.storage.cache}`)
+        console.log(`  Fulltext:  ${status.storage.fulltext}`)
+        console.log(`  Analytics: ${status.storage.analytics}`)
+        console.log('')
+
+        // Backends
+        console.log('Backends:')
+        console.log(`  Embedding: ${status.backends.embedding.join(', ')}`)
+        console.log(`  LLM:       ${status.backends.llm.join(', ')}`)
+        if (status.backends.reranker.length > 0) {
+          console.log(`  Reranker:  ${status.backends.reranker.join(', ')}`)
+        }
+        console.log('')
+      } catch (error) {
+        log.error('Status failed', error as Error)
+        process.exit(1)
+      }
+    })
+
+  // Export command - export analytics data
+  program
+    .command('export')
+    .description('Export analytics data to Parquet format')
+    .option('-o, --output <path>', 'Output directory', './exports')
+    .option('-f, --format <format>', 'Export format (parquet|csv|json)', 'parquet')
+    .option('--since <date>', 'Export data since this date (ISO 8601)')
+    .option('--until <date>', 'Export data until this date (ISO 8601)')
+    .action(async (options) => {
+      try {
+        // Get ApplicationService
+        const app = getApplicationService()
+        await app.initialize()
+
+        const storageService = getStorageService(app.getConfig())
+
+        if (!storageService.hasAnalytics()) {
+          log.error('Analytics backend not configured. Enable DuckDB in atlas.config.ts')
+          process.exit(1)
+        }
+
+        log.info('Exporting analytics data...')
+
+        const result = await storageService.exportAnalytics({
+          outputDir: options.output,
+          format: options.format,
+          since: options.since ? new Date(options.since) : undefined,
+          until: options.until ? new Date(options.until) : undefined,
+        })
+
+        log.info('Export complete', {
+          files: result.files,
+          rows: result.rowCount,
+          durationMs: result.durationMs,
+        })
+
+        console.log(`\nExported ${result.rowCount} rows to:`)
+        for (const file of result.files) {
+          console.log(`  ${file}`)
+        }
+      } catch (error) {
+        log.error('Export failed', error as Error)
         process.exit(1)
       }
     })
@@ -834,15 +839,20 @@ async function main() {
     .description('Show tracking database statistics')
     .action(async () => {
       try {
-        const { getFileTracker } = await import('@inherent.design/atlas-core')
-        const tracker = getFileTracker()
-        const stats = tracker.getStats()
+        const { getFileTracker, getStorageService } = await import('@inherent.design/atlas-core')
+        const { loadConfig } = await import('@inherent.design/atlas-core')
+        const config = await loadConfig()
+        const storageService = getStorageService(config)
+        const db = storageService.getDatabase()
+        const tracker = getFileTracker(db)
+        const stats = await tracker.getStats()
 
         console.log('Tracking Database Status')
         console.log('========================')
-        console.log(`Active sources:      ${stats.sources}`)
-        console.log(`Active chunks:       ${stats.activeChunks}`)
-        console.log(`Superseded chunks:   ${stats.supersededChunks}`)
+        console.log(`Total sources:       ${stats.totalFiles}`)
+        console.log(`Active sources:      ${stats.activeFiles}`)
+        console.log(`Deleted sources:     ${stats.deletedFiles}`)
+        console.log(`Total chunks:        ${stats.totalChunks}`)
       } catch (error) {
         log.error('Failed to get tracking status', error as Error)
         process.exit(1)
@@ -851,22 +861,25 @@ async function main() {
 
   trackingCommand
     .command('vacuum')
-    .description('Clean up old superseded chunk records (14+ days old)')
+    .description('Clean up old deleted source records (PostgreSQL)')
     .option('-n, --dry-run', 'Preview what would be removed')
     .action(async (options) => {
       try {
-        const { getFileTracker } = await import('@inherent.design/atlas-core')
-        const tracker = getFileTracker()
+        const { getFileTracker, getStorageService } = await import('@inherent.design/atlas-core')
+        const { loadConfig } = await import('@inherent.design/atlas-core')
+        const config = await loadConfig()
+        const storageService = getStorageService(config)
+        const db = storageService.getDatabase()
+        const tracker = getFileTracker(db)
+        const stats = await tracker.getStats()
 
         if (options.dryRun) {
-          // For dry run, just show stats
-          const stats = tracker.getStats()
-          console.log(`Would clean up: ${stats.supersededChunks} superseded chunk records`)
+          console.log(`Would clean up: ${stats.deletedFiles} deleted source records`)
           return
         }
 
-        const result = await tracker.vacuum()
-        console.log(`Cleaned up ${result.removed} old chunk records`)
+        console.log('Note: PostgreSQL automatically cleans up via ON DELETE CASCADE.')
+        console.log(`Currently tracking: ${stats.deletedFiles} deleted sources`)
       } catch (error) {
         log.error('Vacuum failed', error as Error)
         process.exit(1)
@@ -880,10 +893,14 @@ async function main() {
     .action(async (filePath: string) => {
       try {
         const { resolve } = await import('path')
-        const { getFileTracker } = await import('@inherent.design/atlas-core')
+        const { getFileTracker, getStorageService } = await import('@inherent.design/atlas-core')
+        const { loadConfig } = await import('@inherent.design/atlas-core')
+        const config = await loadConfig()
+        const storageService = getStorageService(config)
+        const db = storageService.getDatabase()
 
         const absolutePath = resolve(filePath)
-        const tracker = getFileTracker()
+        const tracker = getFileTracker(db)
         const result = await tracker.needsIngestion(absolutePath)
 
         console.log(`File: ${absolutePath}`)
@@ -900,24 +917,6 @@ async function main() {
 
   // Run CLI
   program.parse()
-}
-
-/**
- * Format status indicator
- */
-function formatStatus(status: string): string {
-  switch (status) {
-    case 'ok':
-      return 'ok'
-    case 'warning':
-      return 'warning'
-    case 'error':
-      return 'error'
-    case 'not_configured':
-      return 'not configured'
-    default:
-      return status
-  }
 }
 
 // Execute main function

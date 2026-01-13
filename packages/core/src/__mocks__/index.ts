@@ -5,7 +5,7 @@
  *
  * Usage:
  * ```typescript
- * import { createMockEmbeddingBackend, createMockStorageBackend } from './__mocks__'
+ * import { createMockEmbeddingBackend, createMockStorageBackend } from './__mocks__.js'
  * ```
  */
 
@@ -14,14 +14,14 @@ export {
   MockEmbeddingBackend,
   createMockEmbeddingBackend,
   type MockEmbeddingConfig,
-} from './MockEmbeddingBackend'
+} from './MockEmbeddingBackend.js'
 
 // Storage backend
 export {
   MockStorageBackend,
   createMockStorageBackend,
   type MockStorageConfig,
-} from './MockStorageBackend'
+} from './MockStorageBackend.js'
 
 // LLM backend
 export {
@@ -29,7 +29,7 @@ export {
   createMockLLMBackend,
   CONSOLIDATION_RESPONSES,
   type MockLLMConfig,
-} from './MockLLMBackend'
+} from './MockLLMBackend.js'
 
 // Reranker backend
 export {
@@ -37,4 +37,4 @@ export {
   createMockRerankerBackend,
   type MockRerankerConfig,
   type RerankStrategy,
-} from './MockRerankerBackend'
+} from './MockRerankerBackend.js'

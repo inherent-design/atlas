@@ -4,8 +4,8 @@
  * Abstracts vector database operations for multi-backend support.
  */
 
-import type { BackendDescriptor, LatencyClass } from '../../shared/capabilities'
-import type { ChunkPayload } from '../../shared/types'
+import type { BackendDescriptor, LatencyClass } from '../../shared/capabilities.js'
+import type { ChunkPayload, VectorName } from '../../shared/types.js'
 
 // ============================================
 // Capability Types
@@ -36,8 +36,9 @@ export interface StorageBackend extends BackendDescriptor<StorageCapability>, Ca
 
 /**
  * Named vector identifier (corresponds to collection vector names)
+ * Re-exported from shared/types.ts for convenience
  */
-export type VectorName = 'text' | 'code' | 'media'
+export type { VectorName }
 
 /**
  * Named vectors structure for multi-vector points.

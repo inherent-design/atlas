@@ -4,10 +4,10 @@
     "allowJs": true,
     "jsx": "react-jsx",
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    "lib": ["ES2020"],
     "module": "Preserve",
     "moduleDetection": "force",
-    // Bundler mode
+    // Bundler mode (tsx execution)
     "moduleResolution": "bundler",
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
@@ -20,9 +20,15 @@
     "skipLibCheck": true,
     // Best practices
     "strict": true,
-    "target": "ESNext",
-    "types": ["bun-types", "vitest/globals"],
-    "verbatimModuleSyntax": true
+    "target": "ES2020",
+    "types": ["node", "vitest/globals"],
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "downlevelIteration": true,
+    // Declaration generation (when --declaration is passed)
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist"
   },
-  "exclude": ["*.test.ts"]
+  "exclude": ["*.test.ts", "**/__tests__/**", "**/__mocks__/**", "**/__fixtures__/**"]
 }

@@ -6,6 +6,7 @@
  */
 
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import {
   AtlasConfigSchema,
@@ -14,8 +15,8 @@ import {
   parseBackendSpecifier,
   validateProviderCapability,
   type Capability,
-} from './config.schema'
-import { createLogger } from './logger'
+} from './config.schema.js'
+import { createLogger } from './logger.js'
 
 const log = createLogger('config-loader')
 
@@ -31,7 +32,7 @@ let globalConfig: AtlasConfig | null = null
  * 3. User's home directory (~/.atlas/config.ts) - system-wide config
  */
 async function tryLoadUserConfig(configPath?: string): Promise<Partial<AtlasConfig>> {
-  const homedir = require('os').homedir()
+  const homeDir = homedir()
 
   // Resolve config path - check multiple locations
   const paths = [
@@ -39,8 +40,8 @@ async function tryLoadUserConfig(configPath?: string): Promise<Partial<AtlasConf
     join(process.cwd(), 'atlas.config.ts'),
     join(process.cwd(), 'atlas.config.js'),
     // System-wide config in ~/.atlas/
-    join(homedir, '.atlas', 'config.ts'),
-    join(homedir, '.atlas', 'config.js'),
+    join(homeDir, '.atlas', 'config.ts'),
+    join(homeDir, '.atlas', 'config.js'),
   ].filter(Boolean) as string[]
 
   for (const path of paths) {
@@ -127,6 +128,8 @@ function mergeConfig(defaults: AtlasConfig, user: Partial<AtlasConfig>): AtlasCo
 
   // Merge in order: defaults → env-detected → user (user takes precedence)
   const merged: AtlasConfig = {
+    ...defaults,
+    ...user,
     backends: {
       ...defaults.backends,
       ...envDefaults.backends,
@@ -226,6 +229,8 @@ export function applyRuntimeOverrides(overrides: Partial<AtlasConfig>): void {
 
   // Create new config with deep merge of overrides
   const merged: AtlasConfig = {
+    ...globalConfig,
+    ...overrides,
     backends: {
       ...globalConfig.backends,
       ...overrides.backends,
@@ -233,6 +238,17 @@ export function applyRuntimeOverrides(overrides: Partial<AtlasConfig>): void {
     logging: {
       ...globalConfig.logging,
       ...overrides.logging,
+    },
+    storage: {
+      ...globalConfig.storage,
+      ...overrides.storage,
+      // Deep merge nested storage configs
+      ...(overrides.storage?.qdrant && globalConfig.storage?.qdrant
+        ? { qdrant: { ...globalConfig.storage.qdrant, ...overrides.storage.qdrant } }
+        : {}),
+      ...(overrides.storage?.postgres && globalConfig.storage?.postgres
+        ? { postgres: { ...globalConfig.storage.postgres, ...overrides.storage.postgres } }
+        : {}),
     },
   }
 

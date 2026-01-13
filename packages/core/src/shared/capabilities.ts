@@ -11,6 +11,8 @@
  * - Type utilities for capability narrowing
  */
 
+import type { ContentType } from './types.js'
+
 // ============================================
 // Service Types
 // ============================================
@@ -134,8 +136,9 @@ export interface PricingInfo {
 
 /**
  * Content type for routing to appropriate backend/vector
+ * Re-exported from shared/types.ts for convenience
  */
-export type ContentType = 'text' | 'code' | 'media'
+export type { ContentType }
 
 /**
  * Embedding strategy for content
@@ -203,4 +206,3 @@ export function getServiceType(cap: Capability): ServiceType {
   if (isRerankerCapability(cap)) return 'reranker'
   throw new Error(`Unknown capability: ${cap}`)
 }
-

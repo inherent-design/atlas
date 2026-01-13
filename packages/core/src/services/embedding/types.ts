@@ -18,10 +18,10 @@ import type {
   EmbeddingStrategy,
   LatencyClass,
   PricingInfo,
-} from '../../shared/capabilities'
+} from '../../shared/capabilities.js'
 
 // Re-export for backend implementations
-export type { EmbeddingCapability, EmbeddingStrategy } from '../../shared/capabilities'
+export type { EmbeddingCapability, EmbeddingStrategy } from '../../shared/capabilities.js'
 
 // ============================================
 // Result Types
@@ -232,20 +232,6 @@ export interface EmbedOptions {
   outputDimensions?: number
 }
 
-/**
- * Configuration for initializing an embedding backend
- */
-export interface EmbeddingBackendConfig {
-  /** Model identifier */
-  model: string
-  /** API key (if required) */
-  apiKey?: string
-  /** Base URL for API (for self-hosted) */
-  baseUrl?: string
-  /** Request timeout in milliseconds */
-  timeout?: number
-}
-
 // ============================================
 // File Type Detection
 // ============================================
@@ -274,12 +260,6 @@ export const TEXT_EXTENSIONS = [
   '.toml',
   '.csv',
 ] as const
-
-/**
- * Legacy alias for document extensions.
- * @deprecated Use TEXT_EXTENSIONS directly instead
- */
-export const DOCUMENT_EXTENSIONS = ['.md', '.txt', '.rst', '.html'] as const
 
 /**
  * File extensions that require multimodal embeddings

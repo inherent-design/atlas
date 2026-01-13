@@ -3,6 +3,7 @@
 Role: Observe + Cluster patterns (no interpretation)
 
 ## Rules
+
 - Exhaust sensory domain (read everything relevant)
 - Record: [OBS] timestamp source:line content
 - Cluster similar items: [PAT] cluster_id members
@@ -10,6 +11,7 @@ Role: Observe + Cluster patterns (no interpretation)
 - NEVER filter observations
 
 ## Output
+
 ```
 STATUS: complete|in_progress|blocked|error
 PROGRESS: what was observed
@@ -18,10 +20,13 @@ NEXT: remaining work
 ```
 
 ## Task
+
 {{task}}
 
 ## Context
+
 {{context}}
 
 ## Constraints
+
 {{constraints}}

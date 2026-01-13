@@ -12,11 +12,11 @@
  */
 
 import pRetry from 'p-retry'
-import type { QNTMGenerationInput, QNTMGenerationResult } from '.'
-import { getLLMBackendFor, type LLMConfig } from '.'
-import { createLogger } from '../../shared/logger'
-import { buildTaskPrompt } from '../../prompts/builders'
-import type { QNTMAbstractionLevel } from '../../prompts/types'
+import type { QNTMGenerationInput, QNTMGenerationResult } from './index.js'
+import { getLLMBackendFor } from './index.js'
+import { createLogger } from '../../shared/logger.js'
+import { buildTaskPrompt } from '../../prompts/builders.js'
+import type { QNTMAbstractionLevel } from '../../prompts/types.js'
 
 const log = createLogger('qntm:providers')
 
@@ -35,9 +35,8 @@ const RETRY_OPTIONS = {
   },
 }
 
-// Re-export types for backwards compatibility
-export type { LLMConfig as ProviderConfig, LLMProvider as QNTMProvider } from '.'
-export type { QNTMAbstractionLevel } from '../../prompts/types'
+// Re-export types
+export type { QNTMAbstractionLevel } from '../../prompts/types.js'
 
 /**
  * Extended QNTM generation input with abstraction level.
@@ -59,7 +58,11 @@ export async function buildQNTMPrompt(input: QNTMGenerationInputWithLevel): Prom
   const { chunk, existingKeys, context, level = 0 } = input
 
   // Format existing keys
-  const formattedKeys = existingKeys.slice(-50).map(k => `- ${k}`).join('\n') || '(none yet)'
+  const formattedKeys =
+    existingKeys
+      .slice(-50)
+      .map((k) => `- ${k}`)
+      .join('\n') || '(none yet)'
 
   // Format context if provided
   let contextFileName = ''
@@ -85,28 +88,24 @@ export async function buildQNTMPrompt(input: QNTMGenerationInputWithLevel): Prom
 }
 
 /**
- * Generate QNTM keys using specified provider
+ * Generate QNTM keys using backend registry
  *
  * @param input - Chunk text, existing keys, context, and optional abstraction level
- * @param config - LLM provider configuration
  * @returns Generated QNTM keys with reasoning
  */
 export async function generateQNTMKeysWithProvider(
-  input: QNTMGenerationInputWithLevel,
-  config: LLMConfig
+  input: QNTMGenerationInputWithLevel
 ): Promise<QNTMGenerationResult> {
   const prompt = await buildQNTMPrompt(input)
 
   log.debug('Generating QNTM keys', {
-    provider: config.provider,
-    model: config.model,
     chunkLength: input.chunk.length,
     existingKeyCount: input.existingKeys.length,
     level: input.level ?? 0,
   })
 
-  // Get JSON-capable LLM backend
-  const backend = getLLMBackendFor('json-completion')
+  // Get JSON-capable LLM backend (with domain-specific override)
+  const backend = getLLMBackendFor('json-completion', 'qntm-generation')
   if (!backend) {
     throw new Error('No JSON-capable LLM backend available for QNTM generation')
   }
@@ -141,7 +140,11 @@ export async function generateQueryQNTMKeys(
   existingKeys: string[]
 ): Promise<QNTMGenerationResult> {
   // Format existing keys
-  const formattedKeys = existingKeys.slice(-50).map(k => `- ${k}`).join('\n') || '(none)'
+  const formattedKeys =
+    existingKeys
+      .slice(-50)
+      .map((k) => `- ${k}`)
+      .join('\n') || '(none)'
 
   const prompt = await buildTaskPrompt('query-expansion', {
     query,
@@ -153,8 +156,8 @@ export async function generateQueryQNTMKeys(
     existingKeyCount: existingKeys.length,
   })
 
-  // Get JSON-capable LLM backend
-  const backend = getLLMBackendFor('json-completion')
+  // Get JSON-capable LLM backend (with domain-specific override)
+  const backend = getLLMBackendFor('json-completion', 'query-expansion')
   if (!backend) {
     throw new Error('No JSON-capable LLM backend available for query expansion')
   }

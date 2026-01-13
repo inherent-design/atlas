@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * atlas-project skill implementation
  *
@@ -9,7 +9,7 @@
  */
 
 import { AtlasConnection, isDaemonRunning } from '@inherent.design/atlas-core'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
 
@@ -24,11 +24,20 @@ interface SkillInput {
   cwd: string
 }
 
+/** Read stdin using Node.js streams */
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = []
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks).toString('utf-8')
+}
+
 async function main() {
   // Parse skill input
   let input: SkillInput
   try {
-    const data = await Bun.readableStreamToText(Bun.stdin.stream())
+    const data = await readStdin()
     input = JSON.parse(data)
   } catch (error) {
     console.error('Error: Invalid skill input')
@@ -43,13 +52,17 @@ async function main() {
     const parts = input.args.trim().split(/\s+/)
     if (parts.length >= 2) {
       projectName = parts[0]
-      projectPath = parts[1]
+      const part1 = parts[1]
+      if (!part1) throw new Error('Invalid project specification')
+      projectPath = part1
     } else if (parts.length === 1) {
       // Single arg could be path or name, try to disambiguate
-      if (parts[0].includes('/') || parts[0] === '.') {
-        projectPath = parts[0]
+      const part0 = parts[0]
+      if (!part0) throw new Error('Invalid project specification')
+      if (part0.includes('/') || part0 === '.') {
+        projectPath = part0
       } else {
-        projectName = parts[0]
+        projectName = part0
       }
     }
   }
@@ -76,19 +89,14 @@ async function main() {
   // 1. Conversation history (last 10 messages for context)
   const recentMessages = input.conversation_history.slice(-10)
   context.push('## Conversation Context\n')
-  context.push(
-    recentMessages.map((m) => `**${m.role}**: ${m.content}`).join('\n\n')
-  )
+  context.push(recentMessages.map((m) => `**${m.role}**: ${m.content}`).join('\n\n'))
 
   // 2. Directory structure
   try {
-    const tree = execSync(
-      `tree -L 3 -I 'node_modules|dist|build|target|.git' "${projectPath}"`,
-      {
-        encoding: 'utf-8',
-        maxBuffer: 10 * 1024 * 1024, // 10MB
-      }
-    )
+    const tree = execSync(`tree -L 3 -I 'node_modules|dist|build|target|.git' "${projectPath}"`, {
+      encoding: 'utf-8',
+      maxBuffer: 10 * 1024 * 1024, // 10MB
+    })
     context.push('\n## Directory Structure\n')
     context.push('```\n' + tree.trim() + '\n```')
   } catch {
@@ -133,7 +141,7 @@ async function main() {
     const path = join(projectPath, manifest)
     if (existsSync(path)) {
       try {
-        const content = await Bun.file(path).text()
+        const content = readFileSync(path, 'utf-8')
         // Truncate if too large
         const truncated =
           content.length > 5000 ? content.slice(0, 5000) + '\n...(truncated)' : content
@@ -151,7 +159,7 @@ async function main() {
     const path = join(projectPath, readme)
     if (existsSync(path)) {
       try {
-        const content = await Bun.file(path).text()
+        const content = readFileSync(path, 'utf-8')
         // Truncate README to first 2000 chars
         const truncated =
           content.length > 2000 ? content.slice(0, 2000) + '\n...(truncated)' : content
@@ -176,7 +184,7 @@ async function main() {
   // Detect from package manifests
   if (existsSync(join(projectPath, 'package.json'))) {
     try {
-      const pkg = JSON.parse(await Bun.file(join(projectPath, 'package.json')).text())
+      const pkg = JSON.parse(readFileSync(join(projectPath, 'package.json'), 'utf-8'))
       version = pkg.version || version
       projectType = pkg.workspaces ? 'Monorepo (Node)' : 'Node.js'
 
@@ -196,7 +204,8 @@ async function main() {
       if (pkg.dependencies?.react || pkg.devDependencies?.react) techStack.push('React')
       if (pkg.dependencies?.next || pkg.devDependencies?.next) techStack.push('Next.js')
       if (pkg.dependencies?.vue || pkg.devDependencies?.vue) techStack.push('Vue')
-      if (pkg.dependencies?.typescript || pkg.devDependencies?.typescript) techStack.push('TypeScript')
+      if (pkg.dependencies?.typescript || pkg.devDependencies?.typescript)
+        techStack.push('TypeScript')
     } catch {}
   }
 
@@ -218,7 +227,10 @@ async function main() {
     techStack.push('Go')
   }
 
-  if (existsSync(join(projectPath, 'pyproject.toml')) || existsSync(join(projectPath, 'requirements.txt'))) {
+  if (
+    existsSync(join(projectPath, 'pyproject.toml')) ||
+    existsSync(join(projectPath, 'requirements.txt'))
+  ) {
     projectType = 'Python'
     setupCommands.push('pip install -r requirements.txt')
     if (existsSync(join(projectPath, 'pyproject.toml'))) setupCommands.push('pip install -e .')
@@ -255,7 +267,7 @@ ${runCommands.length > 0 ? '\`\`\`bash\n# Run\n' + runCommands.join('\n') + '\n`
 
 ## Tech Stack
 
-${techStack.length > 0 ? techStack.map(t => `- ${t}`).join('\n') : '- See package manifest for details'}
+${techStack.length > 0 ? techStack.map((t) => `- ${t}`).join('\n') : '- See package manifest for details'}
 
 ${context.slice(2).join('\n\n')}
 
@@ -268,7 +280,9 @@ ${context.slice(2).join('\n\n')}
   if (!projectName) {
     const match = bootstrapContent.match(/^#\s+(.+?)\s+Bootstrap/m)
     if (match) {
-      projectName = match[1]
+      const matchedName = match[1]
+      if (!matchedName) throw new Error('Failed to extract project name from bootstrap')
+      projectName = matchedName
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '')
@@ -315,7 +329,9 @@ ${context.slice(2).join('\n\n')}
     console.log('Note: Daemon not running. Auto-ingestion not started.')
     console.log('To enable auto-ingestion:')
     console.log('  1. Start daemon: cd ~/production/atlas/packages/core && bun run daemon')
-    console.log(`  2. Start ingestion: bun run --filter @inherent.design/atlas-cli atlas ingest.start "${projectPath}" -r --watch`)
+    console.log(
+      `  2. Start ingestion: bun run --filter @inherent.design/atlas-cli atlas ingest.start "${projectPath}" -r --watch`
+    )
   }
 
   // Output for Claude Code

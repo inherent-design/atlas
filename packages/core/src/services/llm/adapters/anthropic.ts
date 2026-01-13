@@ -17,7 +17,7 @@ import type {
   UnifiedMessage,
   UnifiedContent,
   ToolDefinition,
-} from '../message'
+} from '../message.js'
 
 /**
  * Message adapter for Anthropic SDK
@@ -26,9 +26,7 @@ export class AnthropicAdapter {
   /**
    * Convert unified request to Anthropic SDK format
    */
-  toNativeRequest(
-    request: UnifiedRequest
-  ): Anthropic.Messages.MessageCreateParamsNonStreaming {
+  toNativeRequest(request: UnifiedRequest): Anthropic.Messages.MessageCreateParamsNonStreaming {
     // Convert messages
     const messages = request.messages.map((msg) => this.toNativeMessage(msg))
 
@@ -186,7 +184,14 @@ export class AnthropicAdapter {
    * Map Anthropic stop reason to unified format
    */
   private mapStopReason(
-    reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | 'pause_turn' | 'refusal' | null
+    reason:
+      | 'end_turn'
+      | 'max_tokens'
+      | 'stop_sequence'
+      | 'tool_use'
+      | 'pause_turn'
+      | 'refusal'
+      | null
   ): 'end_turn' | 'max_tokens' | 'tool_use' | 'stop_sequence' | 'error' {
     if (!reason) return 'end_turn'
 
@@ -208,7 +213,9 @@ export class AnthropicAdapter {
 
     // Concatenate all system messages
     const systemPrompt = systemMessages.length
-      ? systemMessages.map((m) => m.content.map((c) => (c.type === 'text' ? c.text : '')).join('')).join('\n\n')
+      ? systemMessages
+          .map((m) => m.content.map((c) => (c.type === 'text' ? c.text : '')).join(''))
+          .join('\n\n')
       : undefined
 
     return [systemPrompt, nonSystemMessages]

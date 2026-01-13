@@ -62,10 +62,7 @@ export async function loadSection(name: string): Promise<string> {
   }
 
   // Check cache
-  if (
-    section.cache?.content &&
-    Date.now() - section.cache.loadedAt < section.cache.ttl
-  ) {
+  if (section.cache?.content && Date.now() - section.cache.loadedAt < section.cache.ttl) {
     return section.cache.content
   }
 
@@ -85,4 +82,3 @@ export async function loadSection(name: string): Promise<string> {
     return `[Failed to load section ${name}]`
   }
 }
-

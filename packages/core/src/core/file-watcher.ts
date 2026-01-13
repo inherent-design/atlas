@@ -9,12 +9,13 @@ import { watch, type FSWatcher } from 'chokidar'
 import { resolve, relative, extname } from 'path'
 import { homedir } from 'os'
 import { existsSync, mkdirSync } from 'fs'
-import { createLogger } from '../shared/logger'
-import { getConfig } from '../shared/config.loader'
-import { IGNORE_PATTERNS } from '../shared/config'
-import { getFileTracker } from '../services/tracking'
-import { getAllEmbeddableExtensions } from '../services/embedding/types'
-import type { ManagedScheduler } from './scheduler-manager'
+import { createLogger } from '../shared/logger.js'
+import { getConfig } from '../shared/config.loader.js'
+import { IGNORE_PATTERNS } from '../shared/config.js'
+import { getFileTracker } from '../services/tracking/index.js'
+import { getStorageService } from '../services/storage/index.js'
+import { getAllEmbeddableExtensions } from '../services/embedding/types.js'
+import type { ManagedScheduler } from './scheduler-manager.js'
 
 const log = createLogger('file-watcher')
 
@@ -94,7 +95,11 @@ class FileWatcher implements ManagedScheduler {
         }
 
         // Ignore .env files (but templates were allowed above)
-        if (path.includes('.env') && !path.endsWith('.env.example') && !path.endsWith('.env.template')) {
+        if (
+          path.includes('.env') &&
+          !path.endsWith('.env.example') &&
+          !path.endsWith('.env.template')
+        ) {
           return true // Ignore
         }
 
@@ -174,7 +179,10 @@ class FileWatcher implements ManagedScheduler {
 
   private async handleDeletion(filePath: string): Promise<void> {
     try {
-      const tracker = getFileTracker()
+      const atlasConfig = getConfig()
+      const storageService = getStorageService(atlasConfig)
+      const db = storageService.getDatabase()
+      const tracker = getFileTracker(db)
       const result = await tracker.markDeleted(filePath)
 
       if (result.supersededChunks.length > 0) {

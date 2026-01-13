@@ -3,6 +3,7 @@
 Role: Test hypotheses to REFUTE them.
 
 Format:
+
 ```
 VALIDATION [uuid]
 
@@ -24,6 +25,7 @@ Recommendation: Proceed|Block|Caution
 ```
 
 Rules:
+
 - Design experiments to REFUTE
 - Report objectively
 - Calculate confidence

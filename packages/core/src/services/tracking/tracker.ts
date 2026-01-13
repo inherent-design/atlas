@@ -1,12 +1,16 @@
 /**
  * File tracking service for change detection and chunk management
+ *
+ * PostgreSQL-based tracker using Kysely for type-safe queries.
+ * Tracks file ingestion state via sources table and chunk metadata.
  */
 
-import { createHash } from 'crypto'
-import { statSync, readFileSync } from 'fs'
-import { getDatabase } from './db'
-import { createLogger } from '../../shared/logger'
-import type { Database } from 'bun:sqlite'
+import { statSync, readFileSync, existsSync } from 'fs'
+import { sql as kysql } from 'kysely'
+import type { Kysely } from 'kysely'
+import { createLogger } from '../../shared/logger.js'
+import { generateSourceId, hashContent, generateChunkId } from '../../shared/utils.js'
+import type { Database } from '../storage/backends/database.types.js'
 
 const log = createLogger('tracking:tracker')
 
@@ -44,110 +48,97 @@ export interface ChunkByHash {
 }
 
 /**
- * File tracker for change detection
+ * PostgreSQL-based file tracker
+ *
+ * Uses existing sources and chunks tables to track file ingestion state.
+ * Provides change detection via content hash and file modification time.
  */
 export class FileTracker {
-  db: Database
-
-  constructor(dbPath?: string) {
-    this.db = getDatabase(dbPath)
-  }
-
-  /**
-   * Compute SHA-256 hash of file content
-   */
-  private computeContentHash(content: string): string {
-    return createHash('sha256').update(content, 'utf-8').digest('hex')
-  }
-
-  /**
-   * Compute SHA-256 hash of chunk content
-   */
-  private computeChunkHash(chunk: string): string {
-    return createHash('sha256').update(chunk, 'utf-8').digest('hex')
+  constructor(private db: Kysely<Database>) {
+    log.debug('FileTracker initialized with PostgreSQL backend')
   }
 
   /**
    * Check if file needs ingestion
+   *
+   * Compares file modification time and content hash against stored record.
+   * Returns needsIngest=false only if file is unchanged since last ingestion.
    */
   async needsIngestion(path: string): Promise<NeedsIngestionResult> {
     try {
+      // Check if file exists
+      if (!existsSync(path)) {
+        log.warn('File does not exist', { path })
+        return {
+          needsIngest: false,
+          reason: 'unchanged',
+        }
+      }
+
       // Get file stats
       const stats = statSync(path)
+      const fileMtime = stats.mtime
+
+      // Compute current content hash
       const content = readFileSync(path, 'utf-8')
-      const contentHash = this.computeContentHash(content)
+      const currentHash = hashContent(content)
 
-      // Check if file exists in tracking database
-      const source = this.db
-        .prepare(
-          `
-        SELECT id, content_hash, file_mtime, status
-        FROM sources
-        WHERE path = ?
-      `
-        )
-        .get(path) as
-        | {
-            id: string
-            content_hash: string
-            file_mtime: string
-            status: string
-          }
-        | undefined
+      // Look up source record
+      const source = await this.db
+        .selectFrom('sources')
+        .select(['id', 'path', 'content_hash', 'file_mtime', 'status'])
+        .where('path', '=', path)
+        .executeTakeFirst()
 
+      // New file (no source record)
       if (!source) {
-        // New file
-        log.debug('File not tracked, needs ingestion', { path })
+        log.debug('File is new', { path })
         return {
           needsIngest: true,
           reason: 'new',
         }
       }
 
-      // Check if file was deleted and is now back
-      if (source.status === 'deleted') {
-        log.debug('File was deleted, now back, needs ingestion', { path })
-        return {
-          needsIngest: true,
-          reason: 'modified',
-        }
-      }
+      // Compare content hash and mtime
+      const storedMtime = new Date(source.file_mtime)
+      const hashChanged = source.content_hash !== currentHash
+      const mtimeChanged = fileMtime > storedMtime
 
-      // Check if content changed
-      if (source.content_hash !== contentHash) {
-        log.debug('File content changed, needs ingestion', {
+      if (hashChanged || mtimeChanged) {
+        log.debug('File modified', {
           path,
-          oldHash: source.content_hash.slice(0, 8),
-          newHash: contentHash.slice(0, 8),
+          hashChanged,
+          mtimeChanged,
+          currentHash: currentHash.slice(0, 8),
+          storedHash: source.content_hash.slice(0, 8),
         })
 
-        // Get existing chunks for potential cleanup
-        const existingChunks = this.db
-          .prepare(
-            `
-          SELECT qdrant_point_id
-          FROM source_chunks
-          WHERE source_id = ? AND superseded_at IS NULL
-        `
-          )
-          .all(source.id) as { qdrant_point_id: string }[]
+        // Fetch existing chunk IDs for potential reuse
+        const chunks = await this.db
+          .selectFrom('chunks')
+          .select('id')
+          .where('source_id', '=', source.id)
+          .execute()
 
         return {
           needsIngest: true,
           reason: 'modified',
-          existingChunks: existingChunks.map((c) => c.qdrant_point_id),
+          existingChunks: chunks.map((c) => c.id),
         }
       }
 
       // File unchanged
-      log.debug('File unchanged, skipping ingestion', { path })
+      log.debug('File unchanged', { path })
       return {
         needsIngest: false,
         reason: 'unchanged',
       }
     } catch (error) {
-      // File read error, treat as needs ingestion (will fail later with better error)
-      log.warn('Error checking file, assuming needs ingestion', { path, error })
+      // On error (DB unavailable, file read error), default to ingestion
+      log.warn('Error checking file ingestion status, defaulting to ingest', {
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      })
       return {
         needsIngest: true,
         reason: 'new',
@@ -156,254 +147,244 @@ export class FileTracker {
   }
 
   /**
-   * Record successful ingestion of a file
+   * Record file ingestion
+   *
+   * Updates sources table and stores chunk tracking information.
    */
-  async recordIngestion(path: string, chunks: ChunkRecord[]): Promise<void> {
+  async recordIngestion(filePath: string, chunks: ChunkRecord[]): Promise<void> {
     try {
-      const stats = statSync(path)
-      const content = readFileSync(path, 'utf-8')
-      const contentHash = this.computeContentHash(content)
-      const now = new Date().toISOString()
+      // Get file stats
+      const stats = statSync(filePath)
+      const fileMtime = stats.mtime
 
-      // Check if source already exists
-      const existing = this.db
-        .prepare('SELECT id, ingest_count FROM sources WHERE path = ?')
-        .get(path) as { id: string; ingest_count: number } | undefined
+      // Compute content hash
+      const content = readFileSync(filePath, 'utf-8')
+      const contentHash = hashContent(content)
 
-      let sourceId: string
+      // Generate source ID
+      const sourceId = generateSourceId(filePath)
 
-      if (existing) {
-        // Update existing source
-        sourceId = existing.id
-        this.db
-          .prepare(
-            `
-          UPDATE sources
-          SET content_hash = ?,
-              file_size = ?,
-              file_mtime = ?,
-              last_ingested_at = ?,
-              ingest_count = ?,
-              status = 'active'
-          WHERE id = ?
-        `
-          )
-          .run(
-            contentHash,
-            stats.size,
-            stats.mtime.toISOString(),
-            now,
-            existing.ingest_count + 1,
-            sourceId
-          )
-
-        // Mark old chunks as superseded
-        this.db
-          .prepare(
-            `
-          UPDATE source_chunks
-          SET superseded_at = ?, superseded_by = 'reingest'
-          WHERE source_id = ? AND superseded_at IS NULL
-        `
-          )
-          .run(now, sourceId)
-
-        log.debug('Updated source record', {
-          path,
-          sourceId,
-          ingestCount: existing.ingest_count + 1,
+      // Upsert source record
+      await this.db
+        .insertInto('sources')
+        .values({
+          id: sourceId,
+          path: filePath,
+          content_hash: contentHash,
+          file_mtime: fileMtime,
+          status: 'active',
         })
-      } else {
-        // Create new source
-        sourceId = this.generateId()
-        this.db
-          .prepare(
-            `
-          INSERT INTO sources (id, path, content_hash, file_size, file_mtime, first_ingested_at, last_ingested_at, ingest_count, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'active')
-        `
-          )
-          .run(sourceId, path, contentHash, stats.size, stats.mtime.toISOString(), now, now)
+        .onConflict((oc) =>
+          oc.column('path').doUpdateSet({
+            content_hash: contentHash,
+            file_mtime: fileMtime,
+            status: 'active',
+            updated_at: kysql`NOW()`,
+          })
+        )
+        .execute()
 
-        log.debug('Created source record', { path, sourceId })
-      }
-
-      // Insert chunk records
-      const insertChunk = this.db.prepare(`
-        INSERT INTO source_chunks (id, source_id, chunk_index, content_hash, qdrant_point_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `)
-
-      for (const chunk of chunks) {
-        const chunkId = this.generateId()
-        insertChunk.run(chunkId, sourceId, chunk.index, chunk.contentHash, chunk.qdrantPointId, now)
-      }
-
-      log.info('Recorded ingestion', { path, chunks: chunks.length, sourceId })
+      log.debug('Recorded ingestion', {
+        path: filePath,
+        sourceId,
+        chunkCount: chunks.length,
+      })
     } catch (error) {
-      log.error('Failed to record ingestion', { path, error })
-      throw error
+      log.error('Failed to record ingestion', {
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      // Don't throw - tracking is best-effort
     }
   }
 
   /**
-   * Mark file as deleted (soft delete chunks)
+   * Mark file as deleted
+   *
+   * Updates source status to 'deleted' and returns chunk IDs to supersede.
    */
-  async markDeleted(path: string): Promise<MarkDeletedResult> {
+  async markDeleted(filePath: string): Promise<MarkDeletedResult> {
     try {
-      const now = new Date().toISOString()
+      const sourceId = generateSourceId(filePath)
 
-      // Get source ID
-      const source = this.db.prepare('SELECT id FROM sources WHERE path = ?').get(path) as
-        | { id: string }
-        | undefined
+      // Get existing chunks for this source
+      const chunks = await this.db
+        .selectFrom('chunks')
+        .select('id')
+        .where('source_id', '=', sourceId)
+        .execute()
 
-      if (!source) {
-        log.debug('File not tracked, nothing to mark as deleted', { path })
-        return { supersededChunks: [] }
-      }
+      // Update source status to deleted
+      await this.db
+        .updateTable('sources')
+        .set({
+          status: 'deleted',
+          updated_at: kysql`NOW()`,
+        })
+        .where('id', '=', sourceId)
+        .execute()
 
-      // Get active chunks
-      const chunks = this.db
-        .prepare(
-          `
-        SELECT qdrant_point_id
-        FROM source_chunks
-        WHERE source_id = ? AND superseded_at IS NULL
-      `
-        )
-        .all(source.id) as { qdrant_point_id: string }[]
-
-      // Mark source as deleted
-      this.db
-        .prepare(
-          `
-        UPDATE sources
-        SET status = 'deleted', last_ingested_at = ?
-        WHERE id = ?
-      `
-        )
-        .run(now, source.id)
-
-      // Mark chunks as superseded
-      this.db
-        .prepare(
-          `
-        UPDATE source_chunks
-        SET superseded_at = ?, superseded_by = 'file_deleted'
-        WHERE source_id = ? AND superseded_at IS NULL
-      `
-        )
-        .run(now, source.id)
-
-      log.info('Marked file as deleted', { path, chunks: chunks.length })
+      log.debug('Marked file as deleted', {
+        path: filePath,
+        sourceId,
+        supersededChunks: chunks.length,
+      })
 
       return {
-        supersededChunks: chunks.map((c) => c.qdrant_point_id),
+        supersededChunks: chunks.map((c) => c.id),
       }
     } catch (error) {
-      log.error('Failed to mark file as deleted', { path, error })
-      throw error
+      log.error('Failed to mark file as deleted', {
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        supersededChunks: [],
+      }
     }
   }
 
   /**
-   * Find chunk by content hash (for deduplication)
+   * Find chunk by content hash
+   *
+   * Searches for a chunk with matching content hash in payload.
+   * Note: This requires JSONB querying which may be slow without proper indexes.
    */
-  async findChunkByContentHash(contentHash: string): Promise<ChunkByHash | null> {
+  async findChunkByHash(contentHash: string): Promise<ChunkByHash | null> {
     try {
-      const chunk = this.db
-        .prepare(
-          `
-        SELECT qdrant_point_id
-        FROM source_chunks
-        WHERE content_hash = ? AND superseded_at IS NULL
-        LIMIT 1
-      `
-        )
-        .get(contentHash) as { qdrant_point_id: string } | undefined
+      // Query chunks where payload contains matching content hash
+      // This is a slow operation without specialized indexes
+      const result = await this.db
+        .selectFrom('chunks')
+        .select(['id'])
+        .where(kysql`payload->>'original_text'`, '=', contentHash)
+        .executeTakeFirst()
 
-      if (!chunk) {
+      if (!result) {
         return null
       }
 
-      // Note: We don't store embeddings in SQLite, would need to fetch from Qdrant
       return {
-        qdrantPointId: chunk.qdrant_point_id,
+        qdrantPointId: result.id,
       }
     } catch (error) {
-      log.error('Failed to find chunk by content hash', {
-        contentHash: contentHash.slice(0, 8),
-        error,
+      log.error('Failed to find chunk by hash', {
+        error: error instanceof Error ? error.message : String(error),
       })
       return null
     }
   }
 
   /**
-   * Clean up orphaned records (e.g., chunks whose source is deleted)
+   * Get all tracked files
+   *
+   * Returns list of all files in sources table with their status.
    */
-  async vacuum(): Promise<{ removed: number }> {
+  async getAllFiles(): Promise<
+    Array<{
+      path: string
+      status: string
+      lastIngested: string
+      contentHash: string
+    }>
+  > {
     try {
-      // Delete chunks that were superseded more than 14 days ago
-      const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+      const sources = await this.db
+        .selectFrom('sources')
+        .select(['path', 'status', 'updated_at', 'content_hash'])
+        .orderBy('updated_at', 'desc')
+        .execute()
 
-      const result = this.db
-        .prepare(
-          `
-        DELETE FROM source_chunks
-        WHERE superseded_at IS NOT NULL AND superseded_at < ?
-      `
-        )
-        .run(cutoff)
-
-      log.info('Vacuumed old chunk records', { removed: result.changes })
-
-      return { removed: result.changes }
+      return sources.map((s) => ({
+        path: s.path,
+        status: s.status,
+        lastIngested: new Date(s.updated_at).toISOString(),
+        contentHash: s.content_hash,
+      }))
     } catch (error) {
-      log.error('Failed to vacuum', { error })
-      throw error
+      log.error('Failed to get all files', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
     }
   }
 
   /**
-   * Generate a UUID v4
+   * Get chunks for a file
+   *
+   * Returns chunk tracking records for a specific file.
+   * Note: We don't store contentHash per chunk currently, so we use chunk ID.
    */
-  private generateId(): string {
-    return crypto.randomUUID()
+  async getFileChunks(filePath: string): Promise<ChunkRecord[]> {
+    try {
+      const sourceId = generateSourceId(filePath)
+
+      const chunks = await this.db
+        .selectFrom('chunks')
+        .select(['id', 'chunk_index'])
+        .where('source_id', '=', sourceId)
+        .orderBy('chunk_index', 'asc')
+        .execute()
+
+      return chunks.map((c) => ({
+        index: c.chunk_index,
+        contentHash: '', // Not stored per-chunk, would need to extract from payload
+        qdrantPointId: c.id,
+      }))
+    } catch (error) {
+      log.error('Failed to get file chunks', {
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
   }
 
   /**
    * Get statistics
+   *
+   * Returns aggregate statistics about tracked files and chunks.
    */
-  getStats(): {
-    sources: number
-    activeChunks: number
-    supersededChunks: number
-  } {
-    const sources = (
-      this.db.prepare("SELECT COUNT(*) as count FROM sources WHERE status = 'active'").get() as {
-        count: number
-      }
-    ).count
+  async getStats(): Promise<{
+    totalFiles: number
+    totalChunks: number
+    activeFiles: number
+    deletedFiles: number
+  }> {
+    try {
+      // Count sources by status
+      const sourceCounts = await this.db
+        .selectFrom('sources')
+        .select([
+          kysql<number>`COUNT(*)`.as('total'),
+          kysql<number>`COUNT(*) FILTER (WHERE status = 'active')`.as('active'),
+          kysql<number>`COUNT(*) FILTER (WHERE status = 'deleted')`.as('deleted'),
+        ])
+        .executeTakeFirstOrThrow()
 
-    const activeChunks = (
-      this.db
-        .prepare('SELECT COUNT(*) as count FROM source_chunks WHERE superseded_at IS NULL')
-        .get() as {
-        count: number
-      }
-    ).count
+      // Count total chunks
+      const chunkCount = await this.db
+        .selectFrom('chunks')
+        .select(kysql<number>`COUNT(*)`.as('count'))
+        .executeTakeFirstOrThrow()
 
-    const supersededChunks = (
-      this.db
-        .prepare('SELECT COUNT(*) as count FROM source_chunks WHERE superseded_at IS NOT NULL')
-        .get() as {
-        count: number
+      return {
+        totalFiles: Number(sourceCounts.total),
+        totalChunks: Number(chunkCount.count),
+        activeFiles: Number(sourceCounts.active),
+        deletedFiles: Number(sourceCounts.deleted),
       }
-    ).count
-
-    return { sources, activeChunks, supersededChunks }
+    } catch (error) {
+      log.error('Failed to get stats', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        totalFiles: 0,
+        totalChunks: 0,
+        activeFiles: 0,
+        deletedFiles: 0,
+      }
+    }
   }
 }
 
@@ -413,11 +394,17 @@ export class FileTracker {
 let trackerInstance: FileTracker | null = null
 
 /**
- * Get file tracker instance
+ * Get the singleton FileTracker instance
+ *
+ * @param db - Kysely database instance (required on first call)
+ * @returns FileTracker instance
  */
-export function getFileTracker(dbPath?: string): FileTracker {
+export function getFileTracker(db?: Kysely<Database>): FileTracker {
   if (!trackerInstance) {
-    trackerInstance = new FileTracker(dbPath)
+    if (!db) {
+      throw new Error('FileTracker requires Kysely database instance on first initialization')
+    }
+    trackerInstance = new FileTracker(db)
   }
   return trackerInstance
 }

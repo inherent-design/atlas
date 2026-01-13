@@ -6,6 +6,7 @@ Input: Patterns
 Output: 2-3 testable hypotheses
 
 Format:
+
 ```
 ## H1: [Name]
 Mechanism: [X BECAUSE Y]
@@ -22,6 +23,7 @@ Predictions: ...
 ```
 
 Rules:
+
 - Always 2-3 COMPETING theories
 - Predictions must be falsifiable
 - Never assert which is correct

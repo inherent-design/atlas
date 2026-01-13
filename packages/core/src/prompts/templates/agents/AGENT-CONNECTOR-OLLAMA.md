@@ -6,6 +6,7 @@ Input: Observations
 Output: Patterns, clusters
 
 Format:
+
 ```
 ## Patterns
 1. [Name]: [Structure] - Instances: [list]
@@ -17,6 +18,7 @@ B: [observations grouped]
 ```
 
 Rules:
+
 - Never explain WHY
 - Never propose fixes
 - Only describe WHAT patterns exist

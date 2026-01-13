@@ -5,17 +5,12 @@
  *
  * Usage:
  * ```typescript
- * import { CHUNKS, EMBEDDINGS, createChunkPayload } from './__fixtures__'
+ * import { CHUNKS, EMBEDDINGS, createChunkPayload } from './__fixtures__.js'
  * ```
  */
 
 // Chunk fixtures
-export {
-  createChunkPayload,
-  CHUNKS,
-  CHUNK_BATCH,
-  createChunkSequence,
-} from './chunks'
+export { createChunkPayload, CHUNKS, CHUNK_BATCH, createChunkSequence } from './chunks.js'
 
 // Embedding fixtures
 export {
@@ -24,7 +19,7 @@ export {
   EMBEDDINGS,
   EMBEDDING_BATCH,
   cosineSimilarity,
-} from './embeddings'
+} from './embeddings.js'
 
 // File content fixtures
 export {
@@ -39,29 +34,29 @@ export {
   getSampleContent,
   createTestFilePath,
   TEST_FILES,
-} from './files'
+} from './files.js'
 
 // Search fixtures
 export {
-  createSearchOptions,
+  createSearchParams,
   createSearchResult,
   SEARCH_OPTIONS,
   SEARCH_RESULTS,
   createSearchResultBatch,
   MOCK_SEARCH_RESPONSE,
   EMPTY_SEARCH_RESPONSE,
-} from './search'
+} from './search.js'
 
 // Ingestion fixtures
 export {
-  createIngestOptions,
+  createIngestParams,
   createIngestResult,
   INGEST_OPTIONS,
   INGEST_RESULTS,
   INGEST_FILE_PATHS,
   createMockFileTree,
   flattenFileTree,
-} from './ingest'
+} from './ingest.js'
 
 // Factory builders
 export {
@@ -72,4 +67,4 @@ export {
   generateVectorPointBatch,
   generateSearchResults,
   generateConsolidationHierarchy,
-} from './factories'
+} from './factories.js'

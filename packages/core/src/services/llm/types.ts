@@ -14,7 +14,8 @@ import type {
   LLMCapability,
   LatencyClass,
   PricingInfo,
-} from '../../shared/capabilities'
+} from '../../shared/capabilities.js'
+import type { ToolDefinition, UnifiedRequest, UnifiedResponse } from './message.js'
 
 // ============================================
 // Result Types
@@ -56,15 +57,6 @@ export interface ThinkingResult extends CompletionResult {
   thinking?: string
   /** Summary of the thinking process */
   thinkingSummary?: string
-}
-
-/**
- * Tool/function definition for tool use
- */
-export interface ToolDefinition {
-  name: string
-  description: string
-  inputSchema: Record<string, unknown>
 }
 
 /**
@@ -112,6 +104,15 @@ export interface LLMBackend extends BackendDescriptor<LLMCapability> {
 
   /** Pricing information (if metered) */
   readonly pricing?: PricingInfo
+
+  /**
+   * Generate a completion using unified message format.
+   * All backends implement this for multi-turn conversations.
+   *
+   * @param request - Unified request with message history
+   * @returns Unified response with generated message
+   */
+  completeWithMessages(request: UnifiedRequest): Promise<UnifiedResponse>
 }
 
 // ============================================
@@ -509,6 +510,45 @@ export function getOllamaEmbeddingDimensions(modelName: string): number | undefi
     if (lower.includes(key)) return dims
   }
   return undefined
+}
+
+// ============================================
+// Type Guards (Capability Checking)
+// ============================================
+
+/**
+ * Type guard: Check if backend supports JSON completion
+ */
+export function hasJSONCompletion(backend: LLMBackend): backend is LLMBackend & CanCompleteJSON {
+  return backend.supports('json-completion')
+}
+
+/**
+ * Type guard: Check if backend supports extended thinking
+ */
+export function hasThinking(backend: LLMBackend): backend is LLMBackend & CanThink {
+  return backend.supports('extended-thinking')
+}
+
+/**
+ * Type guard: Check if backend supports vision
+ */
+export function hasVision(backend: LLMBackend): backend is LLMBackend & CanSeeImages {
+  return backend.supports('vision')
+}
+
+/**
+ * Type guard: Check if backend supports tool use
+ */
+export function hasToolUse(backend: LLMBackend): backend is LLMBackend & CanUseTool {
+  return backend.supports('tool-use')
+}
+
+/**
+ * Type guard: Check if backend supports streaming
+ */
+export function hasStreaming(backend: LLMBackend): backend is LLMBackend & CanStream {
+  return backend.supports('streaming')
 }
 
 // ============================================

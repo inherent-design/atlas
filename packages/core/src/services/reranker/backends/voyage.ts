@@ -13,14 +13,15 @@
 import type {
   RerankerBackend,
   CanRerankText,
+  CanRerankMultilingual,
   RerankResponse,
   RerankOptions,
   InstructedRerankOptions,
   VoyageRerankerModel,
-} from '../types'
-import { VOYAGE_RERANKER_MODELS, formatInstructedQuery } from '../types'
-import type { RerankerCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities'
-import { createLogger } from '../../../shared/logger'
+} from '../types.js'
+import { VOYAGE_RERANKER_MODELS, formatInstructedQuery } from '../types.js'
+import type { RerankerCapability, LatencyClass, PricingInfo } from '../../../shared/capabilities.js'
+import { createLogger } from '../../../shared/logger.js'
 
 const log = createLogger('reranker:voyage')
 
@@ -38,8 +39,11 @@ function getVoyageAPIKey(): string {
 /**
  * Voyage reranker backend.
  * Implements text-reranking capability.
+ * Lite model also implements multilingual reranking.
  */
-export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
+export class VoyageRerankerBackend
+  implements RerankerBackend, CanRerankText, CanRerankMultilingual
+{
   readonly name: string
   readonly model: string
   readonly maxQueryTokens: number
@@ -50,6 +54,7 @@ export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
   readonly pricing?: PricingInfo
   readonly supportsInstructions: boolean
   readonly capabilities: ReadonlySet<RerankerCapability>
+  readonly supportedLanguages: string[]
 
   private apiKey: string
   private baseUrl: string
@@ -67,6 +72,10 @@ export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
     this.supportsInstructions = spec.supportsInstructions
     this.capabilities = spec.capabilities
 
+    // Multilingual support (lite model supports 8 languages)
+    this.supportedLanguages =
+      modelKey === 'rerank-2.5-lite' ? ['en', 'es', 'fr', 'de', 'it', 'zh', 'ja', 'ko'] : []
+
     this.baseUrl = 'https://api.voyageai.com/v1'
 
     try {
@@ -83,6 +92,7 @@ export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
       model: this.model,
       capabilities: [...this.capabilities],
       supportsInstructions: this.supportsInstructions,
+      multilingual: this.supportedLanguages.length > 0,
     })
   }
 
@@ -191,6 +201,26 @@ export class VoyageRerankerBackend implements RerankerBackend, CanRerankText {
       log.error('Voyage rerank failed', error as Error)
       throw new Error(`Voyage rerank failed: ${(error as Error).message}`)
     }
+  }
+
+  /**
+   * Rerank documents with multilingual support.
+   * For lite model, delegates to standard rerank (already multilingual).
+   * For standard model, throws error (not supported).
+   */
+  async rerankMultilingual(
+    query: string,
+    documents: string[],
+    options?: RerankOptions
+  ): Promise<RerankResponse> {
+    if (this.supportedLanguages.length === 0) {
+      throw new Error(
+        `${this.model} does not support multilingual reranking. Use rerank-2.5-lite instead.`
+      )
+    }
+
+    // Lite model's rerank() is already multilingual-aware
+    return this.rerank(query, documents, options)
   }
 }
 

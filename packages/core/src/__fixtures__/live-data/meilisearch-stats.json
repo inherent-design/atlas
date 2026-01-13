@@ -1,0 +1,20 @@
+{
+  "numberOfDocuments": 1190,
+  "rawDocumentDbSize": 2613248,
+  "avgDocumentSize": 2188,
+  "isIndexing": false,
+  "numberOfEmbeddings": 0,
+  "numberOfEmbeddedDocuments": 0,
+  "fieldDistribution": {
+    "consolidation_level": 1190,
+    "content_type": 1190,
+    "created_at": 1190,
+    "file_name": 1190,
+    "file_path": 1190,
+    "file_type": 1190,
+    "id": 1190,
+    "importance": 1190,
+    "original_text": 1190,
+    "qntm_keys": 1190
+  }
+}

@@ -5,7 +5,7 @@
  * Decouples watchdogs from ingest lifecycle and enables daemon-managed background tasks.
  */
 
-import { createLogger } from '../shared/logger'
+import { createLogger } from '../shared/logger.js'
 
 const log = createLogger('scheduler-manager')
 

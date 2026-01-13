@@ -9,35 +9,40 @@
 
 import { readFileSync } from 'fs'
 import { basename, extname, relative } from 'path'
-import { getStorageBackend, withHNSWDisabled } from '../../services/storage'
-import { getEmbeddingBackend } from '../../services/embedding'
-import { getTextSplitter } from '../../services/chunking'
-import { QDRANT_COLLECTION_NAME, BATCH_HNSW_THRESHOLD, CHUNK_MIN_CHARS } from '../../shared/config'
-import { getConfig } from '../../shared/config.loader'
-import { getConsolidationWatchdog, ingestPauseController } from '../consolidate/watchdog'
-import { createLogger, startTimer } from '../../shared/logger'
-import { fetchExistingQNTMKeys, generateQNTMKeys } from '../../services/llm'
-import type { ChunkPayload, IngestResult, IngestOptions } from '../../shared/types'
-import type { VectorPoint, NamedVectors } from '../../services/storage'
-import { ensureCollection, expandPaths, generateChunkId, hashContent } from '../../shared/utils'
+import { getStorageBackend, withHNSWDisabled } from '../../services/storage/index.js'
+import { getEmbeddingBackend } from '../../services/embedding/index.js'
+import { getTextSplitter } from '../../services/chunking/index.js'
+import { CHUNK_MIN_CHARS, BATCH_HNSW_THRESHOLD } from '../../shared/config.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { createLogger, startTimer } from '../../shared/logger.js'
+import { fetchExistingQNTMKeys, generateQNTMKeys } from '../../services/llm/index.js'
+import type { ChunkPayload, IngestResult, IngestParams } from '../../shared/types.js'
+import type { VectorPoint, NamedVectors } from '../../services/storage/index.js'
+import {
+  ensureCollection,
+  expandPaths,
+  generateChunkId,
+  hashContent,
+  getPrimaryCollectionName,
+} from '../../shared/utils.js'
 import {
   detectContentType,
   getRequiredVectors,
-  DOCUMENT_EXTENSIONS,
-} from '../../services/embedding/types'
-import type { CanEmbedContextualized } from '../../services/embedding/types'
-import { parallel, batch } from '../../core/pipeline'
-import { adaptiveParallel } from '../../core/adaptive-parallel'
-import { createIngestContext } from './context'
-import type { IngestContext } from './context'
-import type { ChunkWithContext, EmbeddedChunk, KeyedChunk } from './types'
-import type { QNTMGenerationInput } from '../../services/llm'
-import { getFileTracker } from '../../services/tracking'
+  TEXT_EXTENSIONS,
+} from '../../services/embedding/types.js'
+import type { CanEmbedContextualized } from '../../services/embedding/types.js'
+import { parallel, batch } from '../../core/pipeline.js'
+import { adaptiveParallel } from '../../core/adaptive-parallel.js'
+import { createIngestContext } from './context.js'
+import type { IngestContext } from './context.js'
+import type { ChunkWithContext, EmbeddedChunk, KeyedChunk } from './types.js'
+import type { QNTMGenerationInput } from '../../services/llm/index.js'
+import { getFileTracker } from '../../services/tracking/index.js'
 import {
   splitIntoDocumentsFast,
   estimateTotalTokens,
   VOYAGE_SAFE_LIMIT,
-} from '../../services/tokenization'
+} from '../../services/tokenization/index.js'
 
 const log = createLogger('ingest')
 
@@ -59,15 +64,9 @@ const contextualizedEmbeddingCache = new Map<string, Promise<any>>()
  */
 function shouldUseContextualized(filePath: string, chunkCount: number): boolean {
   const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
-  // Use contextualized for documents with 3+ chunks (context matters)
-  return DOCUMENT_EXTENSIONS.includes(ext as any) && chunkCount >= 3
+  // Use contextualized for text documents with 3+ chunks (context matters)
+  return TEXT_EXTENSIONS.includes(ext as any) && chunkCount >= 3
 }
-
-/**
- * @deprecated Use IngestOptions from '../../shared/types' instead.
- * This alias is kept for backward compatibility during transition.
- */
-export type IngestConfig = IngestOptions
 
 // ============================================
 // Streaming Pipeline Implementation
@@ -87,7 +86,8 @@ async function* streamChunks(
   const relativePath = relative(ctx.rootDir, filePath)
 
   // Check if file needs ingestion (file tracker)
-  const tracker = getFileTracker()
+  const db = ctx.getDatabase()
+  const tracker = getFileTracker(db)
   const trackResult = await tracker.needsIngestion(filePath)
 
   if (!trackResult.needsIngest) {
@@ -218,7 +218,6 @@ async function embedChunk(
       // Use contextualized embeddings (allChunks provided in context)
       const contextBackend = await ctx.getContextualizedEmbeddingBackend()
       if (contextBackend && 'embedContextualized' in contextBackend) {
-
         // Check cache first (avoid duplicate API calls for same file/split)
         // Include split index in cache key for large documents split into sub-documents
         const splitSuffix = context.splitIndex !== undefined ? `:split${context.splitIndex}` : ''
@@ -400,23 +399,8 @@ async function* streamAllFiles(
 ): AsyncGenerator<ChunkWithContext> {
   for (const filePath of filePaths) {
     try {
-      // Wait if ingestion is paused for consolidation
-      if (ingestPauseController.isPaused()) {
-        log.debug('Ingestion paused, waiting for consolidation to complete', { file: filePath })
-        await ingestPauseController.waitForResume()
-        log.debug('Consolidation complete, resuming ingestion', { file: filePath })
-      }
-
-      // Register in-flight operation
-      ingestPauseController.registerInFlight()
-
-      try {
-        for await (const chunk of streamChunks(filePath, ctx)) {
-          yield chunk
-        }
-      } finally {
-        // Complete in-flight operation
-        ingestPauseController.completeInFlight()
+      for await (const chunk of streamChunks(filePath, ctx)) {
+        yield chunk
       }
     } catch (error) {
       log.error(`Failed to stream chunks from ${filePath}`, error as Error)
@@ -438,8 +422,9 @@ async function upsertChunks(
   batchSize: number,
   timeoutMs: number
 ): Promise<number> {
-  const storageBackend = await ctx.getStorageBackend()
-  const tracker = getFileTracker()
+  const storageService = ctx.getStorageService()
+  const db = ctx.getDatabase()
+  const tracker = getFileTracker(db)
   const timestamp = new Date().toISOString()
   let totalStored = 0
 
@@ -535,23 +520,22 @@ async function upsertChunks(
     }
 
     if (points.length > 0) {
-      log.trace('Storage batch upsert request', {
-        collection: QDRANT_COLLECTION_NAME,
+      const collectionName = getPrimaryCollectionName()
+
+      log.trace('Storage batch upsert request (multi-tier)', {
+        collection: collectionName,
         pointCount: points.length,
-        backend: storageBackend.name,
       })
 
-      await storageBackend.upsert(QDRANT_COLLECTION_NAME, points)
+      // Dual-write to Qdrant + PostgreSQL + Meilisearch (if enabled)
+      await storageService.upsertVectors(collectionName, points)
 
-      log.trace('Storage batch upsert complete', {
-        collection: QDRANT_COLLECTION_NAME,
+      log.trace('Storage batch upsert complete (multi-tier)', {
+        collection: collectionName,
         pointCount: points.length,
       })
 
       totalStored += points.length
-
-      // Record ingestion for consolidation watchdog
-      getConsolidationWatchdog().recordIngestion(points.length)
 
       log.debug(`Stored batch of ${points.length} chunks`, { totalStored })
     }
@@ -607,16 +591,6 @@ export async function ingestFile(
     verbose,
   })
 
-  // Wait if ingestion is paused for consolidation
-  if (ingestPauseController.isPaused()) {
-    log.debug('Ingestion paused, waiting for consolidation to complete', { file: filePath })
-    await ingestPauseController.waitForResume()
-    log.debug('Consolidation complete, resuming ingestion', { file: filePath })
-  }
-
-  // Register in-flight operation
-  ingestPauseController.registerInFlight()
-
   try {
     // Stream chunks from file
     const chunks = streamChunks(filePath, ctx)
@@ -652,9 +626,6 @@ export async function ingestFile(
     endTimer()
     return stored
   } finally {
-    // Complete in-flight operation
-    ingestPauseController.completeInFlight()
-
     // Clear contextualized embedding cache
     contextualizedEmbeddingCache.clear()
   }
@@ -663,14 +634,14 @@ export async function ingestFile(
 /**
  * Main ingestion function - streaming pipeline for all files.
  */
-export async function ingest(config: IngestOptions): Promise<IngestResult> {
+export async function ingest(config: IngestParams): Promise<IngestResult> {
   const { paths, recursive = false, rootDir = process.cwd(), verbose = true } = config
   const endTimer = startTimer('ingest (total)')
 
   log.debug('Starting ingestion', { paths, recursive, rootDir })
 
-  // Ensure collection exists ONCE before any file processing
-  await ensureCollection(QDRANT_COLLECTION_NAME)
+  // Ensure collection exists ONCE before any file processing (uses dimension-based naming)
+  await ensureCollection()
 
   // Fetch existing QNTM keys for reuse
   const existingKeys = config.existingKeys || (await fetchExistingQNTMKeys())

@@ -4,8 +4,8 @@
  * Orchestration agent coordinating multi-agent workflows.
  */
 
-import type { PromptDefinition } from '../../types'
-import { loadTemplate } from '../../template-loader'
+import type { PromptDefinition } from '../../types.js'
+import { loadTemplate } from '../../template-loader.js'
 
 export const metaPrompt: PromptDefinition = {
   id: 'agent-meta',

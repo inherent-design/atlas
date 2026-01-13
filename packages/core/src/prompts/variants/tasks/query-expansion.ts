@@ -4,7 +4,7 @@
  * Generates QNTM keys from search queries for semantic retrieval.
  */
 
-import type { PromptDefinition } from '../../types'
+import type { PromptDefinition } from '../../types.js'
 
 export const queryExpansionPrompt: PromptDefinition = {
   id: 'query-expansion',

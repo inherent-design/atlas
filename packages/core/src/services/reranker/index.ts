@@ -10,11 +10,11 @@
  * - Multilingual support
  */
 
-import { createLogger } from '../../shared/logger'
-import { BackendRegistry } from '../../shared/registry'
-import { getConfig } from '../../shared/config.loader'
-import { parseBackendSpecifier } from '../../shared/config.schema'
-import type { RerankerBackend, RerankResponse, RerankOptions } from './types'
+import { createLogger } from '../../shared/logger.js'
+import { BackendRegistry } from '../../shared/registry.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { parseBackendSpecifier } from '../../shared/config.schema.js'
+import type { RerankerBackend, RerankResponse, RerankOptions } from './types.js'
 
 const log = createLogger('reranker')
 
@@ -131,10 +131,9 @@ export async function rerank(
 export type {
   RerankerBackend,
   CanRerankText,
-  CanRerankCode,
   CanRerankMultilingual,
   RerankResponse,
   RerankResult,
   RerankOptions,
   InstructedRerankOptions,
-} from './types'
+} from './types.js'

@@ -17,13 +17,13 @@ import type {
   CompletionResult,
   CompletionOptions,
   OllamaModelDetails,
-} from '../types'
-import { mapOllamaCapabilities, ollamaSupportsThinking } from '../types'
-import type { LLMCapability, LatencyClass } from '../../../shared/capabilities'
-import { createLogger } from '../../../shared/logger'
-import { OLLAMA_URL } from '../../../shared/config'
-import { OllamaAdapter } from '../adapters/ollama'
-import type { UnifiedRequest, UnifiedResponse } from '../message'
+} from '../types.js'
+import { mapOllamaCapabilities, ollamaSupportsThinking } from '../types.js'
+import type { LLMCapability, LatencyClass } from '../../../shared/capabilities.js'
+import { createLogger } from '../../../shared/logger.js'
+import { OLLAMA_URL } from '../../../shared/config.js'
+import { OllamaAdapter } from '../adapters/ollama.js'
+import type { UnifiedRequest, UnifiedResponse } from '../message.js'
 
 const log = createLogger('llm:ollama')
 
@@ -490,7 +490,9 @@ export class OllamaLLMBackend implements LLMBackend, CanComplete, CanCompleteJSO
 }
 
 /**
- * Create an Ollama backend and ensure model is available
+ * Factory for Ollama backends with optional auto-pull.
+ * Note: Registry initialization uses constructor directly.
+ * This helper is for advanced use cases requiring auto-pull.
  */
 export async function createOllamaBackend(
   modelName: string,

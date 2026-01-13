@@ -8,6 +8,8 @@
  * for users who have Claude Code but no ANTHROPIC_API_KEY.
  */
 
+import { spawn } from 'child_process'
+import { spawnSync } from 'child_process'
 import type {
   LLMBackend,
   CanComplete,
@@ -15,16 +17,56 @@ import type {
   CanUseTool,
   CompletionResult,
   CompletionOptions,
-  ToolDefinition,
   ToolUseResult,
-} from '../types'
-import type { LLMCapability } from '../../../shared/capabilities'
-import type { LatencyClass } from '../../../shared/capabilities'
-import { createLogger, startTimer } from '../../../shared/logger'
-import { ClaudeCodeAdapter } from '../adapters/claude-code'
-import type { UnifiedRequest, UnifiedResponse } from '../message'
+} from '../types.js'
+import type { LLMCapability } from '../../../shared/capabilities.js'
+import type { LatencyClass } from '../../../shared/capabilities.js'
+import { createLogger, startTimer } from '../../../shared/logger.js'
+import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
+import type { UnifiedRequest, UnifiedResponse, ToolDefinition } from '../message.js'
 
 const log = createLogger('llm:claude-code')
+
+/**
+ * Helper to spawn process and collect stdout/stderr (Node.js equivalent of Bun.spawn)
+ */
+async function spawnAsync(
+  args: string[],
+  input?: string
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+  if (args.length === 0) {
+    throw new Error('spawnAsync requires at least one argument')
+  }
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn(args[0]!, args.slice(1), {
+      stdio: input ? ['pipe', 'pipe', 'pipe'] : ['inherit', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    proc.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString()
+    })
+
+    proc.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString()
+    })
+
+    proc.on('error', reject)
+
+    proc.on('close', (code: number | null) => {
+      resolve({ stdout, stderr, exitCode: code })
+    })
+
+    // Write input if provided
+    if (input && proc.stdin) {
+      proc.stdin.write(input)
+      proc.stdin.end()
+    }
+  })
+}
 
 /**
  * Claude Code backend using `claude -p` CLI.
@@ -71,12 +113,8 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
    */
   async isAvailable(): Promise<boolean> {
     try {
-      const proc = Bun.spawn(['which', 'claude'], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-      await proc.exited
-      return proc.exitCode === 0
+      const result = spawnSync('which', ['claude'])
+      return result.status === 0
     } catch {
       return false
     }
@@ -112,21 +150,11 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
 
       log.trace('Claude CLI process spawned', { args })
 
-      const process = Bun.spawn(args, {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      process.stdin.write(prompt)
-      process.stdin.end()
+      const { stdout: output, stderr } = await spawnAsync(args, prompt)
 
       log.trace('Prompt written to stdin', {
         promptPreview: prompt.substring(0, 200),
       })
-
-      const output = await new Response(process.stdout).text()
-      const stderr = await new Response(process.stderr).text()
 
       log.trace('Claude CLI raw output', {
         outputLength: output.length,
@@ -230,17 +258,7 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
 
       log.trace('Claude CLI process spawned (unified)', { args })
 
-      const process = Bun.spawn(args, {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      process.stdin.write(prompt)
-      process.stdin.end()
-
-      const output = await new Response(process.stdout).text()
-      const stderr = await new Response(process.stderr).text()
+      const { stdout: output, stderr } = await spawnAsync(args, prompt)
 
       log.trace('Claude CLI raw output (unified)', {
         outputLength: output.length,
@@ -311,17 +329,7 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
 
       log.trace('Claude CLI process spawned (with tools)', { args: args.slice(0, -2) })
 
-      const process = Bun.spawn(args, {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      process.stdin.write(prompt)
-      process.stdin.end()
-
-      const output = await new Response(process.stdout).text()
-      const stderr = await new Response(process.stderr).text()
+      const { stdout: output, stderr } = await spawnAsync(args, prompt)
 
       log.trace('Claude CLI raw output (with tools)', {
         outputLength: output.length,
@@ -384,13 +392,10 @@ export class ClaudeCodeBackend implements LLMBackend, CanComplete, CanCompleteJS
 }
 
 /**
- * Create singleton instance for ClaudeCode backend
+ * Factory for ClaudeCode backends (used by registry initialization)
+ * Note: This is a factory function, not a singleton getter.
+ * Registry manages lifecycle.
  */
-let instance: ClaudeCodeBackend | undefined
-
 export function getClaudeCodeBackend(model: string = 'haiku'): ClaudeCodeBackend {
-  if (!instance || instance.modelId !== model) {
-    instance = new ClaudeCodeBackend(model)
-  }
-  return instance
+  return new ClaudeCodeBackend(model)
 }

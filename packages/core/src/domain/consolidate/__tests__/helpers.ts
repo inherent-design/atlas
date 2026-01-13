@@ -18,7 +18,6 @@ export function resetConsolidateMocks(mockQdrant: any, mockLLM: any, requireColl
   mockQdrant.retrieve.mockReset()
   mockQdrant.setPayload.mockReset()
   mockLLM.completeJSON.mockReset()
-  mockLLM.getLLMConfig.mockReset()
   ;(requireCollection as any).mockReset()
 
   // Restore default implementations
@@ -27,9 +26,7 @@ export function resetConsolidateMocks(mockQdrant: any, mockLLM: any, requireColl
   mockQdrant.setPayload.mockResolvedValue({} as any)
 
   // Default scroll: empty results that terminate pagination
-  mockQdrant.scroll.mockImplementation(() =>
-    Promise.resolve({ points: [], nextOffset: null })
-  )
+  mockQdrant.scroll.mockImplementation(() => Promise.resolve({ points: [], nextOffset: null }))
 
   mockQdrant.search.mockResolvedValue([])
   mockQdrant.retrieve.mockResolvedValue([])
@@ -45,15 +42,10 @@ export function resetConsolidateMocks(mockQdrant: any, mockLLM: any, requireColl
  * @param level - Consolidation level to return points at
  * @param points - Points to return at that level
  */
-export function setupLevelFilteredScroll(
-  mockQdrant: any,
-  level: number,
-  points: any[]
-) {
+export function setupLevelFilteredScroll(mockQdrant: any, level: number, points: any[]) {
   mockQdrant.scroll.mockImplementation((_collection: string, options: any) => {
-    const requestedLevel = options.filter?.must?.find(
-      (m: any) => m.key === 'consolidation_level'
-    )?.match?.value
+    const requestedLevel = options.filter?.must?.find((m: any) => m.key === 'consolidation_level')
+      ?.match?.value
 
     if (requestedLevel === level) {
       return Promise.resolve({ points, nextOffset: null })
@@ -72,16 +64,11 @@ export function setupLevelFilteredScroll(
  * @param level - Consolidation level to return points at
  * @param points - Points to return on first call
  */
-export function setupSingleUseScroll(
-  mockQdrant: any,
-  level: number,
-  points: any[]
-) {
+export function setupSingleUseScroll(mockQdrant: any, level: number, points: any[]) {
   let callCount = 0
   mockQdrant.scroll.mockImplementation((_collection: string, options: any) => {
-    const requestedLevel = options.filter?.must?.find(
-      (m: any) => m.key === 'consolidation_level'
-    )?.match?.value
+    const requestedLevel = options.filter?.must?.find((m: any) => m.key === 'consolidation_level')
+      ?.match?.value
 
     if (requestedLevel === level) {
       callCount++

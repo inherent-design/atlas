@@ -35,8 +35,16 @@ vi.mock('../../services/storage', () => ({
 
 vi.mock('../../services/llm', () => ({
   completeJSON: mockLLM.completeJSON,
-  getLLMConfig: mockLLM.getLLMConfig,
   getLLMBackendFor: mockLLM.getLLMBackendFor,
+}))
+
+vi.mock('../../services/embedding', () => ({
+  getEmbeddingBackend: () => ({
+    name: 'voyage',
+    dimensions: 1024,
+    capabilities: new Set(['text-embedding']),
+  }),
+  getEmbeddingDimensions: () => 1024,
 }))
 
 vi.mock('../../shared/utils', async (importOriginal) => {

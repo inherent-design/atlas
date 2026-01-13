@@ -1,7 +1,7 @@
 /**
  * Smoke tests for session-event hook logic
  */
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect } from 'vitest'
 
 describe('session-event hook logic', () => {
   it('should map PreCompact to session.compacting', () => {
@@ -23,7 +23,7 @@ describe('session-event hook logic', () => {
       session_id: 'test-session',
       transcript_path: '/tmp/transcript.jsonl',
       hook_event_name: 'SessionEnd' as const,
-      cwd: '/tmp'
+      cwd: '/tmp',
     }
 
     const eventData = {

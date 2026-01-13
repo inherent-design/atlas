@@ -11,19 +11,19 @@
  * - contextual_convergence: Different paths arriving at similar insight
  */
 
-import { getStorageBackend } from '../../services/storage'
-import { getEmbeddingBackend } from '../../services/embedding'
+import { getStorageBackend } from '../../services/storage/index.js'
+import { getEmbeddingBackend } from '../../services/embedding/index.js'
 import {
-  QDRANT_COLLECTION_NAME,
   VOYAGE_MODEL,
   CONSOLIDATION_SIMILARITY_THRESHOLD,
-} from '../../shared/config'
-import { getConfig } from '../../shared/config.loader'
-import { getLLMBackendFor } from '../../services/llm'
-import { buildTaskPrompt } from '../../prompts/builders'
-import { createLogger, startTimer } from '../../shared/logger'
-import type { ChunkPayload, ConsolidationType, ConsolidationDirection } from '../../shared/types'
-import type { NamedVectors } from '../../services/storage'
+} from '../../shared/config.js'
+import { getConfig } from '../../shared/config.loader.js'
+import { getPrimaryCollectionName, requireCollection } from '../../shared/utils.js'
+import { getLLMBackendFor } from '../../services/llm/index.js'
+import { buildTaskPrompt } from '../../prompts/builders.js'
+import { createLogger, startTimer } from '../../shared/logger.js'
+import type { ChunkPayload, ConsolidationType, ConsolidationDirection } from '../../shared/types.js'
+import type { NamedVectors } from '../../services/storage/index.js'
 
 const log = createLogger('consolidate')
 
@@ -67,8 +67,8 @@ async function classifyConsolidation(
   payload1: ChunkPayload,
   payload2: ChunkPayload
 ): Promise<ConsolidationClassification> {
-  // Get JSON-capable LLM backend
-  const backend = getLLMBackendFor('json-completion')
+  // Get JSON-capable LLM backend (with domain-specific override)
+  const backend = getLLMBackendFor('json-completion', 'consolidation')
   if (!backend) {
     throw new Error('No JSON-capable LLM backend available for consolidation')
   }
@@ -138,15 +138,13 @@ async function findCandidatesAtLevel(
   const SCROLL_LIMIT = 100 // Increased from 50
 
   do {
-    const result = await storage.scroll(QDRANT_COLLECTION_NAME, {
+    const result = await storage.scroll(getPrimaryCollectionName(), {
       limit: SCROLL_LIMIT,
       offset,
       withPayload: true,
       withVector: true,
       filter: {
-        must: [
-          { key: 'consolidation_level', match: { value: level } },
-        ],
+        must: [{ key: 'consolidation_level', match: { value: level } }],
         must_not: [
           { key: 'deletion_eligible', match: { value: true } }, // Not marked for deletion
         ],
@@ -162,16 +160,14 @@ async function findCandidatesAtLevel(
       if (!textVector) continue
 
       // Search for similar points at same level
-      const similar = await storage.search(QDRANT_COLLECTION_NAME, {
+      const similar = await storage.search(getPrimaryCollectionName(), {
         vectorName: 'text',
         vector: textVector,
         limit: 10, // Top 10 similar candidates
         scoreThreshold: threshold,
         withPayload: true,
         filter: {
-          must: [
-            { key: 'consolidation_level', match: { value: level } },
-          ],
+          must: [{ key: 'consolidation_level', match: { value: level } }],
           must_not: [
             { has_id: [point.id] }, // Exclude self
             { key: 'deletion_eligible', match: { value: true } }, // Not marked for deletion
@@ -233,7 +229,7 @@ async function performConsolidation(
   for (const candidate of candidates) {
     try {
       // Fetch both points
-      const points = await storage.retrieve(QDRANT_COLLECTION_NAME, [
+      const points = await storage.retrieve(getPrimaryCollectionName(), [
         candidate.id,
         candidate.pair_id,
       ])
@@ -292,10 +288,10 @@ async function performConsolidation(
       }
 
       // Update primary point
-      await storage.setPayload(QDRANT_COLLECTION_NAME, [primary!.id as string], updatedPayload)
+      await storage.setPayload(getPrimaryCollectionName(), [primary!.id as string], updatedPayload)
 
       // Mark secondary as superseded (soft delete with provenance)
-      await storage.setPayload(QDRANT_COLLECTION_NAME, [secondary!.id as string], {
+      await storage.setPayload(getPrimaryCollectionName(), [secondary!.id as string], {
         consolidation_level: Math.max(secondaryPayload.consolidation_level, 1) as 0 | 1 | 2 | 3,
         superseded_by: primary!.id as string,
         deletion_eligible: true,
@@ -360,7 +356,7 @@ export async function consolidate(config: ConsolidateConfig): Promise<Consolidat
   try {
     // Require collection to exist - fail if not (don't auto-create)
     const { requireCollection } = await import('../../shared/utils')
-    await requireCollection(QDRANT_COLLECTION_NAME)
+    await requireCollection(getPrimaryCollectionName())
 
     let totalCandidatesFound = 0
     let totalConsolidated = 0

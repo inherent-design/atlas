@@ -5,7 +5,7 @@
  * which to keep during consolidation.
  */
 
-import type { PromptDefinition } from '../../types'
+import type { PromptDefinition } from '../../types.js'
 
 export const consolidationClassificationPrompt: PromptDefinition = {
   id: 'consolidation-classify',

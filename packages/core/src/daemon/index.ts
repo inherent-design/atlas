@@ -4,22 +4,23 @@
  * Exports daemon components and provides main daemon start function.
  */
 
-export * from './events'
-export * from './protocol'
-export * from './server'
-export * from './router'
+export * from './events.js'
+export * from './protocol.js'
+export * from './server.js'
+export * from './router.js'
 
-import { EventRouter } from './router'
-import { AtlasDaemonServer, getSocketPath, getPidFilePath } from './server'
+import { EventRouter } from './router.js'
+import { AtlasDaemonServer, getSocketPath, getPidFilePath } from './server.js'
 import { writeFileSync, existsSync, readFileSync, unlinkSync } from 'fs'
-import { createLogger } from '../shared/logger'
-import { schedulerManager } from '../core/scheduler-manager'
-import { getConsolidationWatchdog } from '../domain/consolidate/watchdog'
-import { getSystemPressureMonitor } from '../core/system-pressure-monitor'
-import { getFileWatcher } from '../core/file-watcher'
-import { getConfig } from '../shared/config.loader'
-import { ensureCollection } from '../shared/utils'
-import { registerPrompts } from '../prompts'
+import { createLogger } from '../shared/logger.js'
+import { schedulerManager } from '../core/scheduler-manager.js'
+import { getSystemPressureMonitor } from '../core/system-pressure-monitor.js'
+import { getFileWatcher } from '../core/file-watcher.js'
+import { getConfig } from '../shared/config.loader.js'
+import { ensureCollection } from '../shared/utils.js'
+import { registerPrompts } from '../prompts/index.js'
+import { getStorageService } from '../services/storage/index.js'
+import { getFileTracker } from '../services/tracking/tracker.js'
 
 const log = createLogger('daemon')
 
@@ -60,7 +61,6 @@ export class AtlasDaemon {
   private registerSchedulers(): void {
     const atlasConfig = getConfig()
     const autoStart = atlasConfig.daemon?.autoStart ?? {
-      consolidationWatchdog: true,
       systemPressureMonitor: true,
       fileWatcher: true,
     }
@@ -71,14 +71,8 @@ export class AtlasDaemon {
       log.debug('Registered SystemPressureMonitor')
     }
 
-    // Register consolidation watchdog if enabled
-    if (autoStart.consolidationWatchdog !== false) {
-      schedulerManager.register(getConsolidationWatchdog())
-      log.debug('Registered ConsolidationWatchdog')
-    }
-
-    // Register file watcher if enabled via config or CLI flag
-    if (this.config.enableFileWatcher === true || autoStart.fileWatcher === true) {
+    // Register FileWatcher if enabled (watches ~/.atlas by default)
+    if (autoStart.fileWatcher !== false) {
       schedulerManager.register(getFileWatcher())
       log.debug('Registered FileWatcher')
     }
@@ -95,6 +89,16 @@ export class AtlasDaemon {
 
     // Clean up stale socket file
     this.cleanupStaleSocket()
+
+    // Initialize ApplicationService (including storage service)
+    await this.router.initialize()
+    log.debug('ApplicationService initialized')
+
+    // Initialize FileTracker with database instance (BEFORE starting schedulers)
+    const storageService = getStorageService()
+    const db = storageService.getDatabase()
+    getFileTracker(db)
+    log.debug('FileTracker initialized with database')
 
     // Ensure collection exists before any operations
     await ensureCollection()

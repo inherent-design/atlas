@@ -4,12 +4,11 @@
  * Multi-agent execution runtime with:
  * - Single agent executor (multi-turn with tools + RAG)
  * - Work coordinator (sequence, parallel, conditional, loop)
- * - Predefined strategies (observe, research, validate-claim, etc.)
  */
 
 // Core execution
-export { executeAgent } from './executor'
-export { executeWork, buildWorkContext } from './coordinator'
+export { executeAgent } from './executor.js'
+export { executeWork, buildWorkContext } from './coordinator.js'
 
 // Types
 export type {
@@ -30,22 +29,8 @@ export type {
   WorkContext,
   WorkResult,
   ToolDefinition,
-} from './types'
+} from './types.js'
 
-export { AGENT_TOOLS } from './types'
+export { AGENT_TOOLS } from './types.js'
 
-// Prompts (migrated to unified registry)
-export { buildAgentPrompt, buildArtifactPath, buildFrontmatter } from '../../prompts/builders'
-
-// Strategies
-export {
-  observe,
-  research,
-  validateClaim,
-  extractLearning,
-  meta,
-  deepDive,
-  parallelExplore,
-  iterativeRefinement,
-  conditionalPath,
-} from './strategies'
+// Strategies: All removed (2026-01-10) - zero usage confirmed by architecture audit

@@ -5,9 +5,12 @@
  * Used by `atlas doctor` CLI command.
  */
 
-import { createLogger } from '../../shared/logger'
-import { QDRANT_URL, OLLAMA_URL, VOYAGE_API_KEY, QDRANT_COLLECTION_NAME } from '../../shared/config'
-import { getFileTracker } from '../tracking'
+import { createLogger } from '../../shared/logger.js'
+import { QDRANT_URL, OLLAMA_URL, VOYAGE_API_KEY } from '../../shared/config.js'
+import { getPrimaryCollectionName } from '../../shared/utils.js'
+import { getFileTracker } from '../tracking/index.js'
+import { getStorageService } from '../storage/index.js'
+import { getConfig } from '../../shared/config.loader.js'
 
 const log = createLogger('doctor')
 
@@ -127,7 +130,7 @@ async function checkQdrant(): Promise<ServiceCheck> {
     const data = (await response.json()) as { version?: string }
 
     // Check if collection exists
-    const collectionResponse = await fetch(`${QDRANT_URL}/collections/${QDRANT_COLLECTION_NAME}`, {
+    const collectionResponse = await fetch(`${QDRANT_URL}/collections/${getPrimaryCollectionName()}`, {
       signal: AbortSignal.timeout(3000),
     })
 
@@ -143,7 +146,7 @@ async function checkQdrant(): Promise<ServiceCheck> {
         name: 'Qdrant',
         status: 'ok',
         version: data.version,
-        details: `collection '${QDRANT_COLLECTION_NAME}' exists`,
+        details: `collection '${getPrimaryCollectionName()}' exists`,
         extra: {
           points: collectionData.result?.points_count ?? 0,
         },
@@ -154,7 +157,7 @@ async function checkQdrant(): Promise<ServiceCheck> {
       name: 'Qdrant',
       status: 'warning',
       version: data.version,
-      details: `collection '${QDRANT_COLLECTION_NAME}' does not exist`,
+      details: `collection '${getPrimaryCollectionName()}' does not exist`,
     }
   } catch (error) {
     return {
@@ -372,18 +375,22 @@ async function checkTracking(): Promise<{
   supersededChunks: number
 } | null> {
   try {
-    const tracker = getFileTracker()
-    const stats = tracker.getStats()
+    const atlasConfig = getConfig()
+    const storageService = getStorageService(atlasConfig)
+    const db = storageService.getDatabase()
+    const tracker = getFileTracker(db)
+    const stats = await tracker.getStats()
 
-    // Get database path from tracking db module
-    const { getDefaultDbPath } = await import('../tracking/db')
-    const dbPath = getDefaultDbPath()
+    // PostgreSQL database info
+    const dbPath = atlasConfig.storage?.postgres
+      ? `postgresql://${atlasConfig.storage.postgres.host}:${atlasConfig.storage.postgres.port}/${atlasConfig.storage.postgres.database}`
+      : 'PostgreSQL (not configured)'
 
     return {
       path: dbPath,
-      sources: stats.sources,
-      activeChunks: stats.activeChunks,
-      supersededChunks: stats.supersededChunks,
+      sources: stats.totalFiles,
+      activeChunks: stats.totalChunks,
+      supersededChunks: stats.deletedFiles,
     }
   } catch (error) {
     log.warn('Failed to check tracking database', { error: (error as Error).message })

@@ -2,6 +2,6 @@
  * File tracking service exports
  */
 
-export * from './tracker'
-export * from './db'
-export * from './schema'
+export * from './tracker.js'
+export * from './db.js'
+export * from './schema.js'

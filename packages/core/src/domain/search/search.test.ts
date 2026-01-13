@@ -76,6 +76,8 @@ vi.mock('../../services/embedding', () => ({
   }),
   getEmbeddingBackend: () => ({
     name: 'voyage:text',
+    dimensions: 1024,
+    capabilities: new Set(['text-embedding']),
     embedText: async (input: string | string[]) => {
       const inputs = Array.isArray(input) ? input : [input]
       return {
@@ -87,6 +89,7 @@ vi.mock('../../services/embedding', () => ({
       }
     },
   }),
+  getEmbeddingDimensions: () => 1024,
 }))
 
 vi.mock('../../services/storage', () => ({
