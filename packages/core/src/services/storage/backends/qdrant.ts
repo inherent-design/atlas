@@ -28,31 +28,36 @@ const log = createLogger('storage:qdrant')
  * Translate StorageFilter to Qdrant SDK filter format.
  * Handles is_null/is_empty conditions that need special structure.
  */
-function translateFilter(filter: StorageFilter | undefined): any {
+function translateFilter(filter: StorageFilter | undefined): Record<string, FilterCondition[]> | undefined {
   if (!filter) return undefined
 
-  const translateCondition = (cond: FilterCondition): any => {
+  const translateCondition = (cond: FilterCondition): FilterCondition => {
     // is_null condition → { is_null: { key: "field" } }
     if ('is_null' in cond) {
-      return { is_null: { key: cond.is_null } }
+      return { is_null: { key: cond.is_null } } as FilterCondition
     }
     // is_empty condition → { is_empty: { key: "field" } }
     if ('is_empty' in cond) {
-      return { is_empty: { key: cond.is_empty } }
+      return { is_empty: { key: cond.is_empty } } as FilterCondition
     }
-    // has_id condition → pass through
-    if ('has_id' in cond) {
-      return { has_id: cond.has_id }
-    }
-    // match/range conditions → pass through (already correct format)
+    // has_id, match, range conditions → pass through (already correct format)
     return cond
   }
 
-  return {
-    must: filter.must?.map(translateCondition),
-    must_not: filter.must_not?.map(translateCondition),
-    should: filter.should?.map(translateCondition),
+  // Only include non-empty filter arrays to avoid JSON null serialization
+  const result: Record<string, FilterCondition[]> = {}
+
+  if (filter.must?.length) {
+    result.must = filter.must.map(translateCondition)
   }
+  if (filter.must_not?.length) {
+    result.must_not = filter.must_not.map(translateCondition)
+  }
+  if (filter.should?.length) {
+    result.should = filter.should.map(translateCondition)
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined
 }
 
 /**
